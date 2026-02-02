@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tactical Medic Card V23 - Realtime Multiplayer</title>
+    <title>Tactical Medic Card V24 - Team Management</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     
@@ -47,7 +47,6 @@
         .app-title { font-size: 1.1em; font-weight: 800; text-transform: uppercase; color: #fff; letter-spacing: 0.5px;}
         .mode-subtitle { font-size: 0.75em; color: var(--text-dim); display: block; margin-top: 2px;}
         
-        /* BOUTON MULTIJOUEUR AVEC INDICATEUR */
         .btn-multi-home {
             margin-top: 8px;
             background: rgba(123, 31, 162, 0.2);
@@ -171,6 +170,19 @@
         /* MULTI UI SPECIFIC */
         .session-code-display { font-size: 2em; letter-spacing: 3px; font-weight: 900; color: var(--accent-purple); text-align: center; margin: 10px 0; border: 2px dashed #444; padding: 10px; background: #111; user-select: all; cursor: pointer;}
         .status-box { padding: 10px; margin-top: 10px; border-radius: 4px; text-align: center; font-weight: bold; font-size: 0.9em; display: none; }
+        
+        /* TEAM BUTTONS */
+        .team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .btn-team-join {
+            background: #222; border: 2px solid #555; padding: 15px; 
+            border-radius: 8px; color: white; font-weight: bold; cursor: pointer;
+            text-transform: uppercase; text-align: center;
+        }
+        .btn-team-join:hover { background: #333; }
+        .btn-team-join.active { border-color: #fff; background: var(--accent-purple); }
+        .current-team-display { font-size: 0.9em; color: var(--accent-purple); display: block; font-weight: bold; }
+        
+        .host-team-item { display: flex; justify-content: space-between; padding: 10px; background: #1a1a1a; border-bottom: 1px solid #333; align-items: center;}
     </style>
 </head>
 <body>
@@ -181,6 +193,8 @@
         <div class="app-title-container">
             <div class="app-title">Tactical Medic Card</div>
             <span id="top-indicator" class="mode-subtitle">Mode Classique</span>
+            <span id="team-indicator" class="current-team-display"></span>
+            
             <button class="btn-multi-home" onclick="ouvrirMultijoueur()">
                 <div id="status-dot-icon" class="status-dot"></div> MULTIJOUEUR
             </button>
@@ -225,19 +239,36 @@
                 <p>CODE DE SESSION :</p>
                 <div id="host-id-display" class="session-code-display" onclick="copierCodeSession()">...</div>
                 <div id="host-status" class="status-box" style="display:block; background:rgba(123,31,162,0.2); color:#d1c4e9;">En attente de joueurs...</div>
-                <p style="font-size:0.8em; color:#888; margin-top:10px;">Configurez maintenant votre partie dans les ⚙️ Réglages. Les joueurs seront mis à jour automatiquement.</p>
+                
+                <h4 style="margin-top:20px; color:white; border-bottom:1px solid #444;">GESTION DES ESCOUADES</h4>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="new-team-name" class="form-input" placeholder="Nom (ex: Bravo)">
+                    <button class="btn-mini" style="background:var(--accent-green); width:50px;" onclick="addTeam()">➕</button>
+                </div>
+                <div id="host-teams-list" style="margin-top:10px;"></div>
+
+                <p style="font-size:0.8em; color:#888; margin-top:20px;">Configurez maintenant votre partie dans les ⚙️ Réglages. Les joueurs seront mis à jour automatiquement.</p>
             </div>
         </div>
 
         <div class="box">
             <h3>JOUEUR (CLIENT)</h3>
             <p style="color:#ccc; font-size:0.9em;">Rejoignez une partie pour recevoir les cartes et réglages.</p>
-            <div class="form-group">
-                <label class="form-label">Code de la partie</label>
-                <input type="text" id="join-id-input" class="form-input" placeholder="Ex: MEDIC-1234" style="text-transform: uppercase;">
+            <div id="client-join-form">
+                <div class="form-group">
+                    <label class="form-label">Code de la partie</label>
+                    <input type="text" id="join-id-input" class="form-input" placeholder="Ex: MEDIC-1234" style="text-transform: uppercase;">
+                </div>
+                <button id="btn-join-session" class="btn-action btn-scan" onclick="joinSession()">Rejoindre</button>
             </div>
-            <button id="btn-join-session" class="btn-action btn-scan" onclick="joinSession()">Rejoindre</button>
+            
             <div id="client-status" class="status-box"></div>
+            
+            <div id="client-team-section" style="display:none; margin-top:20px;">
+                <h4 style="color:var(--accent-blue); text-align:center;">REJOINDRE UNE ESCOUADE</h4>
+                <div id="client-teams-container" class="team-grid">
+                    </div>
+            </div>
         </div>
 
         <div style="height: 50px;"></div>
@@ -358,10 +389,11 @@
             ]
         };
 
-        let appState = { mode: "classique", deathRisk: false, explosionEnabled: false, materiel: {}, quantites: {}, customDecks: [] };
+        let appState = { mode: "classique", deathRisk: false, explosionEnabled: false, materiel: {}, quantites: {}, customDecks: [], teams: [] };
         let timerLogic = null; let isTimerActive = false;
         let currentDeckId = null; let currentCardIndex = null;
         let tempMatosSelection = [];
+        let myTeam = null;
 
         // PEERJS VARS
         let peer = null;
@@ -374,10 +406,7 @@
         /* --- MULTIPLAYER LOGIC (PEERJS) --- */
         function hostSession() {
             if(peer) { peer.destroy(); peer = null; }
-            
-            // Generate simple ID: MEDIC + 4 Random Numbers
             const simpleId = "MEDIC-" + Math.floor(1000 + Math.random() * 9000);
-            
             peer = new Peer(simpleId);
             
             peer.on('open', function(id) {
@@ -386,69 +415,56 @@
                 document.getElementById('host-id-display').innerText = id;
                 document.getElementById('btn-create-session').style.display = "none";
                 updateStatusDot('host');
+                renderHostTeams();
             });
 
             peer.on('connection', function(conn) {
                 connections.push(conn);
                 document.getElementById('host-status').innerText = connections.length + " Joueur(s) Connecté(s)";
                 document.getElementById('host-status').style.backgroundColor = "rgba(0, 230, 118, 0.2)";
-                
-                // Send current state immediately upon connection
                 conn.on('open', () => {
                     conn.send({ type: 'SYNC', state: appState });
                 });
             });
 
-            peer.on('error', function(err) {
-                alert("Erreur Création (ID déjà pris ?): " + err);
-            });
+            peer.on('error', function(err) { alert("Erreur Création : " + err); });
         }
 
         function joinSession() {
             if(peer) { peer.destroy(); peer = null; }
-            
             const joinId = document.getElementById('join-id-input').value.trim().toUpperCase();
             if(!joinId) return;
 
-            peer = new Peer(); // Let server assign ID for client
-            
+            peer = new Peer(); 
             peer.on('open', function(id) {
                 hostConnection = peer.connect(joinId);
-                
                 hostConnection.on('open', function() {
                     isHost = false;
+                    document.getElementById('client-join-form').style.display = "none";
                     document.getElementById('client-status').style.display = "block";
                     document.getElementById('client-status').innerText = "✅ CONNECTÉ À " + joinId;
                     document.getElementById('client-status').style.backgroundColor = "rgba(41, 121, 255, 0.2)";
-                    document.getElementById('btn-join-session').style.display = "none";
                     updateStatusDot('client');
                 });
 
                 hostConnection.on('data', function(data) {
                     if(data.type === 'SYNC') {
-                        console.log("Données reçues de l'hôte", data.state);
                         appState = data.state;
-                        // On sauvegarde mais sans rediffuser (pour éviter boucle)
-                        localStorage.setItem('airsoftMedicConfig', JSON.stringify(appState));
+                        // On n'écrase pas le localStorage en mode client pour éviter de polluer, on garde en RAM
                         updateUI_Game();
-                        alert("Données mises à jour par l'Hôte !");
+                        renderClientTeams();
                     }
                 });
-                
                 hostConnection.on('error', function(err) { alert("Erreur connexion hôte: " + err); });
             });
-            
             peer.on('error', function(err) { alert("Erreur Client: " + err); });
         }
 
         function broadcastState() {
             if(!isHost) return;
             connections.forEach(conn => {
-                if(conn.open) {
-                    conn.send({ type: 'SYNC', state: appState });
-                }
+                if(conn.open) conn.send({ type: 'SYNC', state: appState });
             });
-            console.log("Broadcast sent to " + connections.length + " clients");
         }
 
         function updateStatusDot(type) {
@@ -461,6 +477,62 @@
             navigator.clipboard.writeText(code).then(() => { alert("Code copié !"); });
         }
 
+        /* --- TEAM MANAGEMENT --- */
+        function addTeam() {
+            const name = document.getElementById('new-team-name').value.trim();
+            if(!name) return;
+            if(!appState.teams) appState.teams = [];
+            
+            // Random color
+            const colors = ["#d32f2f", "#1976d2", "#388e3c", "#f57c00", "#7b1fa2", "#0097a7"];
+            const col = colors[appState.teams.length % colors.length];
+
+            appState.teams.push({ id: Date.now(), name: name, color: col });
+            document.getElementById('new-team-name').value = "";
+            renderHostTeams();
+            broadcastState();
+        }
+
+        function renderHostTeams() {
+            const list = document.getElementById('host-teams-list');
+            list.innerHTML = "";
+            if(appState.teams) {
+                appState.teams.forEach(t => {
+                    let div = document.createElement('div');
+                    div.className = "host-team-item";
+                    div.innerHTML = `<span style="color:${t.color}; font-weight:bold;">${t.name}</span> <span style="font-size:0.8em; color:#666;">ID: ${t.id.toString().substr(-4)}</span>`;
+                    list.appendChild(div);
+                });
+            }
+        }
+
+        function renderClientTeams() {
+            const section = document.getElementById('client-team-section');
+            const container = document.getElementById('client-teams-container');
+            container.innerHTML = "";
+            
+            if(appState.teams && appState.teams.length > 0) {
+                section.style.display = "block";
+                appState.teams.forEach(t => {
+                    let btn = document.createElement('div');
+                    btn.className = "btn-team-join";
+                    if(myTeam && myTeam.id === t.id) btn.classList.add('active');
+                    btn.style.borderColor = t.color;
+                    btn.innerText = t.name;
+                    btn.onclick = function() { joinTeamLocal(t); };
+                    container.appendChild(btn);
+                });
+            } else {
+                section.style.display = "none";
+            }
+        }
+
+        function joinTeamLocal(team) {
+            myTeam = team;
+            updateUI_Game(); // update header
+            renderClientTeams(); // update active state button
+            // Optionally send info back to host later
+        }
 
         /* --- BUILDER LOGIC --- */
         function ouvrirBuilder() { showScreen('screen-builder'); renderCustomDecksList(); }
@@ -481,7 +553,6 @@
         function sauvegarderEtQuitterBuilder() { 
             localStorage.setItem('airsoftMedicConfig', JSON.stringify(appState)); 
             updateUI_Game(); 
-            // Broadcast changes if Host
             if(isHost) broadcastState();
             ouvrirBuilder(); 
         }
@@ -615,37 +686,13 @@
 
             let totalActive = calculateTotalActive(mode);
             if(mode === 'avance' && appState.explosionEnabled) {
-                 DB_REGLES.explosion.forEach((r) => {
+                DB_REGLES.explosion.forEach((r) => {
                      let rId = r.id; 
                      if (appState.quantites[rId] === undefined) appState.quantites[rId] = 2;
                      if(r.matos.every(m => appState.materiel[m])) totalActive += appState.quantites[rId] * (r.typeZone === 'membre' ? 4 : 1);
-                 });
+                });
             }
-            
-            const rc = document.getElementById('liste-regles'); rc.innerHTML = "";
-            let reglesAffichees = [];
-            
-            if(DB_REGLES[mode]) reglesAffichees = [...DB_REGLES[mode]];
-            else if (deck) reglesAffichees = [...deck.cards];
-
-            if (mode === 'avance' && appState.explosionEnabled) {
-                reglesAffichees.push({ sep: true, label: "--- CARTES EXPLOSION ---" });
-                reglesAffichees = reglesAffichees.concat(DB_REGLES.explosion);
-            }
-
-            reglesAffichees.forEach((r, idx) => {
-                if(r.sep) { let div = document.createElement('div'); div.style.color = "var(--accent-orange)"; div.style.fontWeight="bold"; div.style.textAlign="center"; div.style.marginTop="15px"; div.style.marginBottom="5px"; div.innerText = r.label; rc.appendChild(div); return; }
-                let rId = r.id || (mode + "_c_" + idx); 
-                if(!r.id) r.id = rId;
-                if (appState.quantites[rId] === undefined) appState.quantites[rId] = 2;
-                let matosManquant = r.matos.find(m => appState.materiel[m] === false);
-                let estActif = matosManquant === undefined;
-                let div = document.createElement('div'); div.className = "check-item"; div.style.opacity = estActif ? "1" : "0.5";
-                let prefix = (r.id && r.id.startsWith('e')) ? "💥 " : "";
-                div.innerHTML = `<div style="flex-grow:1"><strong style="color:${getColor(r.gravite)}">${prefix}${r.titre}</strong><div style="font-size:0.7em; color:#888;">${r.zone||"Custom"}</div></div><div class="qty-control"><button class="btn-mini btn-view" onclick="voirDetails('${r.id}', '${mode}')">👁️</button><button class="btn-mini" onclick="modifQty('${r.id}', -1, '${mode}')">➖</button><span style="width:20px; text-align:center;">${appState.quantites[r.id]}</span><button class="btn-mini" onclick="modifQty('${r.id}', 1, '${mode}')">➕</button></div>`;
-                rc.appendChild(div);
-            });
-            document.getElementById('settings-info-deck').innerText = totalActive + " Cartes Actives dans le paquet";
+            document.getElementById('info-deck').innerText = total + " cartes actives"; 
         }
         
         /* --- ENGINE CORE --- */
@@ -692,6 +739,15 @@
             }
             document.getElementById('top-indicator').innerText = modeLabel;
             
+            // Team indicator header
+            const ti = document.getElementById('team-indicator');
+            if(myTeam) {
+                 ti.innerText = "ÉQUIPE " + myTeam.name;
+                 ti.style.color = myTeam.color;
+            } else {
+                ti.innerText = "";
+            }
+
             const blastBtn = document.getElementById('explosion-trigger-container'); 
             if(appState.mode === 'avance' && appState.explosionEnabled) blastBtn.style.display = "flex"; else blastBtn.style.display = "none"; 
             
@@ -724,12 +780,11 @@
         function sauvegarderEtQuitter() { 
             localStorage.setItem('airsoftMedicConfig', JSON.stringify(appState)); 
             updateUI_Game(); 
-            // Broadcast changes if Host
             if(isHost) broadcastState();
             annulerReglages(); 
         }
         
-        function chargerSauvegarde() { const save = localStorage.getItem('airsoftMedicConfig'); if (save) appState = JSON.parse(save); else { appState = { mode: "classique", deathRisk: false, explosionEnabled: false, materiel: {}, quantites: {}, customDecks: [] }; initDefaults("classique"); initDefaults("avance"); initDefaults("explosion"); } if(!appState.customDecks) appState.customDecks = []; }
+        function chargerSauvegarde() { const save = localStorage.getItem('airsoftMedicConfig'); if (save) appState = JSON.parse(save); else { appState = { mode: "classique", deathRisk: false, explosionEnabled: false, materiel: {}, quantites: {}, customDecks: [], teams: [] }; initDefaults("classique"); initDefaults("avance"); initDefaults("explosion"); } if(!appState.customDecks) appState.customDecks = []; if(!appState.teams) appState.teams = []; }
         function initDefaults(m) { if(m === "explosion" && !DB_REGLES.explosion) return; if(m !== "explosion" && DB_MATERIEL_BASE) DB_MATERIEL_BASE.forEach(i => appState.materiel[i] = true); DB_REGLES[m].forEach(r => appState.quantites[r.id] = (r.gravite==="Légère"?5:(r.gravite==="DÉCÈS"?1:2))); }
         function changerModeMenu(v) { appState.mode = v; renderSettingsMenu(v); }
         function toggleMatos(i) { appState.materiel[i] = !appState.materiel[i]; renderSettingsMenu(appState.mode); }
