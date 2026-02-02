@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tactical Medic Card V20 - Data Update</title>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <title>Tactical Medic Card V21 - Seed System</title>
     
     <style>
         /* --- CHARTE GRAPHIQUE --- */
@@ -133,18 +132,18 @@
         h3 { margin-top: 0; color: var(--accent-orange); font-size: 0.8em; text-transform: uppercase; border-bottom: 1px solid #444; padding-bottom: 8px; letter-spacing: 1px;}
         .full-width { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #444; font-size: 1em; background: #111; color: white;}
         .check-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #333; }
-        
-        /* Item désactivé */
         .check-item.disabled { opacity: 0.4; pointer-events: none; filter: grayscale(1); }
-        
         .btn-mini { width: 32px; height: 32px; border-radius: 4px; border: none; font-weight: bold; background: #444; color: white; cursor:pointer;}
         .btn-view { background: #1976d2; color: white; margin-right: 5px; font-size: 1.2em; display: flex; align-items: center; justify-content: center;}
         
-        /* Compteur dans les réglages */
-        .settings-count-display { 
-            text-align: center; color: var(--accent-green); font-weight: 800; font-size: 1.1em; 
-            padding: 10px; margin-bottom: 15px; border: 1px solid var(--accent-green); 
-            border-radius: 8px; background: rgba(56, 142, 60, 0.1); 
+        .settings-count-display { text-align: center; color: var(--accent-green); font-weight: 800; font-size: 1.1em; padding: 10px; margin-bottom: 15px; border: 1px solid var(--accent-green); border-radius: 8px; background: rgba(56, 142, 60, 0.1); }
+        
+        /* Styles pour le SEED */
+        .seed-textarea {
+            width: 100%; height: 100px; background: #000; color: #0f0; 
+            font-family: monospace; font-size: 0.8em; border: 1px solid #333; 
+            border-radius: 6px; padding: 10px; margin-top: 10px; box-sizing: border-box;
+            resize: none;
         }
 
         .settings-footer { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; z-index: 20; border-top: 1px solid #333; background: #121212;}
@@ -153,8 +152,6 @@
         .btn-save { background: var(--accent-green); color: white; }
         .btn-action { width: 100%; padding: 15px; margin-top: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; color: white; text-transform: uppercase;}
         .btn-share { background: #444; border: 1px solid #666; } .btn-scan { background: #1976d2; }
-        #qr-display, #reader { margin-top: 15px; text-align: center; display: none; }
-        #qr-image { border: 5px solid white; max-width: 180px; }
         
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); backdrop-filter: blur(5px); }
         .modal-content { background-color: #222; color: #eee; margin: 15% auto; padding: 20px; border-radius: 8px; width: 85%; max-width: 400px; border: 1px solid #444; max-height: 70vh; overflow-y: auto;}
@@ -249,11 +246,19 @@
         <div class="box" style="border: 1px solid var(--accent-red);"><h3 style="color:var(--accent-red)">☠️ Option Hardcore</h3><div class="check-item"><span>Activer Risque de Mort</span><input type="checkbox" id="chk-death" onchange="toggleDeathRisk()" style="transform:scale(1.5); accent-color: var(--accent-red);"></div></div>
         
         <div class="box"><h3>1. Matériel disponible</h3><div id="liste-materiel"></div></div>
-        
         <div id="settings-info-deck" class="settings-count-display">0 Cartes Actives</div>
-        
         <div class="box"><h3>2. Composition du paquet</h3><div id="liste-regles"></div></div>
-        <div class="box"><h3>3. Partage & Synchro</h3><button class="btn-action btn-share" onclick="genererQRCode()">📲 Afficher mon QR Code</button><div id="qr-display"><img id="qr-image" src="" alt="QR Code" /></div><button class="btn-action btn-scan" onclick="demarrerScanner()">📷 Scanner une config</button><div id="reader"></div><p id="scan-result" style="text-align:center; color:#4caf50; font-weight:bold; margin-top:10px;"></p></div>
+        
+        <div class="box">
+            <h3>3. Partage (Seed)</h3>
+            <p style="font-size:0.8em; color:#888;">Copiez ce code pour partager votre config et vos paquets custom.</p>
+            <textarea id="seed-io" class="seed-textarea" onclick="this.select()"></textarea>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="btn-action btn-share" onclick="exporterConfig()">📤 Générer Code</button>
+                <button class="btn-action btn-scan" onclick="importerConfig()">📥 Charger Code</button>
+            </div>
+        </div>
+
         <div style="height: 80px;"></div>
         <div class="settings-footer"><button class="footer-btn btn-cancel" onclick="annulerReglages()">ANNULER</button><button class="footer-btn btn-save" onclick="sauvegarderEtQuitter()">VALIDER</button></div>
     </div>
@@ -269,7 +274,7 @@
         function playFlatline() { if(flatlineOsc) return; const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.type = 'sine'; osc.frequency.value = 800; gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); flatlineOsc = osc; }
         function stopAllAudio() { if(beepInterval) { clearInterval(beepInterval); beepInterval = null; } if(flatlineOsc) { try { flatlineOsc.stop(); } catch(e){} flatlineOsc = null; } }
 
-        /* --- DATA MISE A JOUR V20 --- */
+        /* --- DATA --- */
         const DB_MATERIEL_BASE = ["Garrot", "Bandage", "Poche de transfusion", "Attelle", "Morphine", "Épinéphrine", "Pansement 3 côtés"];
         const MEMBRES = ["Bras Gauche", "Bras Droit", "Jambe Gauche", "Jambe Droite"];
         
@@ -400,7 +405,9 @@
             document.getElementById('chk-death').checked = appState.deathRisk || false; 
             document.getElementById('chk-explosion').checked = appState.explosionEnabled || false; 
             renderSettingsMenu(appState.mode);
-            showScreen('screen-settings'); document.getElementById('qr-display').style.display="none"; document.getElementById('reader').style.display="none";
+            showScreen('screen-settings');
+            // Seed field reset
+            document.getElementById('seed-io').value = "";
         }
 
         function calculateTotalActive(mode) {
@@ -452,22 +459,23 @@
 
             matosList.forEach(item => {
                 if (appState.materiel[item] === undefined) appState.materiel[item] = true;
-                
-                // Check if useful
                 let isUseful = usefulMaterials.has(item);
-                
                 let div = document.createElement('div'); 
                 div.className = "check-item" + (isUseful ? "" : " disabled");
-                
-                div.innerHTML = `
-                    <span style="${isUseful ? '' : 'text-decoration:line-through;'}">${item}</span>
-                    <input type="checkbox" onchange="toggleMatos('${item}')" ${appState.materiel[item]?'checked':''} style="transform:scale(1.2)" ${isUseful ? '' : 'disabled'}>
-                `; 
+                div.innerHTML = `<span style="${isUseful ? '' : 'text-decoration:line-through;'}">${item}</span><input type="checkbox" onchange="toggleMatos('${item}')" ${appState.materiel[item]?'checked':''} style="transform:scale(1.2)" ${isUseful ? '' : 'disabled'}>`; 
                 mc.appendChild(div);
             });
 
             // UPDATE COMPTEUR SETTINGS
             let totalActive = calculateTotalActive(mode);
+            // Patch pour l'explosion settings count si actif
+            if(mode === 'avance' && appState.explosionEnabled) {
+                 DB_REGLES.explosion.forEach((r) => {
+                     let rId = r.id; 
+                     if (appState.quantites[rId] === undefined) appState.quantites[rId] = 2;
+                     if(r.matos.every(m => appState.materiel[m])) totalActive += appState.quantites[rId] * (r.typeZone === 'membre' ? 4 : 1);
+                 });
+            }
             
             // 2. Liste Règles
             const rc = document.getElementById('liste-regles'); rc.innerHTML = "";
@@ -481,31 +489,19 @@
                 reglesAffichees = reglesAffichees.concat(DB_REGLES.explosion);
             }
 
-            let realTotalCount = 0;
-
             reglesAffichees.forEach((r, idx) => {
                 if(r.sep) { let div = document.createElement('div'); div.style.color = "var(--accent-orange)"; div.style.fontWeight="bold"; div.style.textAlign="center"; div.style.marginTop="15px"; div.style.marginBottom="5px"; div.innerText = r.label; rc.appendChild(div); return; }
-                
                 let rId = r.id || (mode + "_c_" + idx); 
                 if(!r.id) r.id = rId;
-
                 if (appState.quantites[rId] === undefined) appState.quantites[rId] = 2;
-                
                 let matosManquant = r.matos.find(m => appState.materiel[m] === false);
                 let estActif = matosManquant === undefined;
-
-                if(estActif) {
-                    realTotalCount += appState.quantites[rId] * (r.typeZone === 'membre' ? 4 : 1);
-                }
-
                 let div = document.createElement('div'); div.className = "check-item"; div.style.opacity = estActif ? "1" : "0.5";
                 let prefix = (r.id && r.id.startsWith('e')) ? "💥 " : "";
-                
                 div.innerHTML = `<div style="flex-grow:1"><strong style="color:${getColor(r.gravite)}">${prefix}${r.titre}</strong><div style="font-size:0.7em; color:#888;">${r.zone||"Custom"}</div></div><div class="qty-control"><button class="btn-mini btn-view" onclick="voirDetails('${r.id}', '${mode}')">👁️</button><button class="btn-mini" onclick="modifQty('${r.id}', -1, '${mode}')">➖</button><span style="width:20px; text-align:center;">${appState.quantites[r.id]}</span><button class="btn-mini" onclick="modifQty('${r.id}', 1, '${mode}')">➕</button></div>`;
                 rc.appendChild(div);
             });
-
-            document.getElementById('settings-info-deck').innerText = realTotalCount + " Cartes Actives dans le paquet";
+            document.getElementById('settings-info-deck').innerText = totalActive + " Cartes Actives dans le paquet";
         }
         
         /* --- ENGINE CORE --- */
@@ -530,7 +526,6 @@
                 let rId = r.id || (appState.mode + "_c_" + idx); 
                 let qty = appState.quantites[rId] !== undefined ? appState.quantites[rId] : 0;
                 if (qty <= 0) return;
-                
                 if (r.typeZone === "membre") MEMBRES.forEach(m => deck.push({ ...r, finalZone: m }));
                 else deck.push({ ...r, finalZone: r.zone || r.finalZone });
             });
@@ -560,12 +555,10 @@
             const oldBtns = document.querySelectorAll('.js-custom-btn'); oldBtns.forEach(b => b.remove()); 
             if(appState.customDecks) { appState.customDecks.forEach(deck => { if(deck.showOnHome) { const div = document.createElement('div'); div.className = "btn-circle-container btn-container-shared js-custom-btn"; div.innerHTML = `<div class="pulse-ring-custom"></div><button class="main-btn btn-core-shared custom-btn-style" onclick="lancerSequenceTirage('${deck.id}')"><img src="btn-custom.png" class="icon-custom" onerror="this.src='picto-blesse.png'" alt="Custom"></button><div class="btn-label">${deck.name}</div>`; container.appendChild(div); } }); } 
             
-            // Calculer total pour l'accueil
             let total = calculateTotalActive(appState.mode);
             if(appState.mode === 'avance' && appState.explosionEnabled) {
-                // Ajout manuel explosion
-                DB_REGLES.explosion.forEach((r, idx) => {
-                     let rId = r.id; // Explosion cards have static IDs
+                DB_REGLES.explosion.forEach((r) => {
+                     let rId = r.id; 
                      if (appState.quantites[rId] === undefined) appState.quantites[rId] = 2;
                      if(r.matos.every(m => appState.materiel[m])) total += appState.quantites[rId] * (r.typeZone === 'membre' ? 4 : 1);
                 });
@@ -582,7 +575,7 @@
         function retourAccueil() { clearInterval(timerLogic); stopAllAudio(); showScreen('screen-game'); }
         function toggleDeathRisk() { appState.deathRisk = document.getElementById('chk-death').checked; }
         function toggleExplosion() { appState.explosionEnabled = document.getElementById('chk-explosion').checked; updateUI_Game(); }
-        function annulerReglages() { showScreen('screen-game'); if(html5QrcodeScanner) html5QrcodeScanner.stop(); }
+        function annulerReglages() { showScreen('screen-game'); }
         function sauvegarderEtQuitter() { localStorage.setItem('airsoftMedicConfig', JSON.stringify(appState)); updateUI_Game(); annulerReglages(); }
         function chargerSauvegarde() { const save = localStorage.getItem('airsoftMedicConfig'); if (save) appState = JSON.parse(save); else { appState = { mode: "classique", deathRisk: false, explosionEnabled: false, materiel: {}, quantites: {}, customDecks: [] }; initDefaults("classique"); initDefaults("avance"); initDefaults("explosion"); } if(!appState.customDecks) appState.customDecks = []; }
         function initDefaults(m) { if(m === "explosion" && !DB_REGLES.explosion) return; if(m !== "explosion" && DB_MATERIEL_BASE) DB_MATERIEL_BASE.forEach(i => appState.materiel[i] = true); DB_REGLES[m].forEach(r => appState.quantites[r.id] = (r.gravite==="Légère"?5:(r.gravite==="DÉCÈS"?1:2))); }
@@ -591,10 +584,36 @@
         function modifQty(id, d, mode) { appState.quantites[id] += d; if(appState.quantites[id]<0) appState.quantites[id]=0; renderSettingsMenu(mode); }
         function getColor(g) { if(g==="Critique") return "#d32f2f"; if(g==="Grave") return "#f57c00"; if(g==="Légère") return "#388e3c"; if(g==="DÉCÈS") return "#111"; return "#7b1fa2"; }
         function fermerModal() { document.getElementById('myModal').style.display = "none"; }
-        function genererQRCode() { const json = JSON.stringify(appState); const url = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${btoa(json)}`; document.getElementById('qr-image').src = url; document.getElementById('qr-display').style.display = "block"; document.getElementById('reader').style.display = "none"; }
-        let html5QrcodeScanner;
-        function demarrerScanner() { document.getElementById('qr-display').style.display = "none"; document.getElementById('reader').style.display = "block"; document.getElementById('scan-result').innerText = "Veuillez scanner..."; html5QrcodeScanner = new Html5Qrcode("reader"); html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (decodedText) => { html5QrcodeScanner.stop(); try { const conf = JSON.parse(atob(decodedText)); appState = conf; sauvegarderEtQuitter(); alert("Configuration chargée avec succès !"); } catch(e) { alert("Code invalide"); } }); }
         function updateCardColorPreview() { /* Helper optionnel */ }
+
+        /* --- EXPORT / IMPORT SEED SYSTEM --- */
+        function exporterConfig() {
+            // Encode en Base64 compatible UTF-8 (Emojis, Accents)
+            const json = JSON.stringify(appState);
+            // Astuce pour gérer l'UTF-8 avec btoa
+            const seed = btoa(unescape(encodeURIComponent(json)));
+            document.getElementById('seed-io').value = seed;
+            alert("Code généré ! Vous pouvez le copier.");
+        }
+
+        function importerConfig() {
+            const seed = document.getElementById('seed-io').value.trim();
+            if(!seed) { alert("Veuillez coller un code."); return; }
+            try {
+                // Decode Base64 UTF-8
+                const json = decodeURIComponent(escape(atob(seed)));
+                const conf = JSON.parse(json);
+                // Validation basique
+                if(!conf.mode || !conf.materiel) throw new Error("Format invalide");
+                
+                appState = conf;
+                sauvegarderEtQuitter();
+                alert("Configuration chargée avec succès !");
+            } catch(e) {
+                alert("Code invalide ou corrompu.");
+                console.error(e);
+            }
+        }
     </script>
 </body>
 </html>
