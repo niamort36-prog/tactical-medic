@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tactical Medic Card V24 - Team Management</title>
+    <title>Tactical Medic Card V25 - Admin Dashboard</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     
@@ -183,6 +183,11 @@
         .current-team-display { font-size: 0.9em; color: var(--accent-purple); display: block; font-weight: bold; }
         
         .host-team-item { display: flex; justify-content: space-between; padding: 10px; background: #1a1a1a; border-bottom: 1px solid #333; align-items: center;}
+
+        /* HOST DASHBOARD */
+        .host-dashboard { display: none; border: 1px solid var(--accent-purple); background: rgba(20,20,20,0.5); padding: 15px; border-radius: 8px; }
+        .host-dash-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 10px; }
+        .host-btn-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -232,29 +237,39 @@
         
         <div class="box" style="border-color: var(--accent-purple);">
             <h3>ADMINISTRATEUR (HOST)</h3>
-            <p style="color:#ccc; font-size:0.9em;">Créez une session. Toute modification de vos réglages sera envoyée aux joueurs.</p>
-            <button id="btn-create-session" class="btn-action" style="background:var(--accent-purple);" onclick="hostSession()">📡 Créer une Session</button>
             
-            <div id="host-panel" style="display:none;">
-                <p>CODE DE SESSION :</p>
-                <div id="host-id-display" class="session-code-display" onclick="copierCodeSession()">...</div>
-                <div id="host-status" class="status-box" style="display:block; background:rgba(123,31,162,0.2); color:#d1c4e9;">En attente de joueurs...</div>
+            <div id="host-creation-step">
+                <p style="color:#ccc; font-size:0.9em;">Créez une session pour prendre le contrôle.</p>
+                <button id="btn-create-session" class="btn-action" style="background:var(--accent-purple);" onclick="hostSession()">📡 Créer une Session</button>
+            </div>
+
+            <div id="host-dashboard" class="host-dashboard">
+                <div class="host-dash-header">
+                    <strong style="color:var(--accent-green);">✅ SESSION ACTIVE</strong>
+                    <button class="btn-mini" onclick="stopSession()" style="background:#d32f2f;">X</button>
+                </div>
                 
+                <p style="font-size:0.8em; margin:0; color:#888;">CODE DE SESSION</p>
+                <div id="host-id-display" class="session-code-display" style="margin-top:5px; font-size:1.5em; padding:5px;" onclick="copierCodeSession()">...</div>
+                <div id="host-status" class="status-box" style="display:block; background:rgba(123,31,162,0.2); color:#d1c4e9; margin-top:5px;">0 Joueur(s) Connecté(s)</div>
+
+                <div class="host-btn-grid">
+                     <button class="btn-action" style="background:#333; margin:0;" onclick="ouvrirReglages()">🛠️ CONFIGURER / CRÉER PAQUET</button>
+                </div>
+
                 <h4 style="margin-top:20px; color:white; border-bottom:1px solid #444;">GESTION DES ESCOUADES</h4>
                 <div style="display:flex; gap:10px;">
                     <input type="text" id="new-team-name" class="form-input" placeholder="Nom (ex: Bravo)">
                     <button class="btn-mini" style="background:var(--accent-green); width:50px;" onclick="addTeam()">➕</button>
                 </div>
                 <div id="host-teams-list" style="margin-top:10px;"></div>
-
-                <p style="font-size:0.8em; color:#888; margin-top:20px;">Configurez maintenant votre partie dans les ⚙️ Réglages. Les joueurs seront mis à jour automatiquement.</p>
             </div>
         </div>
 
-        <div class="box">
+        <div class="box" id="client-section-box">
             <h3>JOUEUR (CLIENT)</h3>
-            <p style="color:#ccc; font-size:0.9em;">Rejoignez une partie pour recevoir les cartes et réglages.</p>
             <div id="client-join-form">
+                <p style="color:#ccc; font-size:0.9em;">Rejoignez une partie pour recevoir les cartes et réglages.</p>
                 <div class="form-group">
                     <label class="form-label">Code de la partie</label>
                     <input type="text" id="join-id-input" class="form-input" placeholder="Ex: MEDIC-1234" style="text-transform: uppercase;">
@@ -266,8 +281,7 @@
             
             <div id="client-team-section" style="display:none; margin-top:20px;">
                 <h4 style="color:var(--accent-blue); text-align:center;">REJOINDRE UNE ESCOUADE</h4>
-                <div id="client-teams-container" class="team-grid">
-                    </div>
+                <div id="client-teams-container" class="team-grid"></div>
             </div>
         </div>
 
@@ -411,9 +425,12 @@
             
             peer.on('open', function(id) {
                 isHost = true;
-                document.getElementById('host-panel').style.display = "block";
+                // UI SWITCH: Parallel version start
+                document.getElementById('host-creation-step').style.display = "none";
+                document.getElementById('host-dashboard').style.display = "block";
+                document.getElementById('client-section-box').style.display = "none";
+                
                 document.getElementById('host-id-display').innerText = id;
-                document.getElementById('btn-create-session').style.display = "none";
                 updateStatusDot('host');
                 renderHostTeams();
             });
@@ -421,13 +438,24 @@
             peer.on('connection', function(conn) {
                 connections.push(conn);
                 document.getElementById('host-status').innerText = connections.length + " Joueur(s) Connecté(s)";
-                document.getElementById('host-status').style.backgroundColor = "rgba(0, 230, 118, 0.2)";
                 conn.on('open', () => {
                     conn.send({ type: 'SYNC', state: appState });
                 });
             });
 
             peer.on('error', function(err) { alert("Erreur Création : " + err); });
+        }
+
+        function stopSession() {
+            if(confirm("Arrêter la session et déconnecter les joueurs ?")) {
+                if(peer) { peer.destroy(); peer = null; }
+                isHost = false;
+                connections = [];
+                document.getElementById('host-dashboard').style.display = "none";
+                document.getElementById('host-creation-step').style.display = "block";
+                document.getElementById('client-section-box').style.display = "block";
+                updateStatusDot('');
+            }
         }
 
         function joinSession() {
@@ -450,7 +478,6 @@
                 hostConnection.on('data', function(data) {
                     if(data.type === 'SYNC') {
                         appState = data.state;
-                        // On n'écrase pas le localStorage en mode client pour éviter de polluer, on garde en RAM
                         updateUI_Game();
                         renderClientTeams();
                     }
@@ -482,11 +509,8 @@
             const name = document.getElementById('new-team-name').value.trim();
             if(!name) return;
             if(!appState.teams) appState.teams = [];
-            
-            // Random color
             const colors = ["#d32f2f", "#1976d2", "#388e3c", "#f57c00", "#7b1fa2", "#0097a7"];
             const col = colors[appState.teams.length % colors.length];
-
             appState.teams.push({ id: Date.now(), name: name, color: col });
             document.getElementById('new-team-name').value = "";
             renderHostTeams();
@@ -510,7 +534,6 @@
             const section = document.getElementById('client-team-section');
             const container = document.getElementById('client-teams-container');
             container.innerHTML = "";
-            
             if(appState.teams && appState.teams.length > 0) {
                 section.style.display = "block";
                 appState.teams.forEach(t => {
@@ -529,9 +552,8 @@
 
         function joinTeamLocal(team) {
             myTeam = team;
-            updateUI_Game(); // update header
-            renderClientTeams(); // update active state button
-            // Optionally send info back to host later
+            updateUI_Game(); 
+            renderClientTeams();
         }
 
         /* --- BUILDER LOGIC --- */
@@ -628,7 +650,20 @@
             document.getElementById('seed-io').value = "";
         }
         
-        function ouvrirMultijoueur() { showScreen('screen-multiplayer'); }
+        function ouvrirMultijoueur() { 
+            // Si on est host, on montre direct le dashboard, sinon on montre le menu normal
+            if(isHost) {
+                document.getElementById('host-creation-step').style.display = "none";
+                document.getElementById('host-dashboard').style.display = "block";
+                document.getElementById('client-section-box').style.display = "none";
+            } else {
+                // Check if client connected
+                if(hostConnection && hostConnection.open) {
+                     // Client mode connected view (optional handling if needed)
+                }
+            }
+            showScreen('screen-multiplayer'); 
+        }
 
         function calculateTotalActive(mode) {
             let total = 0;
@@ -639,11 +674,9 @@
                  if(deck) rules = deck.cards;
             }
             if(!rules) return 0;
-            
             rules.forEach((r, idx) => {
                  let rId = r.id || (mode + "_c_" + idx);
                  if (appState.quantites[rId] === undefined) appState.quantites[rId] = 2; // Default qty logic check
-                 // Check if active
                  if(r.matos.every(m => appState.materiel[m])) {
                      total += appState.quantites[rId] * (r.typeZone === 'membre' ? 4 : 1);
                  }
@@ -654,7 +687,6 @@
         function renderSettingsMenu(mode) {
             const boxExplo = document.getElementById('box-explosion-opt');
             boxExplo.style.display = (mode === 'avance') ? 'block' : 'none';
-            
             let usefulMaterials = new Set();
             let rulesForAnalysis = [];
             if (DB_REGLES[mode]) rulesForAnalysis = DB_REGLES[mode];
@@ -668,7 +700,6 @@
             rulesForAnalysis.forEach(r => {
                 if(r.matos) r.matos.forEach(m => usefulMaterials.add(m));
             });
-
             const mc = document.getElementById('liste-materiel'); mc.innerHTML = "";
             let matosList = [...DB_MATERIEL_BASE];
             let deck = appState.customDecks.find(d => d.id === mode);
@@ -683,7 +714,6 @@
                 div.innerHTML = `<span style="${isUseful ? '' : 'text-decoration:line-through;'}">${item}</span><input type="checkbox" onchange="toggleMatos('${item}')" ${appState.materiel[item]?'checked':''} style="transform:scale(1.2)" ${isUseful ? '' : 'disabled'}>`; 
                 mc.appendChild(div);
             });
-
             let totalActive = calculateTotalActive(mode);
             if(mode === 'avance' && appState.explosionEnabled) {
                 DB_REGLES.explosion.forEach((r) => {
@@ -692,7 +722,27 @@
                      if(r.matos.every(m => appState.materiel[m])) totalActive += appState.quantites[rId] * (r.typeZone === 'membre' ? 4 : 1);
                 });
             }
-            document.getElementById('info-deck').innerText = total + " cartes actives"; 
+            const rc = document.getElementById('liste-regles'); rc.innerHTML = "";
+            let reglesAffichees = [];
+            if(DB_REGLES[mode]) reglesAffichees = [...DB_REGLES[mode]];
+            else if (deck) reglesAffichees = [...deck.cards];
+            if (mode === 'avance' && appState.explosionEnabled) {
+                reglesAffichees.push({ sep: true, label: "--- CARTES EXPLOSION ---" });
+                reglesAffichees = reglesAffichees.concat(DB_REGLES.explosion);
+            }
+            reglesAffichees.forEach((r, idx) => {
+                if(r.sep) { let div = document.createElement('div'); div.style.color = "var(--accent-orange)"; div.style.fontWeight="bold"; div.style.textAlign="center"; div.style.marginTop="15px"; div.style.marginBottom="5px"; div.innerText = r.label; rc.appendChild(div); return; }
+                let rId = r.id || (mode + "_c_" + idx); 
+                if(!r.id) r.id = rId;
+                if (appState.quantites[rId] === undefined) appState.quantites[rId] = 2;
+                let matosManquant = r.matos.find(m => appState.materiel[m] === false);
+                let estActif = matosManquant === undefined;
+                let div = document.createElement('div'); div.className = "check-item"; div.style.opacity = estActif ? "1" : "0.5";
+                let prefix = (r.id && r.id.startsWith('e')) ? "💥 " : "";
+                div.innerHTML = `<div style="flex-grow:1"><strong style="color:${getColor(r.gravite)}">${prefix}${r.titre}</strong><div style="font-size:0.7em; color:#888;">${r.zone||"Custom"}</div></div><div class="qty-control"><button class="btn-mini btn-view" onclick="voirDetails('${r.id}', '${mode}')">👁️</button><button class="btn-mini" onclick="modifQty('${r.id}', -1, '${mode}')">➖</button><span style="width:20px; text-align:center;">${appState.quantites[r.id]}</span><button class="btn-mini" onclick="modifQty('${r.id}', 1, '${mode}')">➕</button></div>`;
+                rc.appendChild(div);
+            });
+            document.getElementById('settings-info-deck').innerText = totalActive + " Cartes Actives dans le paquet";
         }
         
         /* --- ENGINE CORE --- */
