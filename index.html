@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tactical Medic Card V25 - Admin Dashboard</title>
+    <title>Tactical Medic Card V26 - Admin Control Loop</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     
@@ -171,17 +171,11 @@
         .session-code-display { font-size: 2em; letter-spacing: 3px; font-weight: 900; color: var(--accent-purple); text-align: center; margin: 10px 0; border: 2px dashed #444; padding: 10px; background: #111; user-select: all; cursor: pointer;}
         .status-box { padding: 10px; margin-top: 10px; border-radius: 4px; text-align: center; font-weight: bold; font-size: 0.9em; display: none; }
         
-        /* TEAM BUTTONS */
         .team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .btn-team-join {
-            background: #222; border: 2px solid #555; padding: 15px; 
-            border-radius: 8px; color: white; font-weight: bold; cursor: pointer;
-            text-transform: uppercase; text-align: center;
-        }
+        .btn-team-join { background: #222; border: 2px solid #555; padding: 15px; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; text-transform: uppercase; text-align: center; }
         .btn-team-join:hover { background: #333; }
         .btn-team-join.active { border-color: #fff; background: var(--accent-purple); }
         .current-team-display { font-size: 0.9em; color: var(--accent-purple); display: block; font-weight: bold; }
-        
         .host-team-item { display: flex; justify-content: space-between; padding: 10px; background: #1a1a1a; border-bottom: 1px solid #333; align-items: center;}
 
         /* HOST DASHBOARD */
@@ -254,7 +248,8 @@
                 <div id="host-status" class="status-box" style="display:block; background:rgba(123,31,162,0.2); color:#d1c4e9; margin-top:5px;">0 Joueur(s) Connecté(s)</div>
 
                 <div class="host-btn-grid">
-                     <button class="btn-action" style="background:#333; margin:0;" onclick="ouvrirReglages()">🛠️ CONFIGURER / CRÉER PAQUET</button>
+                     <button class="btn-action" style="background:#333; margin:0; border:1px solid #666;" onclick="ouvrirReglages()">⚙️ RÉGLAGES MISSION</button>
+                     <button class="btn-action" style="background:#222; margin:0; border:1px solid #666;" onclick="ouvrirBuilder()">✏️ GÉRER LES PAQUETS</button>
                 </div>
 
                 <h4 style="margin-top:20px; color:white; border-bottom:1px solid #444;">GESTION DES ESCOUADES</h4>
@@ -294,7 +289,7 @@
         <button class="btn-action btn-scan" onclick="creerNouveauPaquet()">+ CRÉER UN PAQUET</button>
         <div id="custom-decks-list" class="builder-list" style="margin-top:20px;"></div>
         <div style="height: 50px;"></div>
-        <button class="btn-action btn-share" onclick="retourAccueil()">RETOUR ACCUEIL</button>
+        <button class="btn-action btn-share" onclick="retourAdminOuAccueil()">RETOUR</button>
     </div>
 
     <div id="screen-deck-edit" class="screen">
@@ -576,7 +571,8 @@
             localStorage.setItem('airsoftMedicConfig', JSON.stringify(appState)); 
             updateUI_Game(); 
             if(isHost) broadcastState();
-            ouvrirBuilder(); 
+            // Retour au dashboard si admin
+            if(isHost) ouvrirMultijoueur(); else ouvrirBuilder(); 
         }
 
         // --- CARD EDITING ---
@@ -651,18 +647,17 @@
         }
         
         function ouvrirMultijoueur() { 
-            // Si on est host, on montre direct le dashboard, sinon on montre le menu normal
+            // Si on est host, on montre direct le dashboard
             if(isHost) {
                 document.getElementById('host-creation-step').style.display = "none";
                 document.getElementById('host-dashboard').style.display = "block";
                 document.getElementById('client-section-box').style.display = "none";
-            } else {
-                // Check if client connected
-                if(hostConnection && hostConnection.open) {
-                     // Client mode connected view (optional handling if needed)
-                }
             }
             showScreen('screen-multiplayer'); 
+        }
+
+        function retourAdminOuAccueil() {
+             if(isHost) ouvrirMultijoueur(); else retourAccueil();
         }
 
         function calculateTotalActive(mode) {
@@ -825,7 +820,9 @@
         function retourAccueil() { clearInterval(timerLogic); stopAllAudio(); showScreen('screen-game'); }
         function toggleDeathRisk() { appState.deathRisk = document.getElementById('chk-death').checked; }
         function toggleExplosion() { appState.explosionEnabled = document.getElementById('chk-explosion').checked; updateUI_Game(); }
-        function annulerReglages() { showScreen('screen-game'); }
+        function annulerReglages() { 
+            if(isHost) ouvrirMultijoueur(); else showScreen('screen-game'); 
+        }
         
         function sauvegarderEtQuitter() { 
             localStorage.setItem('airsoftMedicConfig', JSON.stringify(appState)); 
