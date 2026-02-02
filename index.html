@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tactical Medic Card V19</title>
+    <title>Tactical Medic Card V20 - Data Update</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     
     <style>
@@ -269,14 +269,51 @@
         function playFlatline() { if(flatlineOsc) return; const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.type = 'sine'; osc.frequency.value = 800; gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); flatlineOsc = osc; }
         function stopAllAudio() { if(beepInterval) { clearInterval(beepInterval); beepInterval = null; } if(flatlineOsc) { try { flatlineOsc.stop(); } catch(e){} flatlineOsc = null; } }
 
-        /* --- DATA --- */
+        /* --- DATA MISE A JOUR V20 --- */
         const DB_MATERIEL_BASE = ["Garrot", "Bandage", "Poche de transfusion", "Attelle", "Morphine", "Épinéphrine", "Pansement 3 côtés"];
         const MEMBRES = ["Bras Gauche", "Bras Droit", "Jambe Gauche", "Jambe Droite"];
         
         const DB_REGLES = {
-            classique: [ { id: "c1", titre: "DCD", zone: "Tête ou Torse", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] }, { id: "c2", titre: "Inconscient", zone: "Torse", gravite: "Critique", effet: "30s massage + Poche", matos: ["Poche de transfusion"] }, { id: "c3", titre: "Hémorragie", typeZone: "membre", gravite: "Critique", effet: "Garrot + Bandage + Poche", matos: ["Garrot", "Bandage", "Poche de transfusion"] }, { id: "c4", titre: "Saignement", typeZone: "membre", gravite: "Critique", effet: "Bandage + Poche", matos: ["Bandage", "Poche de transfusion"] }, { id: "c5", titre: "Fracture", typeZone: "membre", gravite: "Grave", effet: "Bandage + Attelle", matos: ["Bandage", "Attelle"] }, { id: "c6", titre: "Éraflure", typeZone: "membre", gravite: "Légère", effet: "Bandage", matos: ["Bandage"] } ],
-            avance: [ { id: "a1", titre: "DCD", zone: "Tête", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] }, { id: "a2", titre: "DCD", zone: "Torse", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] }, { id: "a3", titre: "Inconscient", zone: "Torse", gravite: "Critique", effet: "Bandage + Massage + Épi + Poche", matos: ["Bandage", "Épinéphrine", "Poche de transfusion"] }, { id: "a4", titre: "Plaie soufflante", zone: "Torse", gravite: "Critique", effet: "Pnsmt 3 côtés + Morphine + Poche", matos: ["Pansement 3 côtés", "Morphine", "Poche de transfusion"] }, { id: "a5", titre: "Hémorragie", typeZone: "membre", gravite: "Critique", effet: "Garrot + Bandage + Morphine + Poche", matos: ["Garrot", "Bandage", "Morphine", "Poche de transfusion"] }, { id: "a6", titre: "Saignement grave", typeZone: "membre", gravite: "Grave", effet: "Bandage + Morphine", matos: ["Bandage", "Morphine"] }, { id: "a7", titre: "Saignement", typeZone: "membre", gravite: "Grave", effet: "Bandage", matos: ["Bandage"] }, { id: "a8", titre: "Fracture", typeZone: "membre", gravite: "Grave", effet: "Bandage + Attelle + Morphine", matos: ["Bandage", "Attelle", "Morphine"] }, { id: "a9", titre: "Éraflure", typeZone: "membre", gravite: "Légère", effet: "Bandage", matos: ["Bandage"] }, { id: "a10", titre: "Prot. Balistique", zone: "Tête", gravite: "Spécial", effet: "Protégé: Rien. Sinon: Éraflure (Bandage)", matos: [] }, { id: "a11", titre: "Prot. Balistique", zone: "Torse", gravite: "Spécial", effet: "Protégé: Hématome (Morphine). Sinon: Bandage", matos: ["Morphine", "Bandage"] }, { id: "a12", titre: "Choc Casque", zone: "Tête", gravite: "Spécial", effet: "Protégé: Sonné. Sinon: DCD", matos: [] }, { id: "a13", titre: "Choc Gilet", zone: "Torse", gravite: "Spécial", effet: "Protégé: Sonné. Sinon: DCD", matos: [] } ],
-            explosion: [ { id: "e1", titre: "DCD (Blast)", zone: "Tête", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] }, { id: "e2", titre: "DCD (Blast)", zone: "Torse", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] }, { id: "e3", titre: "Inconscient", zone: "Torse", gravite: "Critique", effet: "Bandage + 30s Massage + Épi + Poche", matos: ["Bandage", "Épinéphrine", "Poche de transfusion"] }, { id: "e4", titre: "Plaie Soufflante", zone: "Torse", gravite: "Critique", effet: "Pnsmt 3 côtés + Morphine + Poche", matos: ["Pansement 3 côtés", "Morphine", "Poche de transfusion"] }, { id: "e5", titre: "Hémorragie Massive", typeZone: "membre", gravite: "Critique", effet: "Garrot + Bandage + Morphine + Poche", matos: ["Garrot", "Bandage", "Morphine", "Poche de transfusion"] }, { id: "e6", titre: "Saignement Grave", typeZone: "membre", gravite: "Grave", effet: "Bandage + Morphine", matos: ["Bandage", "Morphine"] }, { id: "e7", titre: "Saignement", typeZone: "membre", gravite: "Grave", effet: "Bandage", matos: ["Bandage"] }, { id: "e8", titre: "Fracture Ouverte", typeZone: "membre", gravite: "Grave", effet: "Bandage + Attelle + Morphine", matos: ["Bandage", "Attelle", "Morphine"] }, { id: "e9", titre: "Éraflure (Éclat)", typeZone: "membre", gravite: "Légère", effet: "Bandage", matos: ["Bandage"] }, { id: "e10", titre: "Prot. Balistique", zone: "Tête", gravite: "Spécial", effet: "Protégé: Rien. Sinon: Éraflure", matos: [] }, { id: "e11", titre: "Prot. Balistique", zone: "Torse", gravite: "Spécial", effet: "Protégé: Hématome (Morphine). Sinon: Bandage", matos: ["Morphine", "Bandage"] }, { id: "e12", titre: "Souffle (Casque)", zone: "Tête", gravite: "Spécial", effet: "Protégé: Sonné. Sinon: DCD", matos: [] }, { id: "e13", titre: "Souffle (Gilet)", zone: "Torse", gravite: "Spécial", effet: "Protégé: Sonné. Sinon: DCD", matos: [] } ]
+            classique: [
+                { id: "c1", titre: "DCD", zone: "Tête ou Torse", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] },
+                { id: "c2", titre: "Inconscient", zone: "Torse", gravite: "Critique", effet: "30s massage + Poche", matos: ["Poche de transfusion"] },
+                { id: "c3", titre: "Hémorragie", typeZone: "membre", gravite: "Critique", effet: "Garrot + Poche", matos: ["Garrot", "Bandage", "Poche de transfusion"] },
+                { id: "c4", titre: "Saignement", typeZone: "membre", gravite: "Grave", effet: "Bandage + Poche", matos: ["Bandage", "Poche de transfusion"] },
+                { id: "c5", titre: "Fracture", typeZone: "membre", gravite: "Grave", effet: "Attelle", matos: ["Bandage", "Attelle"] },
+                { id: "c6", titre: "Éraflure", typeZone: "membre", gravite: "Légère", effet: "Bandage", matos: ["Bandage"] },
+                { id: "a12", titre: "Choc Casque", zone: "Tête", gravite: "Spécial", effet: "Si Prot: Sonné (Relevé). Sinon: DCD", matos: [] },
+                { id: "a13", titre: "Choc Gilet", zone: "Torse", gravite: "Spécial", effet: "Si Prot: Sonné (Relevé). Sinon: DCD", matos: [] }
+            ],
+            avance: [
+                { id: "a1", titre: "DCD", zone: "Tête", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] },
+                { id: "a2", titre: "DCD", zone: "Torse", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] },
+                { id: "a3", titre: "Inconscient", zone: "Torse", gravite: "Critique", effet: "Bandage + Massage + Épi + Poche", matos: ["Bandage", "Épinéphrine", "Poche de transfusion"] },
+                { id: "a4", titre: "Plaie soufflante", zone: "Torse", gravite: "Critique", effet: "Pnsmt 3 côtés + Morphine + Poche", matos: ["Pansement 3 côtés", "Morphine", "Poche de transfusion"] },
+                { id: "a5", titre: "Hémorragie", typeZone: "membre", gravite: "Critique", effet: "Garrot + Bandage + Morphine + Poche", matos: ["Garrot", "Bandage", "Morphine", "Poche de transfusion"] },
+                { id: "a6", titre: "Saignement grave", typeZone: "membre", gravite: "Grave", effet: "Bandage + Morphine", matos: ["Bandage", "Morphine"] },
+                { id: "a7", titre: "Saignement", typeZone: "membre", gravite: "Grave", effet: "Bandage", matos: ["Bandage"] },
+                { id: "a8", titre: "Fracture", typeZone: "membre", gravite: "Grave", effet: "Bandage + Attelle + Morphine", matos: ["Bandage", "Attelle", "Morphine"] },
+                { id: "a9", titre: "Éraflure", typeZone: "membre", gravite: "Légère", effet: "Bandage", matos: ["Bandage"] },
+                { id: "a10", titre: "Prot. Balistique", zone: "Tête", gravite: "Spécial", effet: "Si Prot: Rien. Sinon: Éraflure (Bandage)", matos: [] },
+                { id: "a11", titre: "Prot. Balistique", zone: "Torse", gravite: "Spécial", effet: "Si Prot: Hématome (Morphine). Sinon: Bandage", matos: ["Morphine", "Bandage"] },
+                { id: "a12", titre: "Choc Casque", zone: "Tête", gravite: "Spécial", effet: "Si Prot: Sonné (Relevé). Sinon: DCD", matos: [] },
+                { id: "a13", titre: "Choc Gilet", zone: "Torse", gravite: "Spécial", effet: "Si Prot: Sonné (Relevé). Sinon: DCD", matos: [] }
+            ],
+            explosion: [
+                { id: "e1", titre: "DCD (Blast)", zone: "Tête", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] },
+                { id: "e2", titre: "DCD (Blast)", zone: "Torse", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] },
+                { id: "e3", titre: "Inconscient", zone: "Torse", gravite: "Critique", effet: "Bandage + 30s Massage + Épi + Poche", matos: ["Bandage", "Épinéphrine", "Poche de transfusion"] },
+                { id: "e4", titre: "Plaie Soufflante", zone: "Torse", gravite: "Critique", effet: "Pnsmt 3 côtés + Morphine + Poche", matos: ["Pansement 3 côtés", "Morphine", "Poche de transfusion"] },
+                { id: "e5", titre: "Hémorragie Massive", typeZone: "membre", gravite: "Critique", effet: "Garrot + Bandage + Morphine + Poche", matos: ["Garrot", "Bandage", "Morphine", "Poche de transfusion"] },
+                { id: "e6", titre: "Saignement Grave", typeZone: "membre", gravite: "Grave", effet: "Bandage + Morphine", matos: ["Bandage", "Morphine"] },
+                { id: "e7", titre: "Saignement", typeZone: "membre", gravite: "Grave", effet: "Bandage", matos: ["Bandage"] },
+                { id: "e8", titre: "Fracture Ouverte", typeZone: "membre", gravite: "Grave", effet: "Bandage + Attelle + Morphine", matos: ["Bandage", "Attelle", "Morphine"] },
+                { id: "e9", titre: "Éraflure (Éclat)", typeZone: "membre", gravite: "Légère", effet: "Bandage", matos: ["Bandage"] },
+                { id: "e10", titre: "Prot. Balistique", zone: "Tête", gravite: "Spécial", effet: "Protégé: Rien. Sinon: Éraflure", matos: [] },
+                { id: "e11", titre: "Prot. Balistique", zone: "Torse", gravite: "Spécial", effet: "Protégé: Hématome. Sinon: Bandage", matos: ["Morphine", "Bandage"] },
+                { id: "e12", titre: "Souffle (Casque)", zone: "Tête", gravite: "Spécial", effet: "Protégé: Sonné. Sinon: DCD", matos: [] },
+                { id: "e13", titre: "Souffle (Gilet)", zone: "Torse", gravite: "Spécial", effet: "Protégé: Sonné. Sinon: DCD", matos: [] }
+            ]
         };
 
         let appState = { mode: "classique", deathRisk: false, explosionEnabled: false, materiel: {}, quantites: {}, customDecks: [] };
@@ -422,9 +459,6 @@
                 let div = document.createElement('div'); 
                 div.className = "check-item" + (isUseful ? "" : " disabled");
                 
-                // Si pas utile, on décoche visuellement ou on empêche l'interaction (class disabled gère le pointer-events)
-                // Ici on garde l'état mais on le grise.
-                
                 div.innerHTML = `
                     <span style="${isUseful ? '' : 'text-decoration:line-through;'}">${item}</span>
                     <input type="checkbox" onchange="toggleMatos('${item}')" ${appState.materiel[item]?'checked':''} style="transform:scale(1.2)" ${isUseful ? '' : 'disabled'}>
@@ -434,11 +468,6 @@
 
             // UPDATE COMPTEUR SETTINGS
             let totalActive = calculateTotalActive(mode);
-            if(mode === 'avance' && appState.explosionEnabled) {
-                 // Astuce: calculateTotalActive ne prend qu'un mode, ici on ajoute manuellement si explosion
-                 // Ce n'est pas parfait mais simple pour l'affichage settings
-                 // Pour faire propre, on re-calcule via la boucle de rendu rules ci-dessous qui est plus précise
-            }
             
             // 2. Liste Règles
             const rc = document.getElementById('liste-regles'); rc.innerHTML = "";
