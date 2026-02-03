@@ -3,163 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tactical Medic Card V22 - Teams & Identity</title>
+    <title>Tactical Medic V32 - Smart Inventory</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     
     <style>
         /* --- CHARTE GRAPHIQUE --- */
         :root { 
             --bg-dark: #121212; 
             --text-main: #f0f0f0;
-            --text-dim: #888;
             --accent-red: #d32f2f; 
             --accent-orange: #f57c00; 
             --accent-green: #388e3c;
             --accent-blue: #1976d2;
-            --accent-yellow: #fbc02d;
-            --accent-purple: #7b1fa2;
-            --accent-black: #111111;
-            --font-stack: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             --card-bg: #1c1c1c;
+            --font-stack: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
 
         body { 
-            font-family: var(--font-stack);
-            background-color: var(--bg-dark); 
-            color: var(--text-main);
-            margin: 0; padding: 0; 
-            height: 100vh; display: flex; flex-direction: column;
-            overflow: hidden;
+            font-family: var(--font-stack); background-color: var(--bg-dark); color: var(--text-main);
+            margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+            user-select: none;
         }
 
         .topo-bg {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
-            background-image: url('fond-topo.png'); 
-            background-size: cover; background-position: center; opacity: 0.3;
+            background-image: url('fond-topo.png'); background-size: cover; opacity: 0.2;
         }
 
         /* --- HEADER --- */
         header {
-            padding: 15px 20px; display: flex; align-items: center; justify-content: space-between;
-            z-index: 10; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
-            border-bottom: 2px solid #333; transition: border-color 0.3s;
+            padding: 10px 15px; 
+            display: grid; 
+            grid-template-columns: 50px 1fr auto; 
+            align-items: center;
+            z-index: 10; background: linear-gradient(to bottom, rgba(0,0,0,0.95), transparent);
+            border-bottom: 4px solid #333; transition: border-color 0.3s;
         }
-        /* Couleurs d'équipe dynamiques pour le header */
-        header.team-blue { border-bottom-color: var(--accent-blue); }
-        header.team-red { border-bottom-color: var(--accent-red); }
-        header.team-yellow { border-bottom-color: var(--accent-yellow); }
-        header.team-green { border-bottom-color: var(--accent-green); }
-        header.team-orga { border-bottom-color: #fff; }
-
-        .app-title-container { flex-grow: 1; }
-        .app-title { font-size: 1.1em; font-weight: 800; text-transform: uppercase; color: #fff; letter-spacing: 0.5px;}
-        .mode-subtitle { font-size: 0.8em; color: var(--accent-blue); display: block; margin-top: 2px; font-weight: bold;}
-        
-        .header-actions { display: flex; gap: 10px; }
+        .app-title { font-size: 0.9em; font-weight: 800; text-transform: uppercase; text-align: center; white-space: nowrap; }
+        .mode-subtitle { font-size: 0.7em; color: #888; display: block; text-align: center; font-weight: bold; text-transform: uppercase; }
+        .header-actions { display: flex; flex-direction: row; gap: 8px; justify-content: flex-end; }
         .header-btn {
-            background: rgba(30,30,30,0.8); border: 1px solid #444; color: white; border-radius: 8px; 
-            width: 45px; height: 45px; font-size: 1.4em; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            background: rgba(40,40,40,0.9); border: 1px solid #555; color: white; border-radius: 8px; 
+            width: 38px; height: 38px; font-size: 1.2em; cursor: pointer; display: flex; align-items: center; justify-content: center;
         }
+        .header-btn.multi { border-color: var(--accent-blue); color: var(--accent-blue); }
+        .header-btn.online { background: var(--accent-blue); box-shadow: 0 0 10px var(--accent-blue); animation: pulseSlow 2s infinite; }
+        @keyframes pulseSlow { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
 
-        /* --- ÉCRANS --- */
+        /* --- SCREENS --- */
         .screen { display: none; padding: 20px; flex-grow: 1; overflow-y: auto; padding-bottom: 100px; z-index: 5; }
         .screen.active { display: block; }
         .flex-center { display: none; flex-direction: column; align-items: center; justify-content: center; height: 85%; text-align: center; z-index: 5; position: relative; }
         .flex-center.active { display: flex; }
 
-        /* --- CONTAINER BOUTONS ACCUEIL --- */
-        .buttons-wrapper {
-            display: flex; flex-direction: column; align-items: center; gap: 15px;
-            margin-bottom: 20px; width: 100%; justify-content: flex-start;
-            max-height: 65vh; overflow-y: auto; overflow-x: visible;
-            padding: 40px 20px; box-sizing: border-box;
-        }
-        .buttons-wrapper::-webkit-scrollbar { width: 0px; background: transparent; }
-
-        /* --- MIXINS BOUTONS --- */
+        /* --- BUTTONS --- */
+        .buttons-wrapper { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%; max-height: 65vh; overflow-y: auto; padding: 40px 20px; box-sizing: border-box; }
         .btn-container-shared { position: relative; width: 180px; height: 180px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin: 10px 0; }
-        .btn-core-shared { width: 150px; height: 150px; border-radius: 50%; background: rgba(20, 20, 20, 0.7); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; backdrop-filter: blur(5px); padding: 0; overflow: hidden; position: relative; z-index: 2; }
+        .btn-core-shared { width: 150px; height: 150px; border-radius: 50%; background: rgba(20, 20, 20, 0.8); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); z-index: 2; overflow: hidden; transition: transform 0.1s; }
         .btn-core-shared:active { transform: scale(0.95); }
-        .btn-label { position: absolute; bottom: 25px; width: 100%; text-align: center; font-size: 0.8em; font-weight: 800; color: white; text-shadow: 0 1px 3px black; pointer-events: none; text-transform: uppercase; }
-
         .pulse-ring { position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 3px solid var(--accent-red); box-shadow: 0 0 40px rgba(211, 47, 47, 0.6); animation: pulse 2.5s infinite; }
-        .main-btn { border: 2px solid rgba(211, 47, 47, 0.3); }
         .pulse-ring-blast { position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 3px solid var(--accent-orange); box-shadow: 0 0 40px rgba(245, 124, 0, 0.6); animation: pulse 3s infinite; }
-        .blast-btn { border: 2px solid rgba(245, 124, 0, 0.3); }
         .pulse-ring-custom { position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 3px solid var(--accent-green); box-shadow: 0 0 40px rgba(56, 142, 60, 0.6); animation: pulse 3s infinite; }
-        .custom-btn-style { border: 2px solid rgba(56, 142, 60, 0.3); }
+        @keyframes pulse { 0% { transform: scale(0.95); opacity: 0.8; } 100% { transform: scale(1.1); opacity: 0; } }
+        .btn-label { position: absolute; bottom: 25px; width: 100%; text-align: center; font-size: 0.8em; font-weight: 800; color: white; pointer-events: none; text-transform: uppercase; text-shadow: 0 2px 4px black; }
 
         .icon-wounded { width: 70%; height: auto; object-fit: contain; filter: drop-shadow(0 0 8px rgba(211,47,47,0.8)); }
         .icon-blast { width: 65%; height: auto; object-fit: contain; filter: drop-shadow(0 0 8px rgba(245, 124, 0, 0.8)); }
         .icon-custom { width: 60%; height: auto; object-fit: contain; filter: drop-shadow(0 0 8px rgba(56, 142, 60, 0.8)); }
 
-        @keyframes pulse {
-            0% { transform: scale(0.95); opacity: 0.8; box-shadow: 0 0 0 0 currentColor; }
-            70% { transform: scale(1.1); opacity: 0; box-shadow: 0 0 0 40px rgba(0,0,0,0); }
-            100% { transform: scale(0.95); opacity: 0; }
-        }
-
-        .text-diagnostic { font-size: 1.2em; font-weight: 800; text-transform: uppercase; margin-bottom: 5px; color: white; letter-spacing: 1px; text-shadow: 0 2px 5px rgba(0,0,0,0.5);}
-        .text-sub { font-size: 0.9em; color: #aaa; margin-bottom: 20px; }
-        .text-count { font-weight: bold; color: #ccc; padding: 6px 15px; border-radius: 30px; background: rgba(0,0,0,0.6); border: 1px solid #444; font-size: 0.8em;}
-
-        /* --- UI BUILDER --- */
-        .builder-list { display: flex; flex-direction: column; gap: 10px; }
-        .builder-item { background: #222; border: 1px solid #444; border-radius: 8px; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .form-group { margin-bottom: 15px; }
-        .form-label { display: block; margin-bottom: 5px; color: #aaa; font-size: 0.9em; }
-        .form-input { width: 100%; padding: 12px; background: #111; border: 1px solid #444; color: white; border-radius: 4px; box-sizing: border-box; font-size: 1em; }
-        
-        .matos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 200px; overflow-y: auto; background: #111; padding: 10px; border: 1px solid #444; border-radius: 4px; }
-        .matos-check { display: flex; align-items: center; gap: 8px; padding: 5px; background: #222; border-radius: 4px; font-size: 0.9em; }
-        
-        .card-preview-mini { background: #151515; padding: 10px; border-left: 4px solid #555; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
-
-        /* --- MARCH & RESULT --- */
-        .march-list { list-style: none; padding: 0; text-align: left; font-size: 2em; font-weight: 900; color: var(--accent-orange); text-shadow: 0 0 10px rgba(0,0,0,0.8); }
-        .march-list li { margin-bottom: 10px; opacity: 0; animation: fadeIn 0.5s forwards; }
+        /* --- MARCH --- */
+        .march-list { list-style: none; padding: 0; text-align: left; font-size: 2.2em; font-weight: 900; color: var(--accent-orange); text-shadow: 0 0 15px rgba(245, 124, 0, 0.5); }
+        .march-list li { margin-bottom: 15px; opacity: 0; animation: fadeIn 0.4s forwards; }
         .march-list li:nth-child(1) { animation-delay: 0.2s; } .march-list li:nth-child(2) { animation-delay: 1.0s; } .march-list li:nth-child(3) { animation-delay: 1.8s; } .march-list li:nth-child(4) { animation-delay: 2.6s; } .march-list li:nth-child(5) { animation-delay: 3.4s; }
-        @keyframes fadeIn { to { opacity: 1; } }
+        @keyframes fadeIn { to { opacity: 1; transform: translateX(10px); } }
 
-        .result-wrapper { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);}
-        .tac-card { background: var(--card-bg); width: 85%; max-width: 380px; border-radius: 12px; padding: 25px; text-align: left; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.8); border: 3px solid #333; transition: all 0.3s ease; overflow: hidden; }
-        .card-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85em; text-transform: uppercase; color: white; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; width: fit-content; }
+        /* --- RESULT --- */
+        .result-wrapper { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.9); }
+        .tac-card { background: var(--card-bg); width: 85%; max-width: 380px; border-radius: 12px; padding: 25px; border: 3px solid #333; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.5); text-align: left; }
+        .card-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85em; text-transform: uppercase; color: white; margin-bottom: 15px; }
         .card-title { font-size: 1.5em; font-weight: 800; color: white; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; line-height: 1.2; }
         .card-label { font-size: 0.75em; color: #777; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; margin-top: 20px; display: block; }
-        .card-desc { font-size: 1.2em; color: #ddd; font-weight: 500; }
+        .card-desc { font-size: 1.3em; color: #ddd; font-weight: 500; }
         .card-box { border: 1px solid #444; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; color: #fff; font-size: 1em; line-height: 1.5; }
         .btn-card-action { margin-top: 30px; width: 100%; padding: 16px; border-radius: 8px; border: none; font-weight: bold; font-size: 1em; cursor: pointer; text-transform: uppercase; color: white; }
 
-        /* --- DANGER ZONE & DEATH --- */
+        /* --- DEATH --- */
+        #death-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 10, 10, 0.98); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 20; text-align: center; }
+        .skull-icon { font-size: 5em; margin-bottom: 20px; text-shadow: 0 0 20px red; }
+        .death-text { color: #d32f2f; font-size: 2.2em; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; animation: blinkFast 2s infinite; }
         #danger-zone-container { display: none; margin-top: 20px; background: rgba(85, 0, 0, 0.3); border: 1px solid #d32f2f; border-radius: 8px; padding: 15px; text-align: center; }
         .invisible-timer-warning { color: #ff3333; font-weight: 900; font-size: 1em; text-transform: uppercase; animation: blinkFast 0.8s infinite; }
         @keyframes blinkFast { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-        
-        #death-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 10, 10, 0.98); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 20; text-align: center; }
-        .skull-icon { font-size: 5em; margin-bottom: 20px; text-shadow: 0 0 20px red; }
-        .death-text { color: #d32f2f; font-size: 2.2em; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; }
 
-        /* --- RÉGLAGES --- */
+        /* --- UI ELEMENTS --- */
         .box { background: rgba(30, 30, 30, 0.95); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333; }
         h3 { margin-top: 0; color: var(--accent-orange); font-size: 0.8em; text-transform: uppercase; border-bottom: 1px solid #444; padding-bottom: 8px; letter-spacing: 1px;}
-        .full-width { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #444; font-size: 1em; background: #111; color: white;}
         .check-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #333; }
-        .check-item.disabled { opacity: 0.4; pointer-events: none; filter: grayscale(1); }
         .btn-mini { width: 32px; height: 32px; border-radius: 4px; border: none; font-weight: bold; background: #444; color: white; cursor:pointer;}
-        .btn-view { background: #1976d2; color: white; margin-right: 5px; font-size: 1.2em; display: flex; align-items: center; justify-content: center;}
-        
-        .settings-count-display { text-align: center; color: var(--accent-green); font-weight: 800; font-size: 1.1em; padding: 10px; margin-bottom: 15px; border: 1px solid var(--accent-green); border-radius: 8px; background: rgba(56, 142, 60, 0.1); }
-        .seed-textarea { width: 100%; height: 100px; background: #000; color: #0f0; font-family: monospace; font-size: 0.8em; border: 1px solid #333; border-radius: 6px; padding: 10px; margin-top: 10px; box-sizing: border-box; resize: none; }
-
-        .settings-footer { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; z-index: 20; border-top: 1px solid #333; background: #121212;}
-        .footer-btn { flex: 1; padding: 20px; border: none; font-weight: bold; font-size: 1em; cursor: pointer; text-transform: uppercase; }
-        .btn-cancel { background: #1a1a1a; color: #888; }
-        .btn-save { background: var(--accent-green); color: white; }
+        .form-input { width: 100%; padding: 12px; background: #111; border: 1px solid #444; color: white; border-radius: 4px; box-sizing: border-box; font-size: 1em; margin-bottom:10px; }
         .btn-action { width: 100%; padding: 15px; margin-top: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; color: white; text-transform: uppercase;}
-        .btn-share { background: #444; border: 1px solid #666; } .btn-scan { background: #1976d2; }
-        
+        .btn-create { border: 1px solid var(--accent-green); background: rgba(56, 142, 60, 0.2); }
+        .btn-join { border: 1px solid var(--accent-blue); background: rgba(25, 118, 210, 0.2); }
+        .preview-card-mini { padding:10px; border:1px solid #444; background:#111; border-radius:4px; margin-bottom:5px; border-left-width:4px; }
+        .settings-footer { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; z-index: 20; border-top: 1px solid #333; background: #121212;}
+        .footer-btn { flex: 1; padding: 20px; border: none; font-weight: bold; font-size: 1em; cursor: pointer; text-transform: uppercase; background:#1a1a1a; color:#888; }
+        .footer-btn.save { background: var(--accent-green); color: white; }
+        .separator { color: var(--accent-orange); font-weight: bold; text-align: center; margin: 15px 0 5px 0; padding-top: 10px; border-top: 1px dashed #444; letter-spacing: 1px; font-size: 0.9em; }
+
+        /* --- HOST DASHBOARD --- */
+        .player-row { background: #222; border: 1px solid #444; padding: 10px; margin-bottom: 8px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px; }
+        .player-actions { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 5px;}
+        .btn-dash { padding: 5px 10px; font-size: 0.8em; border-radius: 4px; border: none; cursor: pointer; white-space: nowrap; color: white;}
+        #host-connection-id { font-family: monospace; font-size: 1.5em; color: var(--accent-blue); background: black; padding: 10px; border-radius: 4px; border: 1px dashed #444; text-align: center; margin-bottom: 10px;}
+
+        /* --- MODALS --- */
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); backdrop-filter: blur(5px); }
-        .modal-content { background-color: #222; color: #eee; margin: 15% auto; padding: 20px; border-radius: 8px; width: 85%; max-width: 400px; border: 1px solid #444; max-height: 70vh; overflow-y: auto;}
-        .preview-card { border: 1px solid #444; padding: 10px; margin-bottom: 10px; border-radius: 4px; background: #1a1a1a; border-left: 4px solid #333;}
+        .modal-content { background-color: #222; color: #eee; margin: 15% auto; padding: 20px; border-radius: 8px; width: 85%; max-width: 400px; border: 1px solid #444; max-height: 80vh; overflow-y: auto;}
+
     </style>
 </head>
 <body>
@@ -167,9 +127,12 @@
     <div class="topo-bg"></div>
 
     <header id="main-header">
+        <div style="display:flex;">
+            <button id="btn-multi-icon" class="header-btn multi" onclick="ouvrirMenuMultijoueur()">👥</button>
+        </div>
         <div class="app-title-container">
-            <div class="app-title">Tactical Medic Card</div>
-            <span id="top-indicator" class="mode-subtitle">Médecin Inconnu</span>
+            <div class="app-title">Tactical Medic</div>
+            <span id="top-indicator" class="mode-subtitle">Solo</span>
         </div>
         <div class="header-actions">
             <button class="header-btn" onclick="ouvrirBuilder()">✏️</button>
@@ -178,136 +141,152 @@
     </header>
 
     <div id="screen-game" class="flex-center active">
-        <div id="dynamic-buttons-container" class="buttons-wrapper">
-            <div class="btn-circle-container btn-container-shared">
-                <div class="pulse-ring"></div>
-                <button class="main-btn btn-core-shared" onclick="lancerSequenceTirage('bille')">
-                    <img src="picto-blesse.png" class="icon-wounded" alt="Bille">
-                </button>
-                <div class="btn-label">Balistique</div>
-            </div>
-            <div id="explosion-trigger-container" class="blast-container btn-container-shared" style="display:none;">
-                <div class="pulse-ring-blast"></div>
-                <button class="blast-btn btn-core-shared" onclick="lancerSequenceTirage('explosion')">
-                    <img src="btn-explosion.png" class="icon-blast" alt="Explosion">
-                </button>
-                <div class="btn-label">Explosion</div>
-            </div>
-        </div>
+        <div id="dynamic-buttons-container" class="buttons-wrapper"></div>
         <div class="text-diagnostic">DIAGNOSTIC</div>
         <div class="text-sub">Sélectionnez la menace</div>
         <div class="text-count" id="info-deck">Chargement...</div>
     </div>
 
+    <div id="screen-march" class="flex-center">
+        <ul class="march-list">
+            <li>M - Massive Bleeding</li>
+            <li>A - Airways</li>
+            <li>R - Respiration</li>
+            <li>C - Circulation</li>
+            <li>H - Head / Hypothermia</li>
+        </ul>
+        <div style="margin-top:40px; font-size:0.9em; color:#888; text-transform:uppercase; letter-spacing:2px;">Analyse en cours...</div>
+    </div>
+
+    <div id="screen-result" class="screen" style="padding:0; overflow:hidden;">
+        <div class="result-wrapper">
+            <div id="ui-card" class="tac-card">
+                <div id="death-overlay">
+                    <div class="skull-icon">💀</div>
+                    <div class="death-text">MORT AU COMBAT</div>
+                    <div style="color:#aaa; margin-top:10px;">Temps écoulé - Hémorragie fatale</div>
+                    <button class="btn-card-action" style="background:#555; margin-top:30px;" onclick="retourAccueil()">Fermer le dossier</button>
+                </div>
+                <div id="badge-gravite" class="card-badge">GRAVE</div>
+                <div class="card-title" id="txt-titre">Titre</div>
+                <span class="card-label">ZONE</span>
+                <div class="card-desc" id="txt-zone">Bras</div>
+                <span class="card-label">PROTOCOLE</span>
+                <div id="txt-soins" class="card-box">Soins...</div>
+                <div id="danger-zone-container">
+                    <div class="invisible-timer-warning">⚠️ HÉMORRAGIE ACTIVE<br>URGENCE VITALE</div>
+                </div>
+                <button id="btn-card" class="btn-card-action" onclick="actionPrincipale()">Nouveau Diagnostic</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-host-dashboard" class="screen">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:30px; margin-bottom:20px;">
+            <h2 style="margin:0;">QG ORGANISATEUR</h2>
+            <div style="font-size:0.8em; color:var(--accent-green);">● EN LIGNE</div>
+        </div>
+        <div class="box" style="text-align:center; border-color:var(--accent-blue);">
+            <p style="margin-top:0; color:#aaa; font-size:0.9em;">Code de Partie</p>
+            <div id="host-connection-id">...</div>
+            <p style="font-size:0.8em; color:#666;">Donnez ce code aux joueurs</p>
+        </div>
+        <div class="box">
+            <h3>JOUEURS (<span id="connected-count">0</span>)</h3>
+            <div id="host-player-list"></div>
+        </div>
+        <button class="btn-action" style="background:#333;" onclick="retourAccueil()">RETOUR JEU</button>
+    </div>
+
+    <div id="screen-settings" class="screen">
+        <h2 style="margin-top:40px;">RÉGLAGES</h2>
+        <div class="box">
+            <h3>Mode de Jeu</h3>
+            <select id="select-mode" class="form-input" style="width:100%" onchange="changerModeMenu(this.value)"></select>
+        </div>
+        <div class="box" style="border-color:var(--accent-red)">
+            <h3 style="color:var(--accent-red)">☠️ Option Hardcore</h3>
+            <div class="check-item"><span>Activer Risque de Mort</span><input type="checkbox" id="chk-death" onchange="toggleDeathRisk()" style="transform:scale(1.5);"></div>
+        </div>
+        <div id="box-explosion-opt" class="box" style="display:none; border-color:var(--accent-orange)">
+            <h3 style="color:var(--accent-orange)">💥 Explosion</h3>
+            <div class="check-item"><span>Activer Cartes Explosion</span><input type="checkbox" id="chk-explosion" onchange="toggleExplosion()" style="transform:scale(1.5);"></div>
+        </div>
+        <div class="box"><h3>Matériel Requis</h3><div id="liste-materiel"></div></div>
+        <div class="box"><h3>Cartes Actives</h3><div id="liste-regles"></div></div>
+        <div style="height:50px"></div>
+        <div class="settings-footer"><button class="footer-btn" onclick="annulerReglages()">ANNULER</button><button class="footer-btn save" onclick="sauvegarderEtQuitter()">VALIDER</button></div>
+    </div>
+
     <div id="screen-builder" class="screen">
-        <h2 style="margin-top:40px; border-bottom:1px solid #444; padding-bottom:10px;">MES PAQUETS</h2>
-        <button class="btn-action btn-scan" onclick="creerNouveauPaquet()">+ CRÉER UN PAQUET</button>
-        <div id="custom-decks-list" class="builder-list" style="margin-top:20px;"></div>
-        <div style="height: 50px;"></div>
-        <button class="btn-action btn-share" onclick="retourAccueil()">RETOUR ACCUEIL</button>
+        <h2 style="margin-top:40px;">MES PAQUETS</h2>
+        <button class="btn-action btn-create" onclick="creerNouveauPaquet()">+ CRÉER PAQUET</button>
+        <div id="custom-decks-list" style="margin-top:20px;"></div>
+        <button class="btn-action" style="background:#333;" onclick="retourAccueil()">RETOUR</button>
     </div>
 
     <div id="screen-deck-edit" class="screen">
-        <h2 style="margin-top:40px;">ÉDITION PAQUET</h2>
+        <h2 style="margin-top:40px;">ÉDITION</h2>
         <div class="box">
-            <div class="form-group"><label class="form-label">Nom du Paquet</label><input type="text" id="deck-name" class="form-input" placeholder="Ex: Scénario Zombie"></div>
-            <div class="check-item"><span>Afficher bouton sur l'accueil</span><input type="checkbox" id="deck-show-home" style="transform:scale(1.5); accent-color: var(--accent-green);"></div>
+            <input type="text" id="deck-name" class="form-input" placeholder="Nom du paquet">
+            <div class="check-item"><span>Afficher sur l'accueil</span><input type="checkbox" id="deck-show-home"></div>
         </div>
         <div class="box">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h3>CARTES DU PAQUET</h3><button class="btn-mini btn-view" onclick="ajouterCarteCustom()" style="background:var(--accent-green); width:auto; padding:0 10px;">+ AJOUTER</button></div>
+            <h3>CARTES</h3>
+            <button class="btn-mini" onclick="ajouterCarteCustom()" style="width:100%; background:var(--accent-blue); margin-bottom:10px;">+ AJOUTER</button>
             <div id="deck-cards-list"></div>
         </div>
-        <div class="settings-footer"><button class="footer-btn btn-cancel" onclick="ouvrirBuilder()">RETOUR</button><button class="footer-btn btn-save" onclick="sauvegarderPaquetCourant()">ENREGISTRER</button><button class="footer-btn" style="background:#d32f2f; color:white; max-width:60px;" onclick="supprimerPaquetCourant()">🗑️</button></div>
+        <button class="btn-action btn-create" onclick="sauvegarderPaquetCourant()">ENREGISTRER</button>
+        <button class="btn-action" style="background:#d32f2f;" onclick="supprimerPaquetCourant()">SUPPRIMER</button>
     </div>
 
     <div id="screen-card-edit" class="screen">
-        <h2 style="margin-top:40px;">ÉDITION CARTE</h2>
+        <h2 style="margin-top:40px;">CARTE</h2>
         <div class="box">
-            <div class="form-group"><label class="form-label">Catégorie / Gravité</label><select id="card-gravity" class="form-input" onchange="updateCardColorPreview()"><option value="DÉCÈS">⚫ DÉCÈS</option><option value="Critique">🔴 CRITIQUE</option><option value="Grave">🟠 GRAVE</option><option value="Légère">🟢 LÉGÈRE</option><option value="Spécial">🟣 SPÉCIAL</option></select></div>
-            <div class="form-group"><label class="form-label">Titre</label><input type="text" id="card-title" class="form-input" placeholder="Ex: Morsure Infectée"></div>
-            <div class="form-group"><label class="form-label">Zone</label><input type="text" id="card-zone" class="form-input" placeholder="Ex: Bras"></div>
-            <div class="form-group"><label class="form-label">Description (Narratif)</label><textarea id="card-effect" class="form-input" rows="3" placeholder="Ex: Nettoyer la plaie..."></textarea></div>
-            <div class="form-group">
-                <label class="form-label" style="color:var(--accent-blue)">MATÉRIEL DE SOINS REQUIS</label>
-                <div id="card-matos-list" class="matos-grid"></div>
-                <div style="display:flex; gap:5px; margin-top:10px;">
-                    <input type="text" id="new-matos-name" class="form-input" placeholder="Nouveau (ex: Antidote)">
-                    <button class="btn-mini" onclick="addNewMatosToEditor()" style="width:50px; background:var(--accent-blue)">+</button>
-                </div>
+            <select id="card-gravity" class="form-input">
+                <option value="DÉCÈS">⚫ DÉCÈS</option>
+                <option value="Critique">🔴 CRITIQUE</option>
+                <option value="Grave">🟠 GRAVE</option>
+                <option value="Légère">🟢 LÉGÈRE</option>
+                <option value="Spécial">🟣 SPÉCIAL</option>
+            </select>
+            <input type="text" id="card-title" class="form-input" placeholder="Titre (ex: Fracture)">
+            <input type="text" id="card-zone" class="form-input" placeholder="Zone (ex: Bras)">
+            <textarea id="card-effect" class="form-input" rows="3" placeholder="Effet (ex: Attelle)"></textarea>
+            <h3>Matériel Requis</h3>
+            <div id="card-matos-list"></div>
+            <div style="display:flex; gap:5px; margin-top:10px; border-top:1px solid #333; padding-top:10px;">
+                <input type="text" id="new-matos-name" class="form-input" placeholder="Nouveau (ex: Défibrillateur)" style="margin:0;">
+                <button class="header-btn" onclick="ajouterNouveauMatos()" style="width:40px; background:var(--accent-green);">+</button>
             </div>
         </div>
-        <div class="settings-footer"><button class="footer-btn btn-cancel" onclick="annulerEditionCarte()">ANNULER</button><button class="footer-btn btn-save" onclick="validerCarte()">VALIDER</button></div>
+        <button class="btn-action btn-create" onclick="validerCarte()">VALIDER</button>
+        <button class="btn-action" style="background:#333;" onclick="annulerEditionCarte()">ANNULER</button>
     </div>
 
-    <div id="screen-march" class="flex-center"><ul class="march-list"><li>M - Massive Bleeding</li><li>A - Airways</li><li>R - Respiration</li><li>C - Circulation</li><li>H - Head / Hypothermia</li></ul><div style="margin-top:40px; font-size:0.9em; color:#888; text-transform:uppercase; letter-spacing:2px;">Analyse en cours...</div></div>
-    <div id="screen-result" class="screen" style="padding:0; overflow:hidden;"><div class="result-wrapper"><div id="ui-card" class="tac-card"><div id="death-overlay"><div class="skull-icon">💀</div><div class="death-text">MORT AU COMBAT</div><div style="color:#aaa; margin-top:10px;">Temps écoulé - Hémorragie fatale</div><button class="btn-card-action" style="background:#555; margin-top:30px;" onclick="retourAccueil()">Fermer le dossier</button></div><div id="badge-gravite" class="card-badge"><span>⚠️</span> <span id="txt-gravite">GRAVE</span></div><div class="card-title"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg><span id="txt-zone">Jambe droite touchée</span></div><span class="card-label">DESCRIPTION</span><div id="txt-titre" class="card-desc">Fracture</div><span class="card-label">TRAITEMENT REQUIS</span><div id="txt-soins" class="card-box">Soins...</div><div id="danger-zone-container"><div class="invisible-timer-warning">⚠️ HÉMORRAGIE ACTIVE<br>URGENCE VITALE</div></div><button id="btn-card" class="btn-card-action" onclick="actionPrincipale()">Nouveau Diagnostic</button></div></div></div>
-
-    <div id="screen-settings" class="screen">
-        <h2 style="border-bottom:1px solid #444; padding-bottom:10px; margin-bottom:20px; margin-top:40px;">RÉGLAGES MISSION</h2>
-        
-        <div class="box" style="border: 1px solid var(--accent-blue);">
-            <h3 style="color:var(--accent-blue)">0. PROFIL OPÉRATEUR</h3>
-            <div class="form-group">
-                <label class="form-label">Votre Pseudo</label>
-                <input type="text" id="player-pseudo" class="form-input" placeholder="Ex: Doc, Viper..." onchange="saveIdentityLocal()">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Votre Équipe</label>
-                <select id="player-team" class="form-input" onchange="saveIdentityLocal()">
-                    <option value="blue">🔵 ÉQUIPE BLEUE</option>
-                    <option value="red">🔴 ÉQUIPE ROUGE</option>
-                    <option value="yellow">🟡 ÉQUIPE JAUNE</option>
-                    <option value="green">🟢 ÉQUIPE VERTE</option>
-                    <option value="orga">⚪ ORGANISATEUR</option>
-                </select>
-            </div>
+    <div id="previewModal" class="modal" onclick="document.getElementById('previewModal').style.display='none'">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 id="preview-title" style="color:var(--accent-orange); margin-top:0;">Aperçu</h3>
+            <div id="preview-body"></div>
+            <button onclick="document.getElementById('previewModal').style.display='none'" class="btn-action" style="background:#333;">FERMER</button>
         </div>
-
-        <div class="box"><h3>Mode de Jeu</h3><select id="select-mode" class="full-width" onchange="changerModeMenu(this.value)"></select></div>
-        <div id="box-explosion-opt" class="box" style="border: 1px solid var(--accent-orange); display:none;"><h3 style="color:var(--accent-orange)">💥 Pack Explosion</h3><div class="check-item"><span>Activer Cartes Explosion</span><input type="checkbox" id="chk-explosion" onchange="toggleExplosion()" style="transform:scale(1.5); accent-color: var(--accent-orange);"></div></div>
-        <div class="box" style="border: 1px solid var(--accent-red);"><h3 style="color:var(--accent-red)">☠️ Option Hardcore</h3><div class="check-item"><span>Activer Risque de Mort</span><input type="checkbox" id="chk-death" onchange="toggleDeathRisk()" style="transform:scale(1.5); accent-color: var(--accent-red);"></div></div>
-        
-        <div class="box"><h3>1. Matériel disponible</h3><div id="liste-materiel"></div></div>
-        <div id="settings-info-deck" class="settings-count-display">0 Cartes Actives</div>
-        <div class="box"><h3>2. Composition du paquet</h3><div id="liste-regles"></div></div>
-        
-        <div class="box">
-            <h3>3. Partage (Seed)</h3>
-            <p style="font-size:0.8em; color:#888;">Copiez ce code pour partager votre config et vos paquets custom.</p>
-            <textarea id="seed-io" class="seed-textarea" onclick="this.select()"></textarea>
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <button class="btn-action btn-share" onclick="exporterConfig()">📤 Générer Code</button>
-                <button class="btn-action btn-scan" onclick="importerConfig()">📥 Charger & Rejoindre</button>
-            </div>
-        </div>
-
-        <div style="height: 80px;"></div>
-        <div class="settings-footer"><button class="footer-btn btn-cancel" onclick="annulerReglages()">ANNULER</button><button class="footer-btn btn-save" onclick="sauvegarderEtQuitter()">VALIDER</button></div>
     </div>
 
-    <div id="myModal" class="modal" onclick="fermerModal()"><div class="modal-content" onclick="event.stopPropagation()"><h3 id="modal-title" style="color:var(--accent-orange); margin-top:0;">Aperçu</h3><div id="modal-body"></div><button onclick="fermerModal()" style="width:100%; padding:15px; margin-top:15px; background:#444; color:white; border:none; border-radius:4px; font-weight:bold;">FERMER</button></div></div>
-
-    <div id="identityModal" class="modal" style="z-index: 200;">
+    <div id="multiplayerModal" class="modal" style="z-index: 200;">
         <div class="modal-content" style="border: 2px solid var(--accent-blue);">
-            <h3 style="color:var(--accent-blue); text-align:center; margin-top:0;">BIENVENUE OPÉRATEUR</h3>
-            <p style="text-align:center; color:#ccc; font-size:0.9em;">Veuillez confirmer votre identité pour rejoindre la partie.</p>
-            
-            <div class="form-group" style="margin-top:20px;">
-                <label class="form-label">Votre Pseudo</label>
-                <input type="text" id="modal-player-pseudo" class="form-input" placeholder="Ex: Doc">
-            </div>
+            <h3 style="color:var(--accent-blue); text-align:center;">MENU MULTIJOUEUR</h3>
             <div class="form-group">
-                <label class="form-label">Votre Équipe</label>
-                <select id="modal-player-team" class="form-input">
-                    <option value="blue">🔵 ÉQUIPE BLEUE</option>
-                    <option value="red">🔴 ÉQUIPE ROUGE</option>
-                    <option value="yellow">🟡 ÉQUIPE JAUNE</option>
-                    <option value="green">🟢 ÉQUIPE VERTE</option>
-                    <option value="orga">⚪ ORGANISATEUR</option>
-                </select>
+                <label>Votre Pseudo</label>
+                <input type="text" id="multi-pseudo" class="form-input" placeholder="Ex: Doc">
             </div>
-            
-            <button onclick="validerIdentiteModal()" style="width:100%; padding:15px; margin-top:15px; background:var(--accent-blue); color:white; border:none; border-radius:4px; font-weight:bold; font-size:1.1em;">CONFIRMER & JOUER</button>
+            <button class="btn-action btn-create" onclick="creerPartieEnLigne()">CRÉER UNE PARTIE (HOST)</button>
+            <button class="btn-action btn-join" onclick="document.getElementById('join-input-area').style.display='block'">REJOINDRE UNE PARTIE</button>
+            <div id="join-input-area" style="display:none; margin-top:10px;">
+                <input type="text" id="join-code" class="form-input" placeholder="Code (ex: MEDIC-1234)" style="text-transform:uppercase;">
+                <button class="btn-action btn-join" onclick="rejoindrePartieEnLigne()">CONNEXION</button>
+            </div>
+            <button onclick="fermerMultiModal()" class="btn-action" style="background:#333;">ANNULER</button>
+            <div id="multi-status" style="display:none; text-align:center; padding:10px; color:#aaa;">Connexion...</div>
         </div>
     </div>
 
@@ -367,277 +346,341 @@
             ]
         };
 
-        // Added playerName and playerTeam to state
-        let appState = { mode: "classique", deathRisk: false, explosionEnabled: false, materiel: {}, quantites: {}, customDecks: [], playerName: "", playerTeam: "blue" };
+        /* --- STATE --- */
+        let appState = { 
+            mode: "classique", explosionEnabled: false, deathRisk: false,
+            materiel: {}, quantites: {}, customDecks: [], customMaterials: [],
+            playerName: "Joueur", playerTeamId: "blue", isOrga: false,
+            customTeams: [{id:'blue',name:'Bleu',color:'#1976d2'},{id:'red',name:'Rouge',color:'#d32f2f'}]
+        };
+
+        let peer = null; let myConn = null; let hostConns = {}; let playersData = {};
         let timerLogic = null; let isTimerActive = false;
-        let currentDeckId = null; let currentCardIndex = null;
-        let tempMatosSelection = [];
 
-        window.onload = function() { chargerSauvegarde(); updateUI_Game(); checkIdentity(); };
+        /* --- INIT --- */
+        window.onload = function() {
+            if(localStorage.getItem('medic_v32_smart')) appState = JSON.parse(localStorage.getItem('medic_v32_smart'));
+            initDefaults(); updateUI_Game();
+        };
 
-        /* --- BUILDER LOGIC --- */
-        function ouvrirBuilder() { showScreen('screen-builder'); renderCustomDecksList(); }
-        function creerNouveauPaquet() { currentDeckId = Date.now().toString(); appState.customDecks.push({ id: currentDeckId, name: "Nouveau Paquet", showOnHome: true, cards: [], customMaterials: [] }); editDeck(currentDeckId); }
-        function editDeck(id) { currentDeckId = id; const deck = appState.customDecks.find(d => d.id === id); document.getElementById('deck-name').value = deck.name; document.getElementById('deck-show-home').checked = deck.showOnHome; renderDeckCardsList(deck); showScreen('screen-deck-edit'); }
-        function renderCustomDecksList() { const list = document.getElementById('custom-decks-list'); list.innerHTML = ""; appState.customDecks.forEach(deck => { let div = document.createElement('div'); div.className = "builder-item"; div.innerHTML = `<div><strong>${deck.name}</strong><br><span style="font-size:0.8em; color:#888;">${deck.cards.length} cartes</span></div><button class="btn-mini btn-view" onclick="editDeck('${deck.id}')">✏️</button>`; list.appendChild(div); }); }
-        function renderDeckCardsList(deck) { const list = document.getElementById('deck-cards-list'); list.innerHTML = ""; deck.cards.forEach((card, index) => { let div = document.createElement('div'); div.className = "card-preview-mini"; div.style.borderLeftColor = getColor(card.gravite); div.innerHTML = `<div style="flex-grow:1; margin-right:10px;"><strong style="color:${getColor(card.gravite)}">${card.titre}</strong><div style="font-size:0.8em; color:#ccc;">${card.zone}</div></div><div style="min-width:70px; text-align:right;"><button class="btn-mini" onclick="editCard(${index})">✏️</button><button class="btn-mini" style="background:#d32f2f; margin-left:5px;" onclick="deleteCard(${index})">X</button></div>`; list.appendChild(div); }); }
-        function sauvegarderPaquetCourant() { const deck = appState.customDecks.find(d => d.id === currentDeckId); deck.name = document.getElementById('deck-name').value || "Paquet Sans Nom"; deck.showOnHome = document.getElementById('deck-show-home').checked; sauvegarderEtQuitterBuilder(); }
-        function supprimerPaquetCourant() { if(confirm("Supprimer ce paquet définitivement ?")) { appState.customDecks = appState.customDecks.filter(d => d.id !== currentDeckId); sauvegarderEtQuitterBuilder(); } }
-        function sauvegarderEtQuitterBuilder() { localStorage.setItem('airsoftMedicConfig', JSON.stringify(appState)); updateUI_Game(); ouvrirBuilder(); }
+        function initDefaults() {
+            const allItems = [...DB_MATERIEL_BASE, ...(appState.customMaterials || [])];
+            allItems.forEach(m => { if(appState.materiel[m]===undefined) appState.materiel[m]=true; });
+            ["classique","avance","explosion"].forEach(m => { 
+                if(DB_REGLES[m]) DB_REGLES[m].forEach(r => {
+                    let rid = r.id || (m+"_"+r.titre);
+                    if(!appState.quantites[rid]) appState.quantites[rid]=2;
+                });
+            });
+        }
 
-        /* --- CARD EDITING --- */
-        function ajouterCarteCustom() { currentCardIndex = -1; document.getElementById('card-gravity').value = "Légère"; document.getElementById('card-title').value = ""; document.getElementById('card-zone').value = ""; document.getElementById('card-effect').value = ""; tempMatosSelection = []; renderMatosEditor(); showScreen('screen-card-edit'); }
-        function editCard(index) { currentCardIndex = index; const deck = appState.customDecks.find(d => d.id === currentDeckId); const card = deck.cards[index]; document.getElementById('card-gravity').value = card.gravite; document.getElementById('card-title').value = card.titre; document.getElementById('card-zone').value = card.zone; document.getElementById('card-effect').value = card.effet; tempMatosSelection = [...card.matos]; renderMatosEditor(); showScreen('screen-card-edit'); }
-        function renderMatosEditor() { const list = document.getElementById('card-matos-list'); list.innerHTML = ""; const deck = appState.customDecks.find(d => d.id === currentDeckId); const allMatos = [...new Set([...DB_MATERIEL_BASE, ...(deck.customMaterials || [])])]; allMatos.forEach(m => { const checked = tempMatosSelection.includes(m) ? 'checked' : ''; let div = document.createElement('div'); div.className = "matos-check"; div.innerHTML = `<input type="checkbox" onchange="toggleTempMatos('${m}')" ${checked}> ${m}`; list.appendChild(div); }); }
-        function toggleTempMatos(m) { if(tempMatosSelection.includes(m)) tempMatosSelection = tempMatosSelection.filter(x => x !== m); else tempMatosSelection.push(m); }
-        function addNewMatosToEditor() { const name = document.getElementById('new-matos-name').value.trim(); if(!name) return; const deck = appState.customDecks.find(d => d.id === currentDeckId); if(!deck.customMaterials) deck.customMaterials = []; if(!deck.customMaterials.includes(name) && !DB_MATERIEL_BASE.includes(name)) { deck.customMaterials.push(name); } if(!tempMatosSelection.includes(name)) tempMatosSelection.push(name); document.getElementById('new-matos-name').value = ""; renderMatosEditor(); }
-        function validerCarte() { const card = { titre: document.getElementById('card-title').value || "Blessure", zone: document.getElementById('card-zone').value || "Corps", gravite: document.getElementById('card-gravity').value, effet: document.getElementById('card-effect').value || "Aucun soin", matos: tempMatosSelection, typeZone: "custom", finalZone: document.getElementById('card-zone').value || "Corps" }; const deck = appState.customDecks.find(d => d.id === currentDeckId); if(currentCardIndex === -1) deck.cards.push(card); else deck.cards[currentCardIndex] = card; editDeck(currentDeckId); }
-        function deleteCard(index) { const deck = appState.customDecks.find(d => d.id === currentDeckId); deck.cards.splice(index, 1); editDeck(currentDeckId); }
+        /* --- NAVIGATION --- */
+        function showScreen(id) { document.querySelectorAll('.screen, .flex-center').forEach(e => e.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+        function retourAccueil() { 
+            stopAllAudio(); clearInterval(timerLogic); isTimerActive=false;
+            document.getElementById('death-overlay').style.display='none';
+            document.getElementById('danger-zone-container').style.display='none';
+            showScreen('screen-game'); 
+        }
+        
+        /* --- GAME LOGIC --- */
+        function lancerSequenceTirage(src) {
+            initAudio();
+            const card = preparerTirage(src);
+            if(!card) return;
+            showScreen('screen-march');
+            const march = document.querySelector('.march-list');
+            march.innerHTML = march.innerHTML;
+            setTimeout(() => { afficherResultat(card); }, 4000);
+        }
+
+        function preparerTirage(src) {
+            let rules = [];
+            if(src==='explosion') rules = DB_REGLES.explosion;
+            else if(src==='bille') rules = (appState.mode.startsWith('d_')) ? appState.customDecks.find(d=>d.id===appState.mode).cards : DB_REGLES[appState.mode];
+            else rules = appState.customDecks.find(d=>d.id===src).cards;
+
+            let pool = [];
+            rules.forEach(r => { 
+                let rid=r.id||(appState.mode+"_"+r.titre);
+                if(src==='explosion') rid=r.id;
+                let q=appState.quantites[rid];
+                if(q>0 && r.matos.every(m=>appState.materiel[m])) { for(let i=0;i<q;i++) pool.push(r); } 
+            });
+            
+            if(pool.length===0) { alert("Aucune carte disponible. Vérifiez que vous avez le matériel requis (Réglages)."); return null; }
+            return pool[Math.floor(Math.random()*pool.length)];
+        }
+
+        function afficherResultat(card) {
+            document.getElementById('badge-gravite').innerText=card.gravite;
+            const col = getColor(card.gravite);
+            document.getElementById('badge-gravite').style.backgroundColor = col;
+            document.getElementById('ui-card').style.borderColor = col;
+            document.getElementById('ui-card').style.boxShadow = `0 0 50px ${col}60`;
+            document.getElementById('btn-card').style.backgroundColor = col;
+            document.getElementById('txt-titre').innerText=card.titre;
+            let z = card.zone; if(card.typeZone==='membre') z = MEMBRES[Math.floor(Math.random()*4)];
+            document.getElementById('txt-zone').innerText=z;
+            document.getElementById('txt-soins').innerText=card.effet;
+            showScreen('screen-result');
+
+            if(appState.deathRisk && card.gravite === "Critique" && card.gravite !== "DÉCÈS") {
+                if(Math.random() < 0.40) activerTimerMort();
+            }
+        }
+
+        function activerTimerMort() {
+            isTimerActive = true;
+            document.getElementById('danger-zone-container').style.display = "block";
+            const btn = document.getElementById('btn-card');
+            btn.innerText = "SOINS EFFECTUÉS (SAUVER)";
+            btn.style.backgroundColor = "#d32f2f";
+            beepInterval = setInterval(playBeep, 1000);
+            let duree = 30 + Math.random() * 30;
+            timerLogic = setInterval(() => { duree -= 0.1; if(duree <= 0) { clearInterval(timerLogic); mortDuPatient(); } }, 100);
+        }
+
+        function mortDuPatient() {
+            isTimerActive = false; stopAllAudio(); playFlatline();
+            document.getElementById('death-overlay').style.display = "flex";
+        }
+        
+        function actionPrincipale() {
+            if(isTimerActive) { clearInterval(timerLogic); stopAllAudio(); isTimerActive = false; alert("PATIENT STABILISÉ !"); retourAccueil(); }
+            else { retourAccueil(); }
+        }
+
+        function getColor(g) {
+            if(g==="DÉCÈS") return "#000";
+            if(g==="Critique") return "#d32f2f";
+            if(g==="Grave") return "#f57c00";
+            if(g==="Légère") return "#388e3c";
+            return "#7b1fa2";
+        }
+
+        /* --- SETTINGS (SMART DISPLAY) --- */
+        function ouvrirReglages() { 
+            const s=document.getElementById('select-mode'); s.innerHTML=`<option value="classique">CLASSIQUE</option><option value="avance">AVANCÉ</option>`;
+            appState.customDecks.forEach(d=>s.innerHTML+=`<option value="${d.id}">${d.name} (Custom)</option>`);
+            s.value=appState.mode; 
+            document.getElementById('chk-death').checked = appState.deathRisk;
+            renderSettingsList(); showScreen('screen-settings'); 
+        }
+
+        function renderSettingsList() {
+            // 1. Identify Active Rules
+            let activeRules = [];
+            if(appState.mode.startsWith('d_')) {
+                const d = appState.customDecks.find(d=>d.id===appState.mode);
+                if(d) activeRules = d.cards;
+            } else {
+                activeRules = DB_REGLES[appState.mode] || [];
+            }
+            if(appState.mode==='avance' && appState.explosionEnabled) {
+                activeRules = [...activeRules, ...DB_REGLES.explosion];
+            }
+
+            // 2. Identify Required Materials
+            let requiredMatos = new Set();
+            activeRules.forEach(r => {
+                if(r.matos && Array.isArray(r.matos)) {
+                    r.matos.forEach(m => requiredMatos.add(m));
+                }
+            });
+
+            // 3. Render Material Checkboxes (Filtered)
+            const lm = document.getElementById('liste-materiel'); 
+            lm.innerHTML = "";
+            const allPossibleMaterials = [...new Set([...DB_MATERIEL_BASE, ...(appState.customMaterials || [])])];
+            
+            let matosShownCount = 0;
+            allPossibleMaterials.forEach(m => { 
+                // Only show if required by current rules
+                if(requiredMatos.has(m)) {
+                    if(appState.materiel[m]===undefined) appState.materiel[m]=true;
+                    lm.innerHTML += `<div class="check-item"><span>${m}</span><input type="checkbox" onchange="appState.materiel['${m}']=this.checked" ${appState.materiel[m]?'checked':''}></div>`; 
+                    matosShownCount++;
+                }
+            });
+            if(matosShownCount === 0) {
+                lm.innerHTML = "<div style='color:#666; font-style:italic; padding:10px;'>Aucun matériel requis pour ce mode.</div>";
+            }
+            
+            document.getElementById('box-explosion-opt').style.display=(appState.mode==='avance')?'block':'none';
+            document.getElementById('chk-explosion').checked=appState.explosionEnabled;
+
+            // 4. Render Rules List (Standard)
+            const lr=document.getElementById('liste-regles'); lr.innerHTML="";
+            
+            // Re-fetch base rules for splitting logic
+            let baseRules = (appState.mode.startsWith('d_')) ? appState.customDecks.find(d=>d.id===appState.mode).cards : DB_REGLES[appState.mode];
+            if(!baseRules) baseRules=[];
+            
+            let total = 0;
+            const renderRow = (r) => {
+                let rid = r.id || (appState.mode + "_" + r.titre);
+                if(r.id && r.id.startsWith('e')) rid = r.id; 
+                if (appState.quantites[rid] === undefined) appState.quantites[rid] = 2;
+                let q = appState.quantites[rid];
+                // Check against global material state
+                let matosOk = r.matos.every(m => appState.materiel[m]);
+                if (matosOk) total += q;
+
+                lr.innerHTML += `
+                    <div class="check-item" style="opacity:${matosOk ? 1 : 0.5}">
+                        <div style="flex-grow:1"><strong style="color:${getColor(r.gravite)}">${r.titre}</strong></div>
+                        <div style="display:flex; align-items:center; gap:5px;">
+                            <button class="btn-mini" style="background:#1976d2" onclick="voirDetails('${rid}','${appState.mode}')">👁️</button>
+                            <button class="btn-mini" onclick="changeQty('${rid}',-1)">-</button>
+                            <span style="width:20px;text-align:center">${q}</span>
+                            <button class="btn-mini" onclick="changeQty('${rid}',1)">+</button>
+                        </div>
+                    </div>`;
+            };
+
+            baseRules.forEach(r => renderRow(r));
+            if (appState.mode === 'avance' && appState.explosionEnabled) {
+                lr.innerHTML += `<div class="separator">💥 PACK EXPLOSION</div>`;
+                DB_REGLES.explosion.forEach(r => renderRow(r));
+            }
+            document.getElementById('info-deck').innerText = total + " cartes actives";
+        }
+        
+        function voirDetails(rid, mode) {
+            let rules=(mode.startsWith('d_'))?appState.customDecks.find(d=>d.id===mode).cards:DB_REGLES[mode];
+            if(mode==='avance' && appState.explosionEnabled) rules=[...rules, ...DB_REGLES.explosion];
+            const r = rules.find(x => (x.id === rid) || ((mode+"_"+x.titre) === rid));
+            if(!r) return;
+            const modal = document.getElementById('previewModal');
+            document.getElementById('preview-body').innerHTML = `
+                <div class="preview-card-mini" style="border-left-color:${getColor(r.gravite)}">
+                    <h4 style="color:${getColor(r.gravite)}; margin:0;">${r.gravite}</h4>
+                    <p><strong>${r.titre}</strong></p>
+                    <p style="font-size:0.9em;">${r.effet}</p>
+                    <p style="font-size:0.8em; color:#888;">Matos: ${r.matos.join(', ')}</p>
+                </div>`;
+            modal.style.display='block';
+        }
+
+        function changeQty(id, d) { appState.quantites[id] = Math.max(0, appState.quantites[id]+d); renderSettingsList(); }
+        function changerModeMenu(v) { appState.mode=v; renderSettingsList(); }
+        function toggleDeathRisk() { appState.deathRisk = document.getElementById('chk-death').checked; }
+        function toggleExplosion() { appState.explosionEnabled=document.getElementById('chk-explosion').checked; renderSettingsList(); }
+        function sauvegarderEtQuitter() { saveState(); if(appState.isOrga) broadcastConfig(); retourAccueil(); }
+        function annulerReglages() { retourAccueil(); }
+
+        /* --- BUILDER --- */
+        let currentDeckId = null; let currentCardIndex = -1; let tempMatos = [];
+        function ouvrirBuilder() { showScreen('screen-builder'); renderDecksList(); }
+        function creerNouveauPaquet() { let id="d_"+Date.now(); appState.customDecks.push({id:id, name:"Nouveau", showOnHome:true, cards:[]}); editDeck(id); }
+        function renderDecksList() { const l=document.getElementById('custom-decks-list'); l.innerHTML=""; appState.customDecks.forEach(d=>{ l.innerHTML+=`<div class="builder-item"><span>${d.name}</span><button class="header-btn" onclick="editDeck('${d.id}')">✏️</button></div>`; }); }
+        function editDeck(id) { currentDeckId=id; const d=appState.customDecks.find(x=>x.id===id); document.getElementById('deck-name').value=d.name; document.getElementById('deck-show-home').checked=d.showOnHome; renderCardsList(d); showScreen('screen-deck-edit'); }
+        function renderCardsList(d) { const l=document.getElementById('deck-cards-list'); l.innerHTML=""; d.cards.forEach((c,i)=>{ l.innerHTML+=`<div class="builder-item"><span>${c.titre}</span><button class="btn-mini" onclick="editCard(${i})">✏️</button></div>`; }); }
+        function sauvegarderPaquetCourant() { const d=appState.customDecks.find(x=>x.id===currentDeckId); d.name=document.getElementById('deck-name').value; d.showOnHome=document.getElementById('deck-show-home').checked; saveState(); ouvrirBuilder(); }
+        function supprimerPaquetCourant() { appState.customDecks = appState.customDecks.filter(x=>x.id!==currentDeckId); saveState(); ouvrirBuilder(); }
+        function ajouterCarteCustom() { currentCardIndex=-1; document.getElementById('card-title').value=""; tempMatos=[]; showScreen('screen-card-edit'); renderMatosCheck(); }
+        function editCard(i) { currentCardIndex=i; const c=appState.customDecks.find(x=>x.id===currentDeckId).cards[i]; document.getElementById('card-title').value=c.titre; document.getElementById('card-gravity').value=c.gravite; document.getElementById('card-zone').value=c.zone; document.getElementById('card-effect').value=c.effet; tempMatos=[...c.matos]; renderMatosCheck(); showScreen('screen-card-edit'); }
+        
+        function renderMatosCheck() { 
+            const l = document.getElementById('card-matos-list'); 
+            l.innerHTML = "";
+            const allMatos = [...new Set([...DB_MATERIEL_BASE, ...(appState.customMaterials || [])])];
+            allMatos.forEach(m => { 
+                l.innerHTML += `<div class="check-item"><input type="checkbox" onchange="toggleMatos('${m}')" ${tempMatos.includes(m)?'checked':''}> ${m}</div>`; 
+            }); 
+        }
+        function toggleMatos(m) { if(tempMatos.includes(m)) tempMatos=tempMatos.filter(x=>x!==m); else tempMatos.push(m); }
+        
+        function ajouterNouveauMatos() {
+            const val = document.getElementById('new-matos-name').value.trim();
+            if(!val) return;
+            if(!appState.customMaterials) appState.customMaterials = [];
+            if(!appState.customMaterials.includes(val) && !DB_MATERIEL_BASE.includes(val)) {
+                appState.customMaterials.push(val);
+                if(!tempMatos.includes(val)) tempMatos.push(val);
+                saveState();
+                renderMatosCheck();
+            }
+            document.getElementById('new-matos-name').value = "";
+        }
+
+        function validerCarte() { 
+            const nc={ titre:document.getElementById('card-title').value, gravite:document.getElementById('card-gravity').value, zone:document.getElementById('card-zone').value, effet:document.getElementById('card-effect').value, matos:tempMatos, typeZone:'custom' };
+            const d=appState.customDecks.find(x=>x.id===currentDeckId); if(currentCardIndex===-1) d.cards.push(nc); else d.cards[currentCardIndex]=nc;
+            editDeck(currentDeckId);
+        }
         function annulerEditionCarte() { editDeck(currentDeckId); }
 
-        /* --- LOGIQUE JEU & REGLAGES --- */
-        function ouvrirReglages() {
-            // Identity
-            document.getElementById('player-pseudo').value = appState.playerName || "";
-            document.getElementById('player-team').value = appState.playerTeam || "blue";
-
-            const select = document.getElementById('select-mode');
-            select.innerHTML = `<option value="classique">CLASSIQUE</option><option value="avance">AVANCÉ</option>`;
-            appState.customDecks.forEach(d => {
-                let opt = document.createElement('option'); opt.value = d.id; opt.innerText = d.name.toUpperCase() + " (Custom)";
-                select.appendChild(opt);
+        /* --- MULTIJOUEUR PEERJS --- */
+        function ouvrirMenuMultijoueur() { 
+            if(appState.isOrga && peer) { showScreen('screen-host-dashboard'); updateDashboard(); } 
+            else { document.getElementById('multiplayerModal').style.display='block'; document.getElementById('multi-pseudo').value=appState.playerName; }
+        }
+        function fermerMultiModal() { document.getElementById('multiplayerModal').style.display='none'; }
+        function creerPartieEnLigne() {
+            appState.playerName = document.getElementById('multi-pseudo').value || "Orga"; appState.isOrga = true; appState.playerTeamId="orga";
+            document.getElementById('multi-status').style.display='block';
+            peer = new Peer("MEDIC-" + Math.floor(1000 + Math.random() * 9000));
+            peer.on('open', (id) => {
+                document.getElementById('host-connection-id').innerText = id;
+                fermerMultiModal(); showScreen('screen-host-dashboard'); updateDashboard();
+                saveState();
             });
-            select.value = appState.mode;
-            document.getElementById('chk-death').checked = appState.deathRisk || false; 
-            document.getElementById('chk-explosion').checked = appState.explosionEnabled || false; 
-            renderSettingsMenu(appState.mode);
-            showScreen('screen-settings');
-            document.getElementById('seed-io').value = "";
+            peer.on('connection', (conn) => {
+                conn.on('data', (d) => handleHostData(conn, d));
+                conn.on('close', () => { delete hostConns[conn.peer]; delete playersData[conn.peer]; updateDashboard(); });
+                hostConns[conn.peer] = conn;
+            });
         }
-
-        // --- NEW IDENTITY FUNCTIONS ---
-        function saveIdentityLocal() {
-            appState.playerName = document.getElementById('player-pseudo').value;
-            appState.playerTeam = document.getElementById('player-team').value;
-            // Ne pas sauvegarder tout de suite dans localStorage pour ne pas écraser si on annule
+        function rejoindrePartieEnLigne() {
+            const code = document.getElementById('join-code').value.toUpperCase();
+            appState.playerName = document.getElementById('multi-pseudo').value || "Joueur"; appState.isOrga = false;
+            peer = new Peer();
+            peer.on('open', () => {
+                myConn = peer.connect(code);
+                myConn.on('open', () => { myConn.send({type:'JOIN', name:appState.playerName}); document.getElementById('btn-multi-icon').classList.add('online'); fermerMultiModal(); alert("Connecté !"); });
+                myConn.on('data', (d) => handleClientData(d));
+            });
         }
-
-        function checkIdentity() {
-            // Si pas de pseudo, on ouvre la modale
-            if(!appState.playerName || appState.playerName === "") {
-                document.getElementById('identityModal').style.display = "block";
+        function handleHostData(conn, data) {
+            if(data.type === 'JOIN') {
+                playersData[conn.peer] = { id: conn.peer, name: data.name, teamId: 'blue', isOrga: false };
+                broadcastConfig(); updateDashboard();
             }
         }
-
-        function validerIdentiteModal() {
-            const pseudo = document.getElementById('modal-player-pseudo').value;
-            const team = document.getElementById('modal-player-team').value;
-            if(pseudo.trim() === "") { alert("Veuillez entrer un pseudo."); return; }
-            
-            appState.playerName = pseudo;
-            appState.playerTeam = team;
-            
-            document.getElementById('identityModal').style.display = "none";
-            sauvegarderEtQuitter();
+        function handleClientData(data) {
+            if(data.type === 'SYNC_CONFIG') { appState.mode = data.mode; appState.customDecks = data.decks; updateUI_Game(); }
+            if(data.type === 'CMD_TEAM') { appState.playerTeamId = data.teamId; updateUI_Game(); alert("Changement d'équipe !"); }
         }
-
-
-        function calculateTotalActive(mode) {
-            let total = 0;
-            let rules = [];
-            if (DB_REGLES[mode]) rules = DB_REGLES[mode];
-            else { const deck = appState.customDecks.find(d => d.id === mode); if(deck) rules = deck.cards; }
-            if(!rules) return 0;
-            rules.forEach((r, idx) => {
-                 let rId = r.id || (mode + "_c_" + idx);
-                 if (appState.quantites[rId] === undefined) appState.quantites[rId] = 2;
-                 if(r.matos.every(m => appState.materiel[m])) { total += appState.quantites[rId] * (r.typeZone === 'membre' ? 4 : 1); }
+        function broadcastConfig() { Object.values(hostConns).forEach(c => c.send({type:'SYNC_CONFIG', mode:appState.mode, decks:appState.customDecks})); }
+        function updateDashboard() {
+            const l = document.getElementById('host-player-list'); l.innerHTML="";
+            document.getElementById('connected-count').innerText = Object.keys(playersData).length;
+            Object.values(playersData).forEach(p => {
+                const team = appState.customTeams.find(t=>t.id===p.teamId);
+                let btns = ""; appState.customTeams.forEach(t => btns += `<button class="btn-dash" style="border-color:${t.color}" onclick="cmdTeam('${p.id}','${t.id}')">${t.name}</button>`);
+                l.innerHTML += `<div class="player-row" style="border-left:4px solid ${team.color}">
+                    <div class="player-row-header"><strong>${p.name}</strong> <span style="color:${team.color}">${team.name}</span></div>
+                    <div class="player-actions">${btns} <button class="btn-dash" style="background:#d32f2f" onclick="cmdKick('${p.id}')">Kick</button></div>
+                </div>`;
             });
-            return total;
         }
+        function cmdTeam(pid, tid) { playersData[pid].teamId = tid; hostConns[pid].send({type:'CMD_TEAM', teamId:tid}); updateDashboard(); }
+        function cmdKick(pid) { hostConns[pid].close(); delete hostConns[pid]; delete playersData[pid]; updateDashboard(); }
 
-        function renderSettingsMenu(mode) {
-            const boxExplo = document.getElementById('box-explosion-opt'); boxExplo.style.display = (mode === 'avance') ? 'block' : 'none';
-            let usefulMaterials = new Set();
-            let rulesForAnalysis = [];
-            if (DB_REGLES[mode]) rulesForAnalysis = DB_REGLES[mode];
-            else { const d = appState.customDecks.find(d => d.id === mode); if(d) rulesForAnalysis = d.cards; }
-            if(mode === 'avance' && appState.explosionEnabled) { rulesForAnalysis = rulesForAnalysis.concat(DB_REGLES.explosion); }
-            rulesForAnalysis.forEach(r => { if(r.matos) r.matos.forEach(m => usefulMaterials.add(m)); });
-
-            const mc = document.getElementById('liste-materiel'); mc.innerHTML = "";
-            let matosList = [...DB_MATERIEL_BASE];
-            let deck = appState.customDecks.find(d => d.id === mode);
-            if(deck && deck.customMaterials) matosList = [...matosList, ...deck.customMaterials];
-            else if (mode === 'avance') { if(!matosList.includes("Morphine")) matosList.push("Morphine", "Épinéphrine", "Pansement 3 côtés"); }
-
-            matosList.forEach(item => {
-                if (appState.materiel[item] === undefined) appState.materiel[item] = true;
-                let isUseful = usefulMaterials.has(item);
-                let div = document.createElement('div'); div.className = "check-item" + (isUseful ? "" : " disabled");
-                div.innerHTML = `<span style="${isUseful ? '' : 'text-decoration:line-through;'}">${item}</span><input type="checkbox" onchange="toggleMatos('${item}')" ${appState.materiel[item]?'checked':''} style="transform:scale(1.2)" ${isUseful ? '' : 'disabled'}>`; mc.appendChild(div);
-            });
-
-            let totalActive = calculateTotalActive(mode);
-            if(mode === 'avance' && appState.explosionEnabled) {
-                 DB_REGLES.explosion.forEach((r) => {
-                     let rId = r.id; 
-                     if (appState.quantites[rId] === undefined) appState.quantites[rId] = 2;
-                     if(r.matos.every(m => appState.materiel[m])) totalActive += appState.quantites[rId] * (r.typeZone === 'membre' ? 4 : 1);
-                 });
-            }
-            
-            const rc = document.getElementById('liste-regles'); rc.innerHTML = "";
-            let reglesAffichees = [];
-            if(DB_REGLES[mode]) reglesAffichees = [...DB_REGLES[mode]];
-            else if (deck) reglesAffichees = [...deck.cards];
-            if (mode === 'avance' && appState.explosionEnabled) { reglesAffichees.push({ sep: true, label: "--- CARTES EXPLOSION ---" }); reglesAffichees = reglesAffichees.concat(DB_REGLES.explosion); }
-
-            reglesAffichees.forEach((r, idx) => {
-                if(r.sep) { let div = document.createElement('div'); div.style.color = "var(--accent-orange)"; div.style.fontWeight="bold"; div.style.textAlign="center"; div.style.marginTop="15px"; div.style.marginBottom="5px"; div.innerText = r.label; rc.appendChild(div); return; }
-                let rId = r.id || (mode + "_c_" + idx); if(!r.id) r.id = rId;
-                if (appState.quantites[rId] === undefined) appState.quantites[rId] = 2;
-                let matosManquant = r.matos.find(m => appState.materiel[m] === false);
-                let estActif = matosManquant === undefined;
-                let div = document.createElement('div'); div.className = "check-item"; div.style.opacity = estActif ? "1" : "0.5";
-                let prefix = (r.id && r.id.startsWith('e')) ? "💥 " : "";
-                div.innerHTML = `<div style="flex-grow:1"><strong style="color:${getColor(r.gravite)}">${prefix}${r.titre}</strong><div style="font-size:0.7em; color:#888;">${r.zone||"Custom"}</div></div><div class="qty-control"><button class="btn-mini btn-view" onclick="voirDetails('${r.id}', '${mode}')">👁️</button><button class="btn-mini" onclick="modifQty('${r.id}', -1, '${mode}')">➖</button><span style="width:20px; text-align:center;">${appState.quantites[r.id]}</span><button class="btn-mini" onclick="modifQty('${r.id}', 1, '${mode}')">➕</button></div>`;
-                rc.appendChild(div);
-            });
-            document.getElementById('settings-info-deck').innerText = totalActive + " Cartes Actives dans le paquet";
+        /* --- UI & GAME --- */
+        function updateUI_Game() {
+            const team = appState.customTeams.find(t=>t.id===appState.playerTeamId);
+            document.getElementById('main-header').style.borderBottomColor = team.color;
+            document.getElementById('top-indicator').innerText = `${appState.playerName} | ${team.name}`;
+            const c = document.getElementById('dynamic-buttons-container'); c.innerHTML="";
+            c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring"></div><button class="btn-core-shared main-btn" onclick="lancerSequenceTirage('bille')"><img src="picto-blesse.png" class="icon-wounded"></button><div class="btn-label">BALISTIQUE</div></div>`;
+            if(appState.mode==='avance' && appState.explosionEnabled) c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring-blast"></div><button class="btn-core-shared blast-btn" onclick="lancerSequenceTirage('explosion')"><img src="btn-explosion.png" class="icon-blast"></button><div class="btn-label">EXPLOSION</div></div>`;
+            appState.customDecks.forEach(d => { if(d.showOnHome) c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring-custom"></div><button class="btn-core-shared custom-btn-style" onclick="lancerSequenceTirage('${d.id}')"><img src="btn-custom.png" class="icon-custom" onerror="this.src='picto-blesse.png'"></button><div class="btn-label">${d.name}</div></div>`; });
         }
-        
-        /* --- ENGINE CORE --- */
-        function preparerTirage(sourceId) {
-            let deck = []; let sourceRegles = [];
-            if (sourceId === 'explosion') sourceRegles = DB_REGLES.explosion;
-            else if (sourceId === 'bille') {
-                if(DB_REGLES[appState.mode]) sourceRegles = DB_REGLES[appState.mode];
-                else { const cDeck = appState.customDecks.find(d => d.id === appState.mode); if(cDeck) sourceRegles = cDeck.cards; }
-            } else { const cDeck = appState.customDecks.find(d => d.id === sourceId); if(cDeck) sourceRegles = cDeck.cards; }
+        function saveState() { localStorage.setItem('medic_v32_smart', JSON.stringify(appState)); updateUI_Game(); }
 
-            sourceRegles.forEach((r, idx) => {
-                if (!r.matos.every(m => appState.materiel[m])) return;
-                let rId = r.id || (appState.mode + "_c_" + idx); 
-                let qty = appState.quantites[rId] !== undefined ? appState.quantites[rId] : 0;
-                if (qty <= 0) return;
-                if (r.typeZone === "membre") MEMBRES.forEach(m => deck.push({ ...r, finalZone: m }));
-                else deck.push({ ...r, finalZone: r.zone || r.finalZone });
-            });
-
-            if (deck.length === 0) { alert("Paquet vide ou matériel manquant !"); return null; }
-            return deck[Math.floor(Math.random() * deck.length)];
-        }
-
-        /* --- STANDARD FUNCTIONS --- */
-        function lancerSequenceTirage(sourceId) { initAudio(); const carte = preparerTirage(sourceId); if(!carte) return; showScreen('screen-march'); const screenMarch = document.getElementById('screen-march'); screenMarch.innerHTML = screenMarch.innerHTML; setTimeout(() => { afficherResultat(carte); }, 5000); }
-        function afficherResultat(c) { showScreen('screen-result'); clearInterval(timerLogic); stopAllAudio(); isTimerActive = false; document.getElementById('danger-zone-container').style.display = "none"; document.getElementById('death-overlay').style.display = "none"; const btn = document.getElementById('btn-card'); btn.innerText = "Nouveau Diagnostic"; btn.style.background = ""; const col = getColor(c.gravite); const card = document.getElementById('ui-card'); const badge = document.getElementById('badge-gravite'); if(c.gravite === "DÉCÈS") { card.style.borderColor = "#ffffff"; card.style.boxShadow = `0 0 10px #ffffff`; badge.style.backgroundColor = "#000"; badge.style.border = "1px solid white"; btn.style.backgroundColor = "#333"; } else { card.style.borderColor = col; card.style.boxShadow = `0 0 40px ${col}60`; badge.style.backgroundColor = col; badge.style.border = "none"; btn.style.backgroundColor = col; } document.getElementById('txt-gravite').innerText = c.gravite; document.getElementById('txt-zone').innerText = c.finalZone || c.zone; document.getElementById('txt-titre').innerText = c.titre; document.getElementById('txt-soins').innerText = c.effet; if(appState.deathRisk && c.gravite === "Critique" && c.gravite !== "DÉCÈS") { if(Math.random() < 0.40) { activerTimerMort(); } } }
-        
-        function updateUI_Game() { 
-            let modeLabel = "";
-            if(appState.mode === 'classique') modeLabel = "CLASSIQUE";
-            else if(appState.mode === 'avance') modeLabel = "AVANCÉ";
-            else { const d = appState.customDecks.find(d=>d.id===appState.mode); modeLabel = d ? d.name + " (Custom)" : "Inconnu"; }
-            
-            // Header Identity Update
-            const header = document.getElementById('main-header');
-            const team = appState.playerTeam || "blue";
-            header.className = "team-" + team; // for border color
-            
-            let teamName = "ÉQUIPE BLEUE";
-            if(team === 'red') teamName = "ÉQUIPE ROUGE";
-            if(team === 'yellow') teamName = "ÉQUIPE JAUNE";
-            if(team === 'green') teamName = "ÉQUIPE VERTE";
-            if(team === 'orga') teamName = "ORGANISATEUR";
-
-            const pseudo = appState.playerName || "Médecin";
-            document.getElementById('top-indicator').innerText = `${pseudo} | ${teamName} | ${modeLabel}`;
-            
-            const blastBtn = document.getElementById('explosion-trigger-container'); 
-            if(appState.mode === 'avance' && appState.explosionEnabled) blastBtn.style.display = "flex"; else blastBtn.style.display = "none"; 
-            
-            const container = document.getElementById('dynamic-buttons-container'); 
-            const oldBtns = document.querySelectorAll('.js-custom-btn'); oldBtns.forEach(b => b.remove()); 
-            if(appState.customDecks) { appState.customDecks.forEach(deck => { if(deck.showOnHome) { const div = document.createElement('div'); div.className = "btn-circle-container btn-container-shared js-custom-btn"; div.innerHTML = `<div class="pulse-ring-custom"></div><button class="main-btn btn-core-shared custom-btn-style" onclick="lancerSequenceTirage('${deck.id}')"><img src="btn-custom.png" class="icon-custom" onerror="this.src='picto-blesse.png'" alt="Custom"></button><div class="btn-label">${deck.name}</div>`; container.appendChild(div); } }); } 
-            
-            let total = calculateTotalActive(appState.mode);
-            if(appState.mode === 'avance' && appState.explosionEnabled) {
-                DB_REGLES.explosion.forEach((r) => {
-                     let rId = r.id; 
-                     if (appState.quantites[rId] === undefined) appState.quantites[rId] = 2;
-                     if(r.matos.every(m => appState.materiel[m])) total += appState.quantites[rId] * (r.typeZone === 'membre' ? 4 : 1);
-                });
-            }
-            document.getElementById('info-deck').innerText = total + " cartes actives"; 
-        }
-
-        function voirDetails(id, mode) { let regle = null; if(DB_REGLES[mode]) regle = DB_REGLES[mode].find(r => r.id === id); else { const deck = appState.customDecks.find(d => d.id === mode); if(deck) regle = deck.cards.find(r => r.id === id); } if(!regle && DB_REGLES.explosion) regle = DB_REGLES.explosion.find(r => r.id === id); if(!regle) return; const modalBody = document.getElementById('modal-body'); document.getElementById('modal-title').innerText = regle.titre; modalBody.innerHTML = ""; const items = (regle.typeZone === "membre") ? MEMBRES : [regle.zone]; items.forEach(z => { modalBody.innerHTML += `<div class="preview-card" style="border-left-color:${getColor(regle.gravite)}"><h4 style="color:${getColor(regle.gravite) === "#111" ? "#fff" : getColor(regle.gravite)}">${regle.gravite}</h4><p><strong>Zone:</strong> ${z}</p><p><strong>Soins:</strong> ${regle.effet}</p><p style="font-size:0.8em; color:#aaa; margin-top:5px;">Matos: ${regle.matos.join(', ')}</p></div>`; }); document.getElementById('myModal').style.display = "block"; }
-        
-        function showScreen(id) { document.querySelectorAll('.screen, .flex-center').forEach(el => el.classList.remove('active')); document.getElementById(id).classList.add('active'); }
-        function activerTimerMort() { isTimerActive = true; document.getElementById('danger-zone-container').style.display = "block"; const btn = document.getElementById('btn-card'); btn.innerText = "SOINS EFFECTUÉS (SAUVER)"; btn.style.backgroundColor = "#d32f2f"; beepInterval = setInterval(playBeep, 1000); let duree = 30 + Math.random() * 30; let tempsRestant = duree; timerLogic = setInterval(() => { tempsRestant -= 0.1; if(tempsRestant <= 0) { clearInterval(timerLogic); mortDuPatient(); } }, 100); }
-        function mortDuPatient() { isTimerActive = false; stopAllAudio(); playFlatline(); document.getElementById('death-overlay').style.display = "flex"; }
-        function actionPrincipale() { if(isTimerActive) { clearInterval(timerLogic); stopAllAudio(); isTimerActive = false; alert("PATIENT STABILISÉ !"); retourAccueil(); } else { stopAllAudio(); retourAccueil(); } }
-        function retourAccueil() { clearInterval(timerLogic); stopAllAudio(); showScreen('screen-game'); }
-        function toggleDeathRisk() { appState.deathRisk = document.getElementById('chk-death').checked; }
-        function toggleExplosion() { appState.explosionEnabled = document.getElementById('chk-explosion').checked; updateUI_Game(); }
-        function annulerReglages() { showScreen('screen-game'); }
-        
-        function sauvegarderEtQuitter() { 
-            // Save Settings
-            appState.playerName = document.getElementById('player-pseudo').value;
-            appState.playerTeam = document.getElementById('player-team').value;
-            
-            localStorage.setItem('airsoftMedicConfig', JSON.stringify(appState)); 
-            updateUI_Game(); 
-            annulerReglages(); 
-        }
-        
-        function chargerSauvegarde() { const save = localStorage.getItem('airsoftMedicConfig'); if (save) appState = JSON.parse(save); else { appState = { mode: "classique", deathRisk: false, explosionEnabled: false, materiel: {}, quantites: {}, customDecks: [], playerName:"", playerTeam:"blue" }; initDefaults("classique"); initDefaults("avance"); initDefaults("explosion"); } if(!appState.customDecks) appState.customDecks = []; }
-        function initDefaults(m) { if(m === "explosion" && !DB_REGLES.explosion) return; if(m !== "explosion" && DB_MATERIEL_BASE) DB_MATERIEL_BASE.forEach(i => appState.materiel[i] = true); DB_REGLES[m].forEach(r => appState.quantites[r.id] = (r.gravite==="Légère"?5:(r.gravite==="DÉCÈS"?1:2))); }
-        function changerModeMenu(v) { appState.mode = v; renderSettingsMenu(v); }
-        function toggleMatos(i) { appState.materiel[i] = !appState.materiel[i]; renderSettingsMenu(appState.mode); }
-        function modifQty(id, d, mode) { appState.quantites[id] += d; if(appState.quantites[id]<0) appState.quantites[id]=0; renderSettingsMenu(mode); }
-        function getColor(g) { if(g==="Critique") return "#d32f2f"; if(g==="Grave") return "#f57c00"; if(g==="Légère") return "#388e3c"; if(g==="DÉCÈS") return "#111"; return "#7b1fa2"; }
-        function fermerModal() { document.getElementById('myModal').style.display = "none"; }
-        function updateCardColorPreview() { /* Helper optionnel */ }
-
-        /* --- EXPORT / IMPORT SEED SYSTEM --- */
-        function exporterConfig() {
-            const json = JSON.stringify(appState);
-            const seed = btoa(unescape(encodeURIComponent(json)));
-            document.getElementById('seed-io').value = seed;
-            alert("Code généré ! Vous pouvez le copier.");
-        }
-
-        function importerConfig() {
-            const seed = document.getElementById('seed-io').value.trim();
-            if(!seed) { alert("Veuillez coller un code."); return; }
-            try {
-                const oldName = appState.playerName; // Backup identity
-                const oldTeam = appState.playerTeam;
-
-                const json = decodeURIComponent(escape(atob(seed)));
-                const conf = JSON.parse(json);
-                if(!conf.mode || !conf.materiel) throw new Error("Format invalide");
-                
-                appState = conf;
-                
-                // On restaure l'identité (mais on ouvre la modale pour confirmer)
-                appState.playerName = ""; // Force modal trigger
-                
-                sauvegarderEtQuitter();
-                alert("Configuration chargée ! Veuillez confirmer votre identité.");
-                checkIdentity(); // Opens modal
-                
-                // Pre-fill modal with old data if existed, or data from seed if organizer sent roles?
-                // Let's stick to empty to force user input or use the seed's default if relevant.
-                if(oldName) document.getElementById('modal-player-pseudo').value = oldName;
-
-            } catch(e) {
-                alert("Code invalide ou corrompu.");
-                console.error(e);
-            }
-        }
     </script>
 </body>
 </html>
