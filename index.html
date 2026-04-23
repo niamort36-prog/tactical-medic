@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tactical Medic V32 - Smart Inventory</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     
     <style>
         /* --- CHARTE GRAPHIQUE --- */
@@ -114,11 +115,31 @@
         .player-row { background: #222; border: 1px solid #444; padding: 10px; margin-bottom: 8px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px; }
         .player-actions { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 5px;}
         .btn-dash { padding: 5px 10px; font-size: 0.8em; border-radius: 4px; border: none; cursor: pointer; white-space: nowrap; color: white;}
-        #host-connection-id { font-family: monospace; font-size: 1.5em; color: var(--accent-blue); background: black; padding: 10px; border-radius: 4px; border: 1px dashed #444; text-align: center; margin-bottom: 10px;}
+        #host-connection-id { font-family: monospace; font-size: 1.3em; color: var(--accent-blue); background: black; padding: 10px; border-radius: 4px; border: 1px dashed #444; text-align: center; margin-bottom: 10px; word-break: break-all;}
+        .host-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+        .host-tab { flex: 1; min-width: 72px; padding: 10px 6px; border: 1px solid #444; background: #1a1a1a; color: #aaa; border-radius: 6px; font-size: 0.7em; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .host-tab.active { border-color: var(--accent-blue); color: #fff; background: rgba(25, 118, 210, 0.25); }
+        .host-panel { display: none; }
+        .host-panel.active { display: block; }
+        .join-link-row { display: flex; gap: 8px; align-items: stretch; margin: 10px 0; }
+        .join-link-row input { flex: 1; font-size: 0.75em; }
+        #host-qr-wrap { display: flex; justify-content: center; padding: 12px; background: #fff; border-radius: 8px; margin: 10px auto; max-width: 220px; }
+        #host-qr-wrap canvas { display: block; }
+        .log-box { background: #0a0a0a; border: 1px solid #333; border-radius: 6px; padding: 10px; font-family: ui-monospace, monospace; font-size: 0.72em; color: #9ccc65; max-height: 220px; overflow-y: auto; text-align: left; white-space: pre-wrap; }
+        .host-inline-form { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+        .host-inline-form .form-input { margin: 0; flex: 1; min-width: 120px; }
+        .badge-role { font-size: 0.65em; padding: 2px 8px; border-radius: 10px; background: #444; margin-left: 6px; }
+        .badge-role.admin { background: var(--accent-orange); color: #000; }
+        .settings-row-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+        .btn-catalog { padding: 8px 12px; font-size: 0.75em; border-radius: 6px; border: 1px solid var(--accent-blue); background: rgba(25,118,210,0.2); color: #90caf9; cursor: pointer; font-weight: bold; }
+        .catalog-list { max-height: 58vh; overflow-y: auto; text-align: left; margin-top: 10px; }
+        .catalog-card { margin-bottom: 10px; }
+        .catalog-card.hl { outline: 2px solid var(--accent-blue); outline-offset: 2px; }
 
         /* --- MODALS --- */
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); backdrop-filter: blur(5px); }
         .modal-content { background-color: #222; color: #eee; margin: 15% auto; padding: 20px; border-radius: 8px; width: 85%; max-width: 400px; border: 1px solid #444; max-height: 80vh; overflow-y: auto;}
+        .modal-content.modal-wide { max-width: 520px; margin: 6% auto; }
 
     </style>
 </head>
@@ -135,6 +156,7 @@
             <span id="top-indicator" class="mode-subtitle">Solo</span>
         </div>
         <div class="header-actions">
+            <button type="button" id="btn-quitter-partie" class="header-btn" style="display:none;font-size:0.85em;width:auto;padding:0 10px;" onclick="confirmerQuitterPartie()">Sortir</button>
             <button class="header-btn" onclick="ouvrirBuilder()">✏️</button>
             <button class="header-btn" onclick="ouvrirReglages()">⚙️</button>
         </div>
@@ -182,20 +204,64 @@
     </div>
 
     <div id="screen-host-dashboard" class="screen">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:30px; margin-bottom:20px;">
-            <h2 style="margin:0;">QG ORGANISATEUR</h2>
-            <div style="font-size:0.8em; color:var(--accent-green);">● EN LIGNE</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; margin-bottom:12px;">
+            <h2 style="margin:0; font-size:1.1em;">QG — <span id="host-game-title">Partie</span></h2>
+            <div style="font-size:0.75em; color:var(--accent-green);">● EN LIGNE</div>
         </div>
-        <div class="box" style="text-align:center; border-color:var(--accent-blue);">
-            <p style="margin-top:0; color:#aaa; font-size:0.9em;">Code de Partie</p>
+        <div class="host-tabs">
+            <button type="button" class="host-tab active" data-host-tab="join" onclick="hostSetTab('join')">Invitation</button>
+            <button type="button" class="host-tab" data-host-tab="players" onclick="hostSetTab('players')">Joueurs</button>
+            <button type="button" class="host-tab" data-host-tab="teams" onclick="hostSetTab('teams')">Équipes</button>
+            <button type="button" class="host-tab" data-host-tab="packs" onclick="hostSetTab('packs')">Paquets</button>
+            <button type="button" class="host-tab" data-host-tab="logs" onclick="hostSetTab('logs')">Logs</button>
+        </div>
+        <div id="host-panel-join" class="host-panel active box" style="border-color:var(--accent-blue);">
+            <p style="margin:0; color:#aaa; font-size:0.85em;">Code / ID PeerJS</p>
             <div id="host-connection-id">...</div>
-            <p style="font-size:0.8em; color:#666;">Donnez ce code aux joueurs</p>
+            <p style="font-size:0.8em; color:#666;">Lien de connexion (partage ou QR)</p>
+            <div class="join-link-row">
+                <input type="text" id="host-join-link" class="form-input" readonly style="margin:0;">
+                <button type="button" class="btn-mini" style="width:auto;padding:0 14px;" onclick="copierLienInvitation()">Copier</button>
+            </div>
+            <div id="host-qr-wrap"><canvas id="host-qr-canvas" width="180" height="180" style="display:none"></canvas></div>
+            <p style="font-size:0.75em; color:#888;">Les joueurs ouvrent le lien ou scannent le QR, puis valident avec leur pseudo.</p>
         </div>
-        <div class="box">
+        <div id="host-panel-players" class="host-panel box">
             <h3>JOUEURS (<span id="connected-count">0</span>)</h3>
             <div id="host-player-list"></div>
         </div>
-        <button class="btn-action" style="background:#333;" onclick="retourAccueil()">RETOUR JEU</button>
+        <div id="host-panel-teams" class="host-panel box">
+            <h3>ÉQUIPES DE LA PARTIE</h3>
+            <div id="host-teams-editor"></div>
+            <div class="host-inline-form">
+                <input type="text" id="host-new-team-name" class="form-input" placeholder="Nom équipe">
+                <input type="text" id="host-new-team-color" class="form-input" placeholder="#hex couleur" style="max-width:120px;">
+                <button type="button" class="btn-action btn-create" style="margin:0;padding:12px;width:auto;" onclick="hostAjouterEquipe()">+ ÉQUIPE</button>
+            </div>
+        </div>
+        <div id="host-panel-packs" class="host-panel box">
+            <h3>PAQUETS SUPPLÉMENTAIRES</h3>
+            <p style="font-size:0.8em; color:#888; margin-top:0;">Cartes ajoutées au tirage pour les destinataires choisis (en plus du mode de jeu).</p>
+            <div class="host-inline-form" style="flex-direction:column; align-items:stretch;">
+                <select id="host-pack-source" class="form-input" style="margin:0;"></select>
+                <select id="host-pack-scope" class="form-input" style="margin:0;" onchange="hostPackScopeUI()">
+                    <option value="all">Tout le monde</option>
+                    <option value="team">Une équipe seulement</option>
+                    <option value="player">Un joueur seulement</option>
+                </select>
+                <select id="host-pack-team" class="form-input" style="margin:0; display:none;"></select>
+                <select id="host-pack-player" class="form-input" style="margin:0; display:none;"></select>
+                <button type="button" class="btn-action btn-create" style="margin:0;" onclick="hostAjouterPaquetSession()">Ajouter ce paquet</button>
+            </div>
+            <div id="host-session-packs-list" style="margin-top:12px;"></div>
+        </div>
+        <div id="host-panel-logs" class="host-panel box">
+            <h3>JOURNAL TEMPS RÉEL</h3>
+            <div id="host-log-box" class="log-box"></div>
+            <button type="button" class="btn-action" style="background:#333;margin-top:10px;" onclick="hostLogs=[]; renderHostLogs();">Effacer l’affichage</button>
+        </div>
+        <button type="button" class="btn-action" style="background:#b71c1c; margin-top:12px;" onclick="cloturerPartie()">CLÔTURER LA PARTIE (éjecter les joueurs)</button>
+        <button type="button" class="btn-action" style="background:#333; margin-top:8px;" onclick="retourAccueilDepuisHost()">RETOUR ACCUEIL (garder session)</button>
     </div>
 
     <div id="screen-settings" class="screen">
@@ -213,7 +279,14 @@
             <div class="check-item"><span>Activer Cartes Explosion</span><input type="checkbox" id="chk-explosion" onchange="toggleExplosion()" style="transform:scale(1.5);"></div>
         </div>
         <div class="box"><h3>Matériel Requis</h3><div id="liste-materiel"></div></div>
-        <div class="box"><h3>Cartes Actives</h3><div id="liste-regles"></div></div>
+        <div class="box">
+            <div class="settings-row-head">
+                <h3 style="border:none;padding:0;margin:0;">Cartes Actives</h3>
+                <button type="button" class="btn-catalog" onclick="voirCatalogueComplet()">Catalogue complet 👁️</button>
+            </div>
+            <p style="font-size:0.75em; color:#888; margin:0 0 8px 0;">Chaque 👁️ ouvre le catalogue du mode (même liste).</p>
+            <div id="liste-regles"></div>
+        </div>
         <div style="height:50px"></div>
         <div class="settings-footer"><button class="footer-btn" onclick="annulerReglages()">ANNULER</button><button class="footer-btn save" onclick="sauvegarderEtQuitter()">VALIDER</button></div>
     </div>
@@ -264,17 +337,21 @@
         <button class="btn-action" style="background:#333;" onclick="annulerEditionCarte()">ANNULER</button>
     </div>
 
-    <div id="previewModal" class="modal" onclick="document.getElementById('previewModal').style.display='none'">
+    <div id="previewModal" class="modal" onclick="fermerPreviewModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
             <h3 id="preview-title" style="color:var(--accent-orange); margin-top:0;">Aperçu</h3>
             <div id="preview-body"></div>
-            <button onclick="document.getElementById('previewModal').style.display='none'" class="btn-action" style="background:#333;">FERMER</button>
+            <button type="button" onclick="fermerPreviewModal()" class="btn-action" style="background:#333;">FERMER</button>
         </div>
     </div>
 
     <div id="multiplayerModal" class="modal" style="z-index: 200;">
         <div class="modal-content" style="border: 2px solid var(--accent-blue);">
             <h3 style="color:var(--accent-blue); text-align:center;">MENU MULTIJOUEUR</h3>
+            <div class="form-group">
+                <label>Nom de la partie (visible par les joueurs)</label>
+                <input type="text" id="multi-game-name" class="form-input" placeholder="Ex: Exercice Alpha">
+            </div>
             <div class="form-group">
                 <label>Votre Pseudo</label>
                 <input type="text" id="multi-pseudo" class="form-input" placeholder="Ex: Doc">
@@ -287,6 +364,15 @@
             </div>
             <button onclick="fermerMultiModal()" class="btn-action" style="background:#333;">ANNULER</button>
             <div id="multi-status" style="display:none; text-align:center; padding:10px; color:#aaa;">Connexion...</div>
+        </div>
+    </div>
+
+    <div id="confirmLeaveModal" class="modal" style="z-index: 250;" onclick="if(event.target===this)this.style.display='none'">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 style="color:var(--accent-orange); margin-top:0;">Quitter la partie ?</h3>
+            <p style="font-size:0.9em; color:#ccc;">Vous quitterez la session multijoueur et reviendrez au menu principal.</p>
+            <button type="button" class="btn-action" style="background:#d32f2f;" onclick="executerQuitterPartie()">Oui, quitter</button>
+            <button type="button" class="btn-action" style="background:#333;" onclick="document.getElementById('confirmLeaveModal').style.display='none'">Annuler</button>
         </div>
     </div>
 
@@ -350,14 +436,113 @@
         let appState = { 
             mode: "classique", explosionEnabled: false, deathRisk: false,
             materiel: {}, quantites: {}, customDecks: [], customMaterials: [],
-            playerName: "Joueur", playerTeamId: "blue", isOrga: false,
+            playerName: "Joueur", playerTeamId: "blue", isOrga: false, isCoHost: false,
+            lastGameName: "",
             customTeams: [{id:'blue',name:'Bleu',color:'#1976d2'},{id:'red',name:'Rouge',color:'#d32f2f'}]
         };
 
         let peer = null; let myConn = null; let hostConns = {}; let playersData = {};
         let timerLogic = null; let isTimerActive = false;
+        let hostLogs = [];
+        let liveSession = { gameName: '', sessionPacks: [] };
+        let clientSessionMeta = { gameName: '', sessionPacks: [] };
+        let lastDrawSrc = 'bille';
 
         function cardMatos(r) { return Array.isArray(r.matos) ? r.matos : []; }
+        function escapeHtml(s) {
+            if (s === undefined || s === null) return '';
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+        function cloneCards(cards) { try { return JSON.parse(JSON.stringify(cards || [])); } catch(e) { return []; } }
+        function getRulesArrayForDrawSource(src) {
+            if (src === 'explosion') return (DB_REGLES.explosion || []).slice();
+            if (src === 'bille') {
+                if (appState.mode.startsWith('d_')) {
+                    const deck = appState.customDecks.find(d => d.id === appState.mode);
+                    return (deck && deck.cards) ? deck.cards.slice() : [];
+                }
+                return (DB_REGLES[appState.mode] || []).slice();
+            }
+            const deck = appState.customDecks.find(d => d.id === src);
+            return (deck && deck.cards) ? deck.cards.slice() : [];
+        }
+        function getCatalogRulesFlat() {
+            const mode = appState.mode;
+            const rows = [];
+            if (mode.startsWith('d_')) {
+                const cd = appState.customDecks.find(d => d.id === mode);
+                (cd && cd.cards ? cd.cards : []).forEach(r => {
+                    rows.push({ r, rid: r.id || (mode + '_' + r.titre), sec: 'Paquet perso' });
+                });
+                return rows;
+            }
+            (DB_REGLES[mode] || []).forEach(r => {
+                rows.push({ r, rid: r.id || (mode + '_' + r.titre), sec: 'Mode' });
+            });
+            if (mode === 'avance' && appState.explosionEnabled) {
+                (DB_REGLES.explosion || []).forEach(r => {
+                    rows.push({ r, rid: r.id, sec: 'Explosion' });
+                });
+            }
+            return rows;
+        }
+        function voirCatalogueComplet(highlightRid) {
+            const rows = getCatalogRulesFlat();
+            const modal = document.getElementById('previewModal');
+            const mc = modal.querySelector('.modal-content');
+            mc.classList.add('modal-wide');
+            document.getElementById('preview-title').innerText = 'Catalogue — ' + (modeLabelCatalog());
+            let html = '<div class="catalog-list">';
+            rows.forEach(({ r, rid, sec }) => {
+                const mats = cardMatos(r);
+                const hl = (highlightRid && rid === highlightRid) ? ' catalog-card hl' : ' catalog-card';
+                html += `<div class="${hl}"><div class="preview-card-mini" style="border-left-color:${getColor(r.gravite)}">`;
+                html += `<span style="font-size:0.65em;color:#888;">${escapeHtml(sec)}</span>`;
+                html += `<h4 style="color:${getColor(r.gravite)};margin:4px 0 0 0;">${escapeHtml(r.gravite)}</h4>`;
+                html += `<p><strong>${escapeHtml(r.titre)}</strong></p>`;
+                html += `<p style="font-size:0.85em;">${escapeHtml(r.effet || '')}</p>`;
+                html += `<p style="font-size:0.75em;color:#888;">Matos: ${mats.length ? escapeHtml(mats.join(', ')) : '—'}</p>`;
+                html += '</div></div>';
+            });
+            html += '</div>';
+            if (!rows.length) html = '<p style="color:#888;">Aucune carte pour ce mode.</p>';
+            document.getElementById('preview-body').innerHTML = html;
+            modal.style.display = 'block';
+            if (highlightRid) setTimeout(() => { const el = document.querySelector('.catalog-card.hl'); if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 120);
+        }
+        function modeLabelCatalog() {
+            if (appState.mode.startsWith('d_')) {
+                const d = appState.customDecks.find(x => x.id === appState.mode);
+                return d ? d.name : 'Perso';
+            }
+            let s = appState.mode;
+            if (appState.mode === 'avance' && appState.explosionEnabled) s += ' + explosion';
+            return s;
+        }
+        function fermerPreviewModal() {
+            const modal = document.getElementById('previewModal');
+            modal.style.display = 'none';
+            const mc = modal.querySelector('.modal-content');
+            if (mc) mc.classList.remove('modal-wide');
+        }
+        function sessionPackApplies(p, peerId, teamId) {
+            if (!p || p.scope === 'all') return true;
+            if (p.scope === 'team') return p.teamId && p.teamId === teamId;
+            if (p.scope === 'player') return p.peerId && p.peerId === peerId;
+            return false;
+        }
+        function appendSessionPackPool(src, pool) {
+            if (appState.isOrga || !peer) return;
+            const packs = clientSessionMeta.sessionPacks || [];
+            packs.forEach(p => {
+                if (p.src !== src) return;
+                if (!sessionPackApplies(p, peer.id, appState.playerTeamId)) return;
+                (p.cards || []).forEach(r => {
+                    const mats = cardMatos(r);
+                    if (mats.every(m => appState.materiel[m])) pool.push(r);
+                });
+            });
+        }
 
         /* --- INIT --- */
         window.onload = function() {
@@ -372,7 +557,18 @@
             if (!appState.materiel || typeof appState.materiel !== 'object') appState.materiel = {};
             if (!Array.isArray(appState.customDecks)) appState.customDecks = [];
             if (!Array.isArray(appState.customMaterials)) appState.customMaterials = [];
-            initDefaults(); updateUI_Game();
+            if (typeof appState.isCoHost !== 'boolean') appState.isCoHost = false;
+            if (!Array.isArray(appState.customTeams) || appState.customTeams.length < 2) {
+                appState.customTeams = [{id:'blue',name:'Bleu',color:'#1976d2'},{id:'red',name:'Rouge',color:'#d32f2f'}];
+            }
+            initDefaults();
+            const jp = new URLSearchParams(location.search).get('join');
+            if (jp) {
+                document.getElementById('join-input-area').style.display = 'block';
+                document.getElementById('join-code').value = jp.trim();
+                document.getElementById('multiplayerModal').style.display = 'block';
+            }
+            updateUI_Game();
         };
 
         function initDefaults() {
@@ -397,6 +593,7 @@
         
         /* --- GAME LOGIC --- */
         function lancerSequenceTirage(src) {
+            lastDrawSrc = src;
             initAudio();
             const card = preparerTirage(src);
             if(!card) return;
@@ -431,6 +628,7 @@
                 const mats = cardMatos(r);
                 if(q>0 && mats.every(m=>appState.materiel[m])) { for(let i=0;i<q;i++) pool.push(r); } 
             });
+            appendSessionPackPool(src, pool);
             
             if(pool.length===0) { alert("Aucune carte disponible. Vérifiez que vous avez le matériel requis (Réglages)."); return null; }
             return pool[Math.floor(Math.random()*pool.length)];
@@ -448,6 +646,11 @@
             document.getElementById('txt-zone').innerText=z;
             document.getElementById('txt-soins').innerText=card.effet;
             showScreen('screen-result');
+            if (myConn && myConn.open && !appState.isOrga) {
+                try {
+                    myConn.send({ type: 'DRAW_LOG', titre: card.titre, gravite: card.gravite, src: String(lastDrawSrc) });
+                } catch (e) { console.warn(e); }
+            }
 
             if(appState.deathRisk && card.gravite === "Critique") {
                 if(Math.random() < 0.40) activerTimerMort();
@@ -557,10 +760,10 @@
                     <div class="check-item" style="opacity:${matosOk ? 1 : 0.5}">
                         <div style="flex-grow:1"><strong style="color:${getColor(r.gravite)}">${r.titre}</strong></div>
                         <div style="display:flex; align-items:center; gap:5px;">
-                            <button class="btn-mini" style="background:#1976d2" onclick="voirDetails(${JSON.stringify(rid)}, ${JSON.stringify(appState.mode)})">👁️</button>
-                            <button class="btn-mini" onclick="changeQty('${rid}',-1)">-</button>
+                            <button type="button" class="btn-mini" style="background:#1976d2" onclick="voirCatalogueComplet(${JSON.stringify(rid)})">👁️</button>
+                            <button type="button" class="btn-mini" onclick="changeQty(${JSON.stringify(rid)},-1)">-</button>
                             <span style="width:20px;text-align:center">${q}</span>
-                            <button class="btn-mini" onclick="changeQty('${rid}',1)">+</button>
+                            <button type="button" class="btn-mini" onclick="changeQty(${JSON.stringify(rid)},1)">+</button>
                         </div>
                     </div>`;
             };
@@ -573,27 +776,6 @@
             document.getElementById('info-deck').innerText = total + " cartes actives";
         }
         
-        function voirDetails(rid, mode) {
-            let rules=[];
-            if (mode.startsWith('d_')) {
-                const d = appState.customDecks.find(de => de.id === mode);
-                rules = (d && d.cards) ? d.cards.slice() : [];
-            } else rules = (DB_REGLES[mode] || []).slice();
-            if(mode==='avance' && appState.explosionEnabled) rules = [...rules, ...(DB_REGLES.explosion || [])];
-            const r = rules.find(x => (x.id === rid) || ((mode+"_"+x.titre) === rid));
-            if(!r) return;
-            const mats = cardMatos(r);
-            const modal = document.getElementById('previewModal');
-            document.getElementById('preview-body').innerHTML = `
-                <div class="preview-card-mini" style="border-left-color:${getColor(r.gravite)}">
-                    <h4 style="color:${getColor(r.gravite)}; margin:0;">${r.gravite}</h4>
-                    <p><strong>${r.titre}</strong></p>
-                    <p style="font-size:0.9em;">${r.effet}</p>
-                    <p style="font-size:0.8em; color:#888;">Matos: ${mats.length ? mats.join(', ') : '—'}</p>
-                </div>`;
-            modal.style.display='block';
-        }
-
         function setMaterielFlag(name, v) { appState.materiel[name] = v; }
 
         function changeQty(id, d) {
@@ -605,7 +787,7 @@
         function changerModeMenu(v) { appState.mode=v; renderSettingsList(); }
         function toggleDeathRisk() { appState.deathRisk = document.getElementById('chk-death').checked; }
         function toggleExplosion() { appState.explosionEnabled=document.getElementById('chk-explosion').checked; renderSettingsList(); }
-        function sauvegarderEtQuitter() { saveState(); if(appState.isOrga) broadcastConfig(); retourAccueil(); }
+        function sauvegarderEtQuitter() { saveState(); if(appState.isOrga) broadcastFullState(); retourAccueil(); }
         function annulerReglages() { retourAccueil(); }
 
         /* --- BUILDER --- */
@@ -633,7 +815,7 @@
         }
         function supprimerPaquetCourant() { appState.customDecks = appState.customDecks.filter(x=>x.id!==currentDeckId); saveState(); ouvrirBuilder(); }
         function ajouterCarteCustom() { currentCardIndex=-1; document.getElementById('card-title').value=""; tempMatos=[]; showScreen('screen-card-edit'); renderMatosCheck(); }
-        function editCard(i) { currentCardIndex=i; const c=appState.customDecks.find(x=>x.id===currentDeckId).cards[i]; document.getElementById('card-title').value=c.titre; document.getElementById('card-gravity').value=c.gravite; document.getElementById('card-zone').value=c.zone; document.getElementById('card-effect').value=c.effet; tempMatos=[...c.matos]; renderMatosCheck(); showScreen('screen-card-edit'); }
+        function editCard(i) { currentCardIndex=i; const c=appState.customDecks.find(x=>x.id===currentDeckId).cards[i]; document.getElementById('card-title').value=c.titre; document.getElementById('card-gravity').value=c.gravite; document.getElementById('card-zone').value=c.zone; document.getElementById('card-effect').value=c.effet; tempMatos=[...cardMatos(c)]; renderMatosCheck(); showScreen('screen-card-edit'); }
         
         function renderMatosCheck() { 
             const l = document.getElementById('card-matos-list'); 
@@ -666,103 +848,388 @@
         function annulerEditionCarte() { editDeck(currentDeckId); }
 
         /* --- MULTIJOUEUR PEERJS --- */
-        function ouvrirMenuMultijoueur() { 
-            if(appState.isOrga && peer) { showScreen('screen-host-dashboard'); updateDashboard(); } 
-            else { document.getElementById('multiplayerModal').style.display='block'; document.getElementById('multi-pseudo').value=appState.playerName; }
+        function hostSetTab(id) {
+            document.querySelectorAll('.host-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-host-tab') === id));
+            document.querySelectorAll('.host-panel').forEach(p => p.classList.remove('active'));
+            const panel = document.getElementById('host-panel-' + id);
+            if (panel) panel.classList.add('active');
         }
-        function fermerMultiModal() { document.getElementById('multiplayerModal').style.display='none'; }
+        function hostPushLog(text) {
+            hostLogs.unshift(`[${new Date().toLocaleTimeString('fr-FR')}] ${text}`);
+            if (hostLogs.length > 400) hostLogs.length = 400;
+            renderHostLogs();
+        }
+        function renderHostLogs() {
+            const box = document.getElementById('host-log-box');
+            if (box) box.textContent = hostLogs.join('\n');
+        }
+        function hostPackScopeUI() {
+            const sc = document.getElementById('host-pack-scope');
+            if (!sc) return;
+            const v = sc.value;
+            const te = document.getElementById('host-pack-team');
+            const pe = document.getElementById('host-pack-player');
+            if (te) te.style.display = v === 'team' ? 'block' : 'none';
+            if (pe) pe.style.display = v === 'player' ? 'block' : 'none';
+        }
+        function hostPopulatePackUI() {
+            const sel = document.getElementById('host-pack-source');
+            if (!sel) return;
+            sel.innerHTML = '<option value="bille">Balistique (mode actuel)</option><option value="explosion">Pack explosion</option>';
+            appState.customDecks.forEach(d => {
+                sel.innerHTML += `<option value=${JSON.stringify(d.id)}>Perso : ${escapeHtml(d.name)}</option>`;
+            });
+        }
+        function hostPopulatePackTeamPlayerSelects() {
+            const ts = document.getElementById('host-pack-team');
+            const ps = document.getElementById('host-pack-player');
+            if (ts) ts.innerHTML = (appState.customTeams || []).map(t => `<option value=${JSON.stringify(t.id)}>${escapeHtml(t.name)}</option>`).join('');
+            if (ps) ps.innerHTML = Object.values(playersData).map(p => `<option value=${JSON.stringify(p.id)}>${escapeHtml(p.name)}</option>`).join('');
+        }
+        function hostRenderTeamsEditor() {
+            const el = document.getElementById('host-teams-editor');
+            if (!el) return;
+            el.innerHTML = (appState.customTeams || []).map(t => `
+                <div class="player-row" style="border-left:4px solid ${t.color}">
+                    <strong>${escapeHtml(t.name)}</strong>
+                    ${(appState.customTeams || []).length > 2 ? `<button type="button" class="btn-dash" style="background:#555;margin-left:8px;" onclick="hostSupprimerEquipe(${JSON.stringify(t.id)})">Supprimer</button>` : '<span style="font-size:0.75em;color:#666;">(min. 2 équipes)</span>'}
+                </div>`).join('');
+        }
+        function hostRefreshHostPanels() {
+            hostPopulatePackUI();
+            hostPackScopeUI();
+            hostRenderTeamsEditor();
+            renderHostSessionPacksList();
+            hostPopulatePackTeamPlayerSelects();
+            renderHostLogs();
+        }
+        function hostAjouterEquipe() {
+            const nm = document.getElementById('host-new-team-name').value.trim();
+            let col = (document.getElementById('host-new-team-color').value || '').trim();
+            if (!nm) { alert('Indiquez un nom d\'équipe.'); return; }
+            if (!col) col = '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
+            if (!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(col)) col = '#888888';
+            const id = 't_' + Date.now();
+            appState.customTeams.push({ id, name: nm, color: col });
+            document.getElementById('host-new-team-name').value = '';
+            document.getElementById('host-new-team-color').value = '';
+            hostPushLog(`Équipe ajoutée : ${nm}`);
+            broadcastFullState();
+            hostRefreshHostPanels();
+            updateDashboard();
+        }
+        function hostSupprimerEquipe(tid) {
+            if (!appState.customTeams || appState.customTeams.length <= 2) { alert('Il faut au moins deux équipes.'); return; }
+            const keep = appState.customTeams.filter(t => t.id !== tid);
+            const fb = keep[0].id;
+            Object.values(playersData).forEach(p => { if (p.teamId === tid) p.teamId = fb; });
+            appState.customTeams = keep;
+            broadcastFullState();
+            hostPushLog('Équipe supprimée, joueurs réassignés.');
+            hostRefreshHostPanels();
+            updateDashboard();
+        }
+        function hostAjouterPaquetSession() {
+            const src = document.getElementById('host-pack-source').value;
+            const cards = cloneCards(getRulesArrayForDrawSource(src));
+            if (!cards.length) { alert('Ce paquet est vide pour la configuration actuelle.'); return; }
+            const scope = document.getElementById('host-pack-scope').value;
+            const label = document.getElementById('host-pack-source').selectedOptions[0].textContent || src;
+            const pack = { id: 'sp_' + Date.now(), src, scope, cards, teamId: null, peerId: null, label };
+            if (scope === 'team') {
+                pack.teamId = document.getElementById('host-pack-team').value;
+                if (!pack.teamId) { alert('Choisissez une équipe.'); return; }
+            }
+            if (scope === 'player') {
+                pack.peerId = document.getElementById('host-pack-player').value;
+                if (!pack.peerId) { alert('Choisissez un joueur (connecté).'); return; }
+            }
+            liveSession.sessionPacks.push(pack);
+            hostPushLog(`Paquet session : ${label} → ${scope}`);
+            broadcastFullState();
+            renderHostSessionPacksList();
+        }
+        function hostRetirerPaquetSession(pid) {
+            liveSession.sessionPacks = (liveSession.sessionPacks || []).filter(x => x.id !== pid);
+            broadcastFullState();
+            renderHostSessionPacksList();
+        }
+        function renderHostSessionPacksList() {
+            const el = document.getElementById('host-session-packs-list');
+            if (!el) return;
+            const packs = liveSession.sessionPacks || [];
+            if (!packs.length) { el.innerHTML = '<p style="color:#666;font-size:0.85em;">Aucun paquet supplémentaire.</p>'; return; }
+            el.innerHTML = packs.map(p => {
+                let dest = 'Tous';
+                if (p.scope === 'team') dest = 'Équipe : ' + ((appState.customTeams.find(t => t.id === p.teamId) || {}).name || '?');
+                if (p.scope === 'player') dest = 'Joueur : ' + ((playersData[p.peerId] || {}).name || p.peerId);
+                return `<div class="check-item"><div><strong>${escapeHtml(p.label)}</strong><br><span style="font-size:0.75em;color:#888;">${escapeHtml(p.src)} · ${escapeHtml(dest)}</span></div><button type="button" class="btn-mini" style="background:#b71c1c" onclick="hostRetirerPaquetSession(${JSON.stringify(p.id)})">×</button></div>`;
+            }).join('');
+        }
+        function copierLienInvitation() {
+            const el = document.getElementById('host-join-link');
+            const t = el && el.value;
+            if (!t) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(t).then(() => alert('Lien copié.')).catch(() => { el.select(); document.execCommand('copy'); alert('Lien copié.'); });
+            } else { el.select(); document.execCommand('copy'); alert('Lien copié.'); }
+        }
+        function broadcastFullState() {
+            const payload = {
+                type: 'SYNC_CONFIG',
+                mode: appState.mode,
+                decks: appState.customDecks,
+                teams: appState.customTeams,
+                explosionEnabled: appState.explosionEnabled,
+                deathRisk: appState.deathRisk,
+                materiel: appState.materiel,
+                quantites: appState.quantites,
+                gameName: liveSession.gameName,
+                sessionPacks: liveSession.sessionPacks || []
+            };
+            Object.values(hostConns).forEach(c => { try { c.send(payload); } catch (e) {} });
+        }
+        function ouvrirMenuMultijoueur() {
+            if (appState.isOrga && peer) {
+                showScreen('screen-host-dashboard');
+                document.getElementById('host-game-title').innerText = liveSession.gameName || 'Partie';
+                hostRefreshHostPanels();
+                updateDashboard();
+            } else {
+                document.getElementById('multiplayerModal').style.display = 'block';
+                document.getElementById('multi-pseudo').value = appState.playerName;
+                document.getElementById('multi-game-name').value = appState.lastGameName || liveSession.gameName || '';
+            }
+        }
+        function fermerMultiModal() { document.getElementById('multiplayerModal').style.display = 'none'; }
         function creerPartieEnLigne() {
-            appState.playerName = document.getElementById('multi-pseudo').value || "Orga"; appState.isOrga = true; appState.playerTeamId="orga";
-            document.getElementById('multi-status').style.display='block';
-            if (peer) { try { peer.destroy(); } catch(e){} peer = null; }
-            peer = new Peer("MEDIC-" + Math.floor(1000 + Math.random() * 9000));
+            liveSession.gameName = (document.getElementById('multi-game-name').value || '').trim() || 'Partie';
+            appState.lastGameName = liveSession.gameName;
+            if (!liveSession.sessionPacks) liveSession.sessionPacks = [];
+            appState.playerName = document.getElementById('multi-pseudo').value || 'Orga';
+            appState.isOrga = true;
+            appState.playerTeamId = 'orga';
+            document.getElementById('multi-status').style.display = 'block';
+            document.getElementById('multi-status').innerText = 'Création de la partie...';
+            if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
+            peer = new Peer('MEDIC-' + Math.floor(1000 + Math.random() * 9000));
             peer.on('error', (err) => {
-                document.getElementById('multi-status').style.display='block';
+                document.getElementById('multi-status').style.display = 'block';
                 document.getElementById('multi-status').innerText = (err && err.message) ? err.message : 'Erreur PeerJS';
                 console.error(err);
             });
             peer.on('open', (id) => {
                 document.getElementById('host-connection-id').innerText = id;
-                document.getElementById('multi-status').style.display='none';
+                document.getElementById('host-game-title').innerText = liveSession.gameName;
+                const baseUrl = (location.href || '').split('?')[0].split('#')[0];
+                const joinLink = `${baseUrl}?join=${encodeURIComponent(id)}`;
+                const inp = document.getElementById('host-join-link');
+                if (inp) inp.value = joinLink;
+                const canvas = document.getElementById('host-qr-canvas');
+                if (typeof QRCode !== 'undefined' && QRCode.toCanvas && canvas) {
+                    QRCode.toCanvas(canvas, joinLink, { width: 180, margin: 2, color: { dark: '#000000', light: '#ffffff' } }, (err) => {
+                        if (err) { console.error(err); canvas.style.display = 'none'; }
+                        else canvas.style.display = 'block';
+                    });
+                }
+                document.getElementById('multi-status').style.display = 'none';
                 document.getElementById('btn-multi-icon').classList.add('online');
-                fermerMultiModal(); showScreen('screen-host-dashboard'); updateDashboard();
+                fermerMultiModal();
+                showScreen('screen-host-dashboard');
+                hostSetTab('join');
+                hostPushLog('Session hôte démarrée : ' + id);
+                hostRefreshHostPanels();
+                updateDashboard();
                 saveState();
             });
             peer.on('connection', (conn) => {
                 conn.on('data', (d) => handleHostData(conn, d));
-                conn.on('close', () => { delete hostConns[conn.peer]; delete playersData[conn.peer]; updateDashboard(); });
+                conn.on('close', () => {
+                    const n = (playersData[conn.peer] && playersData[conn.peer].name) || conn.peer;
+                    hostPushLog(`${n} a quitté / déconnecté`);
+                    delete hostConns[conn.peer];
+                    delete playersData[conn.peer];
+                    updateDashboard();
+                    hostPopulatePackTeamPlayerSelects();
+                });
                 hostConns[conn.peer] = conn;
             });
         }
         function rejoindrePartieEnLigne() {
             const code = document.getElementById('join-code').value.trim().toUpperCase();
-            if (!code) { alert("Indiquez le code de la partie."); return; }
-            appState.playerName = document.getElementById('multi-pseudo').value || "Joueur"; appState.isOrga = false;
-            document.getElementById('multi-status').style.display='block';
+            if (!code) { alert('Indiquez le code de la partie.'); return; }
+            appState.playerName = document.getElementById('multi-pseudo').value || 'Joueur';
+            appState.isOrga = false;
+            appState.isCoHost = false;
+            document.getElementById('multi-status').style.display = 'block';
             document.getElementById('multi-status').innerText = 'Connexion...';
-            if (peer) { try { peer.destroy(); } catch(e){} peer = null; }
+            if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
             peer = new Peer();
             peer.on('error', (err) => {
-                document.getElementById('multi-status').style.display='block';
+                document.getElementById('multi-status').style.display = 'block';
                 document.getElementById('multi-status').innerText = (err && err.message) ? err.message : 'Erreur PeerJS';
                 console.error(err);
             });
             peer.on('open', () => {
                 myConn = peer.connect(code, { reliable: true });
                 myConn.on('error', (err) => {
-                    alert("Connexion impossible : " + ((err && err.message) ? err.message : "hôte introuvable ou code invalide"));
-                    document.getElementById('multi-status').style.display='none';
+                    alert('Connexion impossible : ' + ((err && err.message) ? err.message : 'hôte introuvable ou code invalide'));
+                    document.getElementById('multi-status').style.display = 'none';
                 });
                 myConn.on('open', () => {
-                    myConn.send({type:'JOIN', name:appState.playerName});
+                    myConn.send({ type: 'JOIN', name: appState.playerName });
                     document.getElementById('btn-multi-icon').classList.add('online');
-                    document.getElementById('multi-status').style.display='none';
+                    document.getElementById('multi-status').style.display = 'none';
                     fermerMultiModal();
-                    alert("Connecté !");
+                    alert('Connecté à la partie !');
                 });
                 myConn.on('close', () => {
                     document.getElementById('btn-multi-icon').classList.remove('online');
+                    document.getElementById('btn-quitter-partie').style.display = 'none';
                 });
                 myConn.on('data', (d) => handleClientData(d));
             });
         }
         function handleHostData(conn, data) {
-            if(data.type === 'JOIN') {
-                playersData[conn.peer] = { id: conn.peer, name: data.name, teamId: 'blue', isOrga: false };
-                broadcastConfig(); updateDashboard();
+            if (!data || !data.type) return;
+            if (data.type === 'JOIN') {
+                const firstTeam = (appState.customTeams[0] && appState.customTeams[0].id) || 'blue';
+                playersData[conn.peer] = { id: conn.peer, name: data.name || 'Joueur', teamId: firstTeam, isCoHost: false };
+                hostPushLog(`${playersData[conn.peer].name} a rejoint`);
+                broadcastFullState();
+                updateDashboard();
+                hostPopulatePackTeamPlayerSelects();
+                return;
+            }
+            if (data.type === 'DRAW_LOG') {
+                const p = playersData[conn.peer];
+                const n = p ? p.name : conn.peer;
+                hostPushLog(`${n} · tirage : ${data.titre || '?'} [${data.gravite || ''}] · ${data.src || ''}`);
+                return;
+            }
+            if (data.type === 'LEAVE') {
+                hostPushLog(`${data.name || 'Joueur'} quitte la partie`);
             }
         }
         function handleClientData(data) {
-            if(data.type === 'SYNC_CONFIG') { appState.mode = data.mode; appState.customDecks = data.decks; updateUI_Game(); }
-            if(data.type === 'CMD_TEAM') { appState.playerTeamId = data.teamId; updateUI_Game(); alert("Changement d'équipe !"); }
+            if (!data) return;
+            if (data.type === 'SYNC_CONFIG') {
+                appState.mode = data.mode;
+                appState.customDecks = data.decks || [];
+                if (data.teams && data.teams.length) appState.customTeams = data.teams;
+                if (data.explosionEnabled !== undefined) appState.explosionEnabled = data.explosionEnabled;
+                if (data.deathRisk !== undefined) appState.deathRisk = data.deathRisk;
+                if (data.materiel) appState.materiel = data.materiel;
+                if (data.quantites) appState.quantites = data.quantites;
+                clientSessionMeta.sessionPacks = data.sessionPacks || [];
+                clientSessionMeta.gameName = data.gameName || '';
+                updateUI_Game();
+                return;
+            }
+            if (data.type === 'CMD_TEAM') {
+                appState.playerTeamId = data.teamId;
+                updateUI_Game();
+                alert('Changement d\'équipe');
+                return;
+            }
+            if (data.type === 'CMD_ROLE') {
+                appState.isCoHost = !!data.isCoHost;
+                updateUI_Game();
+                alert(data.isCoHost ? 'Vous êtes co-organisateur (grade admin).' : 'Grade admin retiré.');
+                return;
+            }
+            if (data.type === 'CLOSE_SESSION') {
+                alert(data.reason || 'La partie est terminée.');
+                executerQuitterPartie();
+            }
         }
-        function broadcastConfig() { Object.values(hostConns).forEach(c => c.send({type:'SYNC_CONFIG', mode:appState.mode, decks:appState.customDecks})); }
         function updateDashboard() {
-            const l = document.getElementById('host-player-list'); l.innerHTML="";
+            const l = document.getElementById('host-player-list');
+            if (!l) return;
+            l.innerHTML = '';
             document.getElementById('connected-count').innerText = Object.keys(playersData).length;
             Object.values(playersData).forEach(p => {
-                const team = appState.customTeams.find(t=>t.id===p.teamId) || appState.customTeams[0];
+                const team = appState.customTeams.find(t => t.id === p.teamId) || appState.customTeams[0];
                 if (!team) return;
-                let btns = ""; appState.customTeams.forEach(t => btns += `<button class="btn-dash" style="border-color:${t.color}" onclick="cmdTeam(${JSON.stringify(p.id)},${JSON.stringify(t.id)})">${t.name}</button>`);
+                let btns = '';
+                appState.customTeams.forEach(t => {
+                    btns += `<button type="button" class="btn-dash" style="border-color:${t.color}" onclick="cmdTeam(${JSON.stringify(p.id)},${JSON.stringify(t.id)})">${escapeHtml(t.name)}</button>`;
+                });
+                const badge = p.isCoHost ? '<span class="badge-role admin">Co-admin</span>' : '';
                 l.innerHTML += `<div class="player-row" style="border-left:4px solid ${team.color}">
-                    <div class="player-row-header"><strong>${p.name}</strong> <span style="color:${team.color}">${team.name}</span></div>
-                    <div class="player-actions">${btns} <button class="btn-dash" style="background:#d32f2f" onclick="cmdKick(${JSON.stringify(p.id)})">Kick</button></div>
+                    <div class="player-row-header"><strong>${escapeHtml(p.name)}</strong>${badge} <span style="color:${team.color}">${escapeHtml(team.name)}</span></div>
+                    <div class="player-actions">${btns}
+                        <button type="button" class="btn-dash" style="background:#f57c00" onclick="cmdToggleCohost(${JSON.stringify(p.id)})">Admin</button>
+                        <button type="button" class="btn-dash" style="background:#d32f2f" onclick="cmdKick(${JSON.stringify(p.id)})">Kick</button>
+                    </div>
                 </div>`;
             });
+        }
+        function cmdToggleCohost(pid) {
+            const p = playersData[pid];
+            const c = hostConns[pid];
+            if (!p || !c) return;
+            p.isCoHost = !p.isCoHost;
+            try { c.send({ type: 'CMD_ROLE', isCoHost: p.isCoHost }); } catch (e) {}
+            hostPushLog(`${p.name} · co-admin : ${p.isCoHost ? 'oui' : 'non'}`);
+            updateDashboard();
         }
         function cmdTeam(pid, tid) {
             const p = playersData[pid]; const c = hostConns[pid];
             if (!p || !c) return;
             p.teamId = tid;
-            c.send({type:'CMD_TEAM', teamId:tid});
+            try { c.send({ type: 'CMD_TEAM', teamId: tid }); } catch (e) {}
             updateDashboard();
         }
         function cmdKick(pid) {
             const c = hostConns[pid];
-            if (c) try { c.close(); } catch(e){}
+            if (c) try { c.send({ type: 'CLOSE_SESSION', reason: 'Vous avez été exclu de la partie.' }); } catch (e) {}
+            if (c) try { c.close(); } catch (e) {}
             delete hostConns[pid];
             delete playersData[pid];
+            hostPushLog(`Kick : ${pid}`);
             updateDashboard();
+            hostPopulatePackTeamPlayerSelects();
+        }
+        function cloturerPartie() {
+            if (!confirm('Clôturer la partie ? Tous les joueurs seront avertis et déconnectés.')) return;
+            Object.values(hostConns).forEach(c => {
+                try { c.send({ type: 'CLOSE_SESSION', reason: 'L\'organisateur a clôturé la partie.' }); } catch (e) {}
+                try { c.close(); } catch (e) {}
+            });
+            hostConns = {};
+            playersData = {};
+            liveSession.sessionPacks = [];
+            hostPushLog('Partie clôturée.');
+            renderHostSessionPacksList();
+            updateDashboard();
+            retourAccueilDepuisHost();
+        }
+        function retourAccueilDepuisHost() {
+            stopAllAudio();
+            if (timerLogic) clearInterval(timerLogic);
+            isTimerActive = false;
+            document.getElementById('death-overlay').style.display = 'none';
+            document.getElementById('danger-zone-container').style.display = 'none';
+            showScreen('screen-game');
+        }
+        function confirmerQuitterPartie() {
+            document.getElementById('confirmLeaveModal').style.display = 'block';
+        }
+        function executerQuitterPartie() {
+            try { if (myConn && myConn.open) myConn.send({ type: 'LEAVE', name: appState.playerName }); } catch (e) {}
+            try { if (myConn) myConn.close(); } catch (e) {}
+            try { if (peer) peer.destroy(); } catch (e) {}
+            myConn = null;
+            peer = null;
+            appState.isOrga = false;
+            appState.isCoHost = false;
+            document.getElementById('btn-multi-icon').classList.remove('online');
+            document.getElementById('btn-quitter-partie').style.display = 'none';
+            document.getElementById('confirmLeaveModal').style.display = 'none';
+            clientSessionMeta = { gameName: '', sessionPacks: [] };
+            showScreen('screen-game');
+            updateUI_Game();
         }
 
         /* --- UI & GAME --- */
@@ -771,11 +1238,16 @@
             const borderCol = team ? team.color : '#888';
             const teamLabel = team ? team.name : (appState.playerTeamId === 'orga' ? 'Organisateur' : '—');
             document.getElementById('main-header').style.borderBottomColor = borderCol;
-            document.getElementById('top-indicator').innerText = `${appState.playerName} | ${teamLabel}`;
+            const inPartie = !!(myConn && myConn.open && !appState.isOrga);
+            const qbtn = document.getElementById('btn-quitter-partie');
+            if (qbtn) qbtn.style.display = inPartie ? 'inline-flex' : 'none';
+            const gn = (!appState.isOrga && clientSessionMeta.gameName) ? (' · ' + clientSessionMeta.gameName) : '';
+            const co = appState.isCoHost ? ' · Co-admin' : '';
+            document.getElementById('top-indicator').innerText = `${appState.playerName} | ${teamLabel}${gn}${co}`;
             const c = document.getElementById('dynamic-buttons-container'); c.innerHTML="";
             c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring"></div><button class="btn-core-shared main-btn" onclick="lancerSequenceTirage('bille')"><img src="picto-blesse.png" class="icon-wounded"></button><div class="btn-label">BALISTIQUE</div></div>`;
             if(appState.mode==='avance' && appState.explosionEnabled) c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring-blast"></div><button class="btn-core-shared blast-btn" onclick="lancerSequenceTirage('explosion')"><img src="btn-explosion.png" class="icon-blast"></button><div class="btn-label">EXPLOSION</div></div>`;
-            appState.customDecks.forEach(d => { if(d.showOnHome) c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring-custom"></div><button class="btn-core-shared custom-btn-style" onclick="lancerSequenceTirage(${JSON.stringify(d.id)})"><img src="btn-custom.png" class="icon-custom" onerror="this.src='picto-blesse.png'"></button><div class="btn-label">${d.name}</div></div>`; });
+            appState.customDecks.forEach(d => { if(d.showOnHome) c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring-custom"></div><button class="btn-core-shared custom-btn-style" onclick="lancerSequenceTirage(${JSON.stringify(d.id)})"><img src="btn-custom.png" class="icon-custom" onerror="this.src='picto-blesse.png'"></button><div class="btn-label">${escapeHtml(d.name)}</div></div>`; });
         }
         function saveState() { localStorage.setItem('medic_v32_smart', JSON.stringify(appState)); updateUI_Game(); }
 
