@@ -357,9 +357,21 @@
         let peer = null; let myConn = null; let hostConns = {}; let playersData = {};
         let timerLogic = null; let isTimerActive = false;
 
+        function cardMatos(r) { return Array.isArray(r.matos) ? r.matos : []; }
+
         /* --- INIT --- */
         window.onload = function() {
-            if(localStorage.getItem('medic_v32_smart')) appState = JSON.parse(localStorage.getItem('medic_v32_smart'));
+            const raw = localStorage.getItem('medic_v32_smart');
+            if (raw) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && typeof parsed === 'object') appState = Object.assign({}, appState, parsed);
+                } catch (e) { console.warn('medic_v32_smart invalide, état par défaut.', e); }
+            }
+            if (!appState.quantites || typeof appState.quantites !== 'object') appState.quantites = {};
+            if (!appState.materiel || typeof appState.materiel !== 'object') appState.materiel = {};
+            if (!Array.isArray(appState.customDecks)) appState.customDecks = [];
+            if (!Array.isArray(appState.customMaterials)) appState.customMaterials = [];
             initDefaults(); updateUI_Game();
         };
 
@@ -369,7 +381,7 @@
             ["classique","avance","explosion"].forEach(m => { 
                 if(DB_REGLES[m]) DB_REGLES[m].forEach(r => {
                     let rid = r.id || (m+"_"+r.titre);
-                    if(!appState.quantites[rid]) appState.quantites[rid]=2;
+                    if(appState.quantites[rid] === undefined) appState.quantites[rid]=2;
                 });
             });
         }
@@ -396,16 +408,28 @@
 
         function preparerTirage(src) {
             let rules = [];
-            if(src==='explosion') rules = DB_REGLES.explosion;
-            else if(src==='bille') rules = (appState.mode.startsWith('d_')) ? appState.customDecks.find(d=>d.id===appState.mode).cards : DB_REGLES[appState.mode];
-            else rules = appState.customDecks.find(d=>d.id===src).cards;
+            if(src==='explosion') rules = DB_REGLES.explosion || [];
+            else if(src==='bille') {
+                if (appState.mode.startsWith('d_')) {
+                    const deck = appState.customDecks.find(d=>d.id===appState.mode);
+                    rules = (deck && deck.cards) ? deck.cards : [];
+                } else rules = DB_REGLES[appState.mode] || [];
+            } else {
+                const deck = appState.customDecks.find(d=>d.id===src);
+                rules = (deck && deck.cards) ? deck.cards : [];
+            }
+            if (!rules.length) {
+                alert("Aucun paquet de cartes pour ce mode. Vérifiez les réglages ou le paquet personnalisé.");
+                return null;
+            }
 
             let pool = [];
             rules.forEach(r => { 
                 let rid=r.id||(appState.mode+"_"+r.titre);
                 if(src==='explosion') rid=r.id;
                 let q=appState.quantites[rid];
-                if(q>0 && r.matos.every(m=>appState.materiel[m])) { for(let i=0;i<q;i++) pool.push(r); } 
+                const mats = cardMatos(r);
+                if(q>0 && mats.every(m=>appState.materiel[m])) { for(let i=0;i<q;i++) pool.push(r); } 
             });
             
             if(pool.length===0) { alert("Aucune carte disponible. Vérifiez que vous avez le matériel requis (Réglages)."); return null; }
@@ -425,7 +449,7 @@
             document.getElementById('txt-soins').innerText=card.effet;
             showScreen('screen-result');
 
-            if(appState.deathRisk && card.gravite === "Critique" && card.gravite !== "DÉCÈS") {
+            if(appState.deathRisk && card.gravite === "Critique") {
                 if(Math.random() < 0.40) activerTimerMort();
             }
         }
@@ -463,6 +487,7 @@
         function ouvrirReglages() { 
             const s=document.getElementById('select-mode'); s.innerHTML=`<option value="classique">CLASSIQUE</option><option value="avance">AVANCÉ</option>`;
             appState.customDecks.forEach(d=>s.innerHTML+=`<option value="${d.id}">${d.name} (Custom)</option>`);
+            if (![...s.options].some(o => o.value === appState.mode)) appState.mode = 'classique';
             s.value=appState.mode; 
             document.getElementById('chk-death').checked = appState.deathRisk;
             renderSettingsList(); showScreen('screen-settings'); 
@@ -484,9 +509,7 @@
             // 2. Identify Required Materials
             let requiredMatos = new Set();
             activeRules.forEach(r => {
-                if(r.matos && Array.isArray(r.matos)) {
-                    r.matos.forEach(m => requiredMatos.add(m));
-                }
+                cardMatos(r).forEach(m => requiredMatos.add(m));
             });
 
             // 3. Render Material Checkboxes (Filtered)
@@ -499,7 +522,7 @@
                 // Only show if required by current rules
                 if(requiredMatos.has(m)) {
                     if(appState.materiel[m]===undefined) appState.materiel[m]=true;
-                    lm.innerHTML += `<div class="check-item"><span>${m}</span><input type="checkbox" onchange="appState.materiel['${m}']=this.checked" ${appState.materiel[m]?'checked':''}></div>`; 
+                    lm.innerHTML += `<div class="check-item"><span>${m}</span><input type="checkbox" onchange="setMaterielFlag(${JSON.stringify(m)}, this.checked)" ${appState.materiel[m]?'checked':''}></div>`; 
                     matosShownCount++;
                 }
             });
@@ -514,8 +537,11 @@
             const lr=document.getElementById('liste-regles'); lr.innerHTML="";
             
             // Re-fetch base rules for splitting logic
-            let baseRules = (appState.mode.startsWith('d_')) ? appState.customDecks.find(d=>d.id===appState.mode).cards : DB_REGLES[appState.mode];
-            if(!baseRules) baseRules=[];
+            let baseRules = [];
+            if (appState.mode.startsWith('d_')) {
+                const cd = appState.customDecks.find(d=>d.id===appState.mode);
+                baseRules = (cd && cd.cards) ? cd.cards : [];
+            } else baseRules = DB_REGLES[appState.mode] || [];
             
             let total = 0;
             const renderRow = (r) => {
@@ -524,14 +550,14 @@
                 if (appState.quantites[rid] === undefined) appState.quantites[rid] = 2;
                 let q = appState.quantites[rid];
                 // Check against global material state
-                let matosOk = r.matos.every(m => appState.materiel[m]);
+                let matosOk = cardMatos(r).every(m => appState.materiel[m]);
                 if (matosOk) total += q;
 
                 lr.innerHTML += `
                     <div class="check-item" style="opacity:${matosOk ? 1 : 0.5}">
                         <div style="flex-grow:1"><strong style="color:${getColor(r.gravite)}">${r.titre}</strong></div>
                         <div style="display:flex; align-items:center; gap:5px;">
-                            <button class="btn-mini" style="background:#1976d2" onclick="voirDetails('${rid}','${appState.mode}')">👁️</button>
+                            <button class="btn-mini" style="background:#1976d2" onclick="voirDetails(${JSON.stringify(rid)}, ${JSON.stringify(appState.mode)})">👁️</button>
                             <button class="btn-mini" onclick="changeQty('${rid}',-1)">-</button>
                             <span style="width:20px;text-align:center">${q}</span>
                             <button class="btn-mini" onclick="changeQty('${rid}',1)">+</button>
@@ -548,22 +574,34 @@
         }
         
         function voirDetails(rid, mode) {
-            let rules=(mode.startsWith('d_'))?appState.customDecks.find(d=>d.id===mode).cards:DB_REGLES[mode];
-            if(mode==='avance' && appState.explosionEnabled) rules=[...rules, ...DB_REGLES.explosion];
+            let rules=[];
+            if (mode.startsWith('d_')) {
+                const d = appState.customDecks.find(de => de.id === mode);
+                rules = (d && d.cards) ? d.cards.slice() : [];
+            } else rules = (DB_REGLES[mode] || []).slice();
+            if(mode==='avance' && appState.explosionEnabled) rules = [...rules, ...(DB_REGLES.explosion || [])];
             const r = rules.find(x => (x.id === rid) || ((mode+"_"+x.titre) === rid));
             if(!r) return;
+            const mats = cardMatos(r);
             const modal = document.getElementById('previewModal');
             document.getElementById('preview-body').innerHTML = `
                 <div class="preview-card-mini" style="border-left-color:${getColor(r.gravite)}">
                     <h4 style="color:${getColor(r.gravite)}; margin:0;">${r.gravite}</h4>
                     <p><strong>${r.titre}</strong></p>
                     <p style="font-size:0.9em;">${r.effet}</p>
-                    <p style="font-size:0.8em; color:#888;">Matos: ${r.matos.join(', ')}</p>
+                    <p style="font-size:0.8em; color:#888;">Matos: ${mats.length ? mats.join(', ') : '—'}</p>
                 </div>`;
             modal.style.display='block';
         }
 
-        function changeQty(id, d) { appState.quantites[id] = Math.max(0, appState.quantites[id]+d); renderSettingsList(); }
+        function setMaterielFlag(name, v) { appState.materiel[name] = v; }
+
+        function changeQty(id, d) {
+            let cur = appState.quantites[id];
+            if (cur === undefined || cur === null) cur = 2;
+            appState.quantites[id] = Math.max(0, cur + d);
+            renderSettingsList();
+        }
         function changerModeMenu(v) { appState.mode=v; renderSettingsList(); }
         function toggleDeathRisk() { appState.deathRisk = document.getElementById('chk-death').checked; }
         function toggleExplosion() { appState.explosionEnabled=document.getElementById('chk-explosion').checked; renderSettingsList(); }
@@ -575,9 +613,24 @@
         function ouvrirBuilder() { showScreen('screen-builder'); renderDecksList(); }
         function creerNouveauPaquet() { let id="d_"+Date.now(); appState.customDecks.push({id:id, name:"Nouveau", showOnHome:true, cards:[]}); editDeck(id); }
         function renderDecksList() { const l=document.getElementById('custom-decks-list'); l.innerHTML=""; appState.customDecks.forEach(d=>{ l.innerHTML+=`<div class="builder-item"><span>${d.name}</span><button class="header-btn" onclick="editDeck('${d.id}')">✏️</button></div>`; }); }
-        function editDeck(id) { currentDeckId=id; const d=appState.customDecks.find(x=>x.id===id); document.getElementById('deck-name').value=d.name; document.getElementById('deck-show-home').checked=d.showOnHome; renderCardsList(d); showScreen('screen-deck-edit'); }
+        function editDeck(id) {
+            currentDeckId=id;
+            const d=appState.customDecks.find(x=>x.id===id);
+            if (!d) { ouvrirBuilder(); return; }
+            document.getElementById('deck-name').value=d.name;
+            document.getElementById('deck-show-home').checked=!!d.showOnHome;
+            renderCardsList(d);
+            showScreen('screen-deck-edit');
+        }
         function renderCardsList(d) { const l=document.getElementById('deck-cards-list'); l.innerHTML=""; d.cards.forEach((c,i)=>{ l.innerHTML+=`<div class="builder-item"><span>${c.titre}</span><button class="btn-mini" onclick="editCard(${i})">✏️</button></div>`; }); }
-        function sauvegarderPaquetCourant() { const d=appState.customDecks.find(x=>x.id===currentDeckId); d.name=document.getElementById('deck-name').value; d.showOnHome=document.getElementById('deck-show-home').checked; saveState(); ouvrirBuilder(); }
+        function sauvegarderPaquetCourant() {
+            const d=appState.customDecks.find(x=>x.id===currentDeckId);
+            if (!d) { ouvrirBuilder(); return; }
+            d.name=document.getElementById('deck-name').value;
+            d.showOnHome=document.getElementById('deck-show-home').checked;
+            saveState();
+            ouvrirBuilder();
+        }
         function supprimerPaquetCourant() { appState.customDecks = appState.customDecks.filter(x=>x.id!==currentDeckId); saveState(); ouvrirBuilder(); }
         function ajouterCarteCustom() { currentCardIndex=-1; document.getElementById('card-title').value=""; tempMatos=[]; showScreen('screen-card-edit'); renderMatosCheck(); }
         function editCard(i) { currentCardIndex=i; const c=appState.customDecks.find(x=>x.id===currentDeckId).cards[i]; document.getElementById('card-title').value=c.titre; document.getElementById('card-gravity').value=c.gravite; document.getElementById('card-zone').value=c.zone; document.getElementById('card-effect').value=c.effet; tempMatos=[...c.matos]; renderMatosCheck(); showScreen('screen-card-edit'); }
@@ -587,7 +640,7 @@
             l.innerHTML = "";
             const allMatos = [...new Set([...DB_MATERIEL_BASE, ...(appState.customMaterials || [])])];
             allMatos.forEach(m => { 
-                l.innerHTML += `<div class="check-item"><input type="checkbox" onchange="toggleMatos('${m}')" ${tempMatos.includes(m)?'checked':''}> ${m}</div>`; 
+                l.innerHTML += `<div class="check-item"><input type="checkbox" onchange="toggleMatos(${JSON.stringify(m)})" ${tempMatos.includes(m)?'checked':''}> ${m}</div>`; 
             }); 
         }
         function toggleMatos(m) { if(tempMatos.includes(m)) tempMatos=tempMatos.filter(x=>x!==m); else tempMatos.push(m); }
@@ -621,9 +674,17 @@
         function creerPartieEnLigne() {
             appState.playerName = document.getElementById('multi-pseudo').value || "Orga"; appState.isOrga = true; appState.playerTeamId="orga";
             document.getElementById('multi-status').style.display='block';
+            if (peer) { try { peer.destroy(); } catch(e){} peer = null; }
             peer = new Peer("MEDIC-" + Math.floor(1000 + Math.random() * 9000));
+            peer.on('error', (err) => {
+                document.getElementById('multi-status').style.display='block';
+                document.getElementById('multi-status').innerText = (err && err.message) ? err.message : 'Erreur PeerJS';
+                console.error(err);
+            });
             peer.on('open', (id) => {
                 document.getElementById('host-connection-id').innerText = id;
+                document.getElementById('multi-status').style.display='none';
+                document.getElementById('btn-multi-icon').classList.add('online');
                 fermerMultiModal(); showScreen('screen-host-dashboard'); updateDashboard();
                 saveState();
             });
@@ -634,12 +695,34 @@
             });
         }
         function rejoindrePartieEnLigne() {
-            const code = document.getElementById('join-code').value.toUpperCase();
+            const code = document.getElementById('join-code').value.trim().toUpperCase();
+            if (!code) { alert("Indiquez le code de la partie."); return; }
             appState.playerName = document.getElementById('multi-pseudo').value || "Joueur"; appState.isOrga = false;
+            document.getElementById('multi-status').style.display='block';
+            document.getElementById('multi-status').innerText = 'Connexion...';
+            if (peer) { try { peer.destroy(); } catch(e){} peer = null; }
             peer = new Peer();
+            peer.on('error', (err) => {
+                document.getElementById('multi-status').style.display='block';
+                document.getElementById('multi-status').innerText = (err && err.message) ? err.message : 'Erreur PeerJS';
+                console.error(err);
+            });
             peer.on('open', () => {
-                myConn = peer.connect(code);
-                myConn.on('open', () => { myConn.send({type:'JOIN', name:appState.playerName}); document.getElementById('btn-multi-icon').classList.add('online'); fermerMultiModal(); alert("Connecté !"); });
+                myConn = peer.connect(code, { reliable: true });
+                myConn.on('error', (err) => {
+                    alert("Connexion impossible : " + ((err && err.message) ? err.message : "hôte introuvable ou code invalide"));
+                    document.getElementById('multi-status').style.display='none';
+                });
+                myConn.on('open', () => {
+                    myConn.send({type:'JOIN', name:appState.playerName});
+                    document.getElementById('btn-multi-icon').classList.add('online');
+                    document.getElementById('multi-status').style.display='none';
+                    fermerMultiModal();
+                    alert("Connecté !");
+                });
+                myConn.on('close', () => {
+                    document.getElementById('btn-multi-icon').classList.remove('online');
+                });
                 myConn.on('data', (d) => handleClientData(d));
             });
         }
@@ -658,26 +741,41 @@
             const l = document.getElementById('host-player-list'); l.innerHTML="";
             document.getElementById('connected-count').innerText = Object.keys(playersData).length;
             Object.values(playersData).forEach(p => {
-                const team = appState.customTeams.find(t=>t.id===p.teamId);
-                let btns = ""; appState.customTeams.forEach(t => btns += `<button class="btn-dash" style="border-color:${t.color}" onclick="cmdTeam('${p.id}','${t.id}')">${t.name}</button>`);
+                const team = appState.customTeams.find(t=>t.id===p.teamId) || appState.customTeams[0];
+                if (!team) return;
+                let btns = ""; appState.customTeams.forEach(t => btns += `<button class="btn-dash" style="border-color:${t.color}" onclick="cmdTeam(${JSON.stringify(p.id)},${JSON.stringify(t.id)})">${t.name}</button>`);
                 l.innerHTML += `<div class="player-row" style="border-left:4px solid ${team.color}">
                     <div class="player-row-header"><strong>${p.name}</strong> <span style="color:${team.color}">${team.name}</span></div>
-                    <div class="player-actions">${btns} <button class="btn-dash" style="background:#d32f2f" onclick="cmdKick('${p.id}')">Kick</button></div>
+                    <div class="player-actions">${btns} <button class="btn-dash" style="background:#d32f2f" onclick="cmdKick(${JSON.stringify(p.id)})">Kick</button></div>
                 </div>`;
             });
         }
-        function cmdTeam(pid, tid) { playersData[pid].teamId = tid; hostConns[pid].send({type:'CMD_TEAM', teamId:tid}); updateDashboard(); }
-        function cmdKick(pid) { hostConns[pid].close(); delete hostConns[pid]; delete playersData[pid]; updateDashboard(); }
+        function cmdTeam(pid, tid) {
+            const p = playersData[pid]; const c = hostConns[pid];
+            if (!p || !c) return;
+            p.teamId = tid;
+            c.send({type:'CMD_TEAM', teamId:tid});
+            updateDashboard();
+        }
+        function cmdKick(pid) {
+            const c = hostConns[pid];
+            if (c) try { c.close(); } catch(e){}
+            delete hostConns[pid];
+            delete playersData[pid];
+            updateDashboard();
+        }
 
         /* --- UI & GAME --- */
         function updateUI_Game() {
             const team = appState.customTeams.find(t=>t.id===appState.playerTeamId);
-            document.getElementById('main-header').style.borderBottomColor = team.color;
-            document.getElementById('top-indicator').innerText = `${appState.playerName} | ${team.name}`;
+            const borderCol = team ? team.color : '#888';
+            const teamLabel = team ? team.name : (appState.playerTeamId === 'orga' ? 'Organisateur' : '—');
+            document.getElementById('main-header').style.borderBottomColor = borderCol;
+            document.getElementById('top-indicator').innerText = `${appState.playerName} | ${teamLabel}`;
             const c = document.getElementById('dynamic-buttons-container'); c.innerHTML="";
             c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring"></div><button class="btn-core-shared main-btn" onclick="lancerSequenceTirage('bille')"><img src="picto-blesse.png" class="icon-wounded"></button><div class="btn-label">BALISTIQUE</div></div>`;
             if(appState.mode==='avance' && appState.explosionEnabled) c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring-blast"></div><button class="btn-core-shared blast-btn" onclick="lancerSequenceTirage('explosion')"><img src="btn-explosion.png" class="icon-blast"></button><div class="btn-label">EXPLOSION</div></div>`;
-            appState.customDecks.forEach(d => { if(d.showOnHome) c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring-custom"></div><button class="btn-core-shared custom-btn-style" onclick="lancerSequenceTirage('${d.id}')"><img src="btn-custom.png" class="icon-custom" onerror="this.src='picto-blesse.png'"></button><div class="btn-label">${d.name}</div></div>`; });
+            appState.customDecks.forEach(d => { if(d.showOnHome) c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring-custom"></div><button class="btn-core-shared custom-btn-style" onclick="lancerSequenceTirage(${JSON.stringify(d.id)})"><img src="btn-custom.png" class="icon-custom" onerror="this.src='picto-blesse.png'"></button><div class="btn-label">${d.name}</div></div>`; });
         }
         function saveState() { localStorage.setItem('medic_v32_smart', JSON.stringify(appState)); updateUI_Game(); }
 
