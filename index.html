@@ -224,7 +224,7 @@
                 <input type="text" id="host-join-link" class="form-input" readonly style="margin:0;">
                 <button type="button" class="btn-mini" style="width:auto;padding:0 14px;" onclick="copierLienInvitation()">Copier</button>
             </div>
-            <div id="host-qr-wrap"><canvas id="host-qr-canvas" width="180" height="180" style="display:none"></canvas></div>
+            <div id="host-qr-wrap"><canvas id="host-qr-canvas" width="180" height="180"></canvas></div>
             <p style="font-size:0.75em; color:#888;">Les joueurs ouvrent le lien ou scannent le QR, puis valident avec leur pseudo.</p>
         </div>
         <div id="host-panel-players" class="host-panel box">
@@ -1104,18 +1104,23 @@
                 const joinLink = `${baseUrl}?join=${encodeURIComponent(id)}`;
                 const inp = document.getElementById('host-join-link');
                 if (inp) inp.value = joinLink;
-                const canvas = document.getElementById('host-qr-canvas');
-                if (typeof QRCode !== 'undefined' && QRCode.toCanvas && canvas) {
-                    QRCode.toCanvas(canvas, joinLink, { width: 180, margin: 2, color: { dark: '#000000', light: '#ffffff' } }, (err) => {
-                        if (err) { console.error(err); canvas.style.display = 'none'; }
-                        else canvas.style.display = 'block';
-                    });
-                }
+
+                // Afficher d'abord l'écran pour que le Canvas soit dessiné avec des dimensions
                 document.getElementById('multi-status').style.display = 'none';
                 document.getElementById('btn-multi-icon').classList.add('online');
                 fermerMultiModal();
                 showScreen('screen-host-dashboard');
                 hostSetTab('join');
+                
+                // Ensuite on génère le QR code
+                const canvas = document.getElementById('host-qr-canvas');
+                if (typeof QRCode !== 'undefined' && canvas) {
+                    canvas.style.display = 'block';
+                    QRCode.toCanvas(canvas, joinLink, { width: 180, margin: 2 }, (err) => {
+                        if (err) { console.error("Erreur QR:", err); }
+                    });
+                }
+                
                 hostPushLog('Session hôte démarrée : ' + id);
                 hostRefreshHostPanels();
                 updateDashboard();
