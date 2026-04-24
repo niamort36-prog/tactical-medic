@@ -6,6 +6,7 @@
     <title>Tactical Medic V32 - Smart Inventory</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     
     <style>
         /* --- CHARTE GRAPHIQUE --- */
@@ -349,20 +350,38 @@
         <div class="modal-content" style="border: 2px solid var(--accent-blue);">
             <h3 style="color:var(--accent-blue); text-align:center;">MENU MULTIJOUEUR</h3>
             <div class="form-group">
-                <label>Nom de la partie (visible par les joueurs)</label>
+                <label>Nom de la partie (Hôte)</label>
                 <input type="text" id="multi-game-name" class="form-input" placeholder="Ex: Exercice Alpha">
             </div>
             <div class="form-group">
-                <label>Votre Pseudo</label>
-                <input type="text" id="multi-pseudo" class="form-input" placeholder="Ex: Doc">
+                <label>Pseudo de l'Hôte</label>
+                <input type="text" id="multi-pseudo" class="form-input" placeholder="Ex: Orga">
             </div>
             <button class="btn-action btn-create" onclick="creerPartieEnLigne()">CRÉER UNE PARTIE (HOST)</button>
+            
+            <hr style="border-color:#444; margin:20px 0;">
+            
             <button class="btn-action btn-join" onclick="document.getElementById('join-input-area').style.display='block'">REJOINDRE UNE PARTIE</button>
-            <div id="join-input-area" style="display:none; margin-top:10px;">
+            
+            <div id="join-input-area" style="display:none; margin-top:10px; border-top:1px solid #444; padding-top:10px;">
+                <div id="qr-reader" style="width:100%; display:none; margin-bottom:10px; background:white; color:black; border-radius:8px; overflow:hidden;"></div>
+                <button class="btn-action" style="background:#555; margin-bottom:10px;" onclick="startQRScanner()">📷 SCANNER QR CODE</button>
+                
                 <input type="text" id="join-code" class="form-input" placeholder="Code (ex: MEDIC-1234)" style="text-transform:uppercase;">
+                
+                <div class="form-group" style="margin-top:10px;">
+                    <label>Votre Pseudo</label>
+                    <input type="text" id="join-pseudo" class="form-input" placeholder="Ex: Doc">
+                </div>
+                <div class="form-group">
+                    <label>Équipe souhaitée</label>
+                    <select id="join-team" class="form-input"></select>
+                </div>
+                
                 <button class="btn-action btn-join" onclick="rejoindrePartieEnLigne()">CONNEXION</button>
             </div>
-            <button onclick="fermerMultiModal()" class="btn-action" style="background:#333;">ANNULER</button>
+            
+            <button onclick="fermerMultiModal()" class="btn-action" style="background:#333; margin-top:20px;">ANNULER</button>
             <div id="multi-status" style="display:none; text-align:center; padding:10px; color:#aaa;">Connexion...</div>
         </div>
     </div>
@@ -447,6 +466,7 @@
         let liveSession = { gameName: '', sessionPacks: [] };
         let clientSessionMeta = { gameName: '', sessionPacks: [] };
         let lastDrawSrc = 'bille';
+        let html5QrcodeScanner = null; // Pour le scanner QR
 
         function cardMatos(r) { return Array.isArray(r.matos) ? r.matos : []; }
         function escapeHtml(s) {
@@ -572,6 +592,8 @@
                 document.getElementById('join-input-area').style.display = 'block';
                 document.getElementById('join-code').value = jp.trim();
                 document.getElementById('multiplayerModal').style.display = 'block';
+                document.getElementById('join-pseudo').value = appState.playerName;
+                populateJoinTeams();
             }
             updateUI_Game();
         };
@@ -707,7 +729,6 @@
         }
 
         function renderSettingsList() {
-            // 1. Identify Active Rules
             let activeRules = [];
             if(appState.mode.startsWith('d_')) {
                 const d = appState.customDecks.find(d=>d.id===appState.mode);
@@ -719,21 +740,18 @@
                 activeRules = [...activeRules, ...DB_REGLES.explosion];
             }
 
-            // 2. Identify Required Materials
             let requiredMatos = new Set();
             activeRules.forEach(r => {
                 let rid = r.id || (appState.mode + "_" + r.titre);
                 if(r.id && r.id.startsWith('e')) rid = r.id; 
                 let q = appState.quantites[rid];
-                if (q === undefined) q = 2; // Default
+                if (q === undefined) q = 2; 
                 
-                // NOUVEAU: On ajoute le matériel requis uniquement si la carte est active (quantité > 0)
                 if (q > 0) {
                     cardMatos(r).forEach(m => requiredMatos.add(m));
                 }
             });
 
-            // 3. Render Material Checkboxes (Filtered)
             const lm = document.getElementById('liste-materiel'); 
             lm.innerHTML = "";
             const allPossibleMaterials = [...new Set([...DB_MATERIEL_BASE, ...(appState.customMaterials || [])])];
@@ -742,7 +760,6 @@
             allPossibleMaterials.forEach(m => { 
                 if(requiredMatos.has(m)) {
                     if(appState.materiel[m]===undefined) appState.materiel[m]=true;
-                    // Appel direct de setMaterielFlag
                     lm.innerHTML += `<div class="check-item"><span>${m}</span><input type="checkbox" onchange='setMaterielFlag(${JSON.stringify(m)}, this.checked)' ${appState.materiel[m]?'checked':''}></div>`; 
                     matosShownCount++;
                 }
@@ -754,7 +771,6 @@
             document.getElementById('box-explosion-opt').style.display=(appState.mode==='avance')?'block':'none';
             document.getElementById('chk-explosion').checked=appState.explosionEnabled;
 
-            // 4. Render Rules List (Standard)
             const lr=document.getElementById('liste-regles'); lr.innerHTML="";
             
             let baseRules = [];
@@ -790,12 +806,10 @@
                 DB_REGLES.explosion.forEach(r => renderRow(r));
             }
             
-            // Mise à jour de l'affichage dans les réglages et sur l'accueil !
             const infoText = total + " cartes actives";
             document.getElementById('info-deck').innerText = infoText;
         }
         
-        // NOUVEAU: On demande le rafraichissement visuel quand on change un matériel
         function setMaterielFlag(name, v) { 
             appState.materiel[name] = v;
             renderSettingsList();
@@ -1014,6 +1028,15 @@
             };
             Object.values(hostConns).forEach(c => { try { c.send(payload); } catch (e) {} });
         }
+        
+        function populateJoinTeams() {
+            const jt = document.getElementById('join-team');
+            if (jt) {
+                jt.innerHTML = (appState.customTeams || [{id:'blue',name:'Bleu'},{id:'red',name:'Rouge'}])
+                               .map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+            }
+        }
+
         function ouvrirMenuMultijoueur() {
             if (appState.isOrga && peer) {
                 showScreen('screen-host-dashboard');
@@ -1023,10 +1046,38 @@
             } else {
                 document.getElementById('multiplayerModal').style.display = 'block';
                 document.getElementById('multi-pseudo').value = appState.playerName;
+                document.getElementById('join-pseudo').value = appState.playerName;
                 document.getElementById('multi-game-name').value = appState.lastGameName || liveSession.gameName || '';
+                populateJoinTeams();
             }
         }
-        function fermerMultiModal() { document.getElementById('multiplayerModal').style.display = 'none'; }
+        
+        function startQRScanner() {
+            document.getElementById('qr-reader').style.display = 'block';
+            if (!html5QrcodeScanner) {
+                html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
+                html5QrcodeScanner.render((decodedText) => {
+                    let code = decodedText;
+                    if(code.includes('?join=')) code = code.split('?join=')[1].split('&')[0];
+                    document.getElementById('join-code').value = code;
+                    
+                    try { html5QrcodeScanner.clear(); } catch(e){}
+                    html5QrcodeScanner = null;
+                    document.getElementById('qr-reader').style.display = 'none';
+                    alert("QR Code scanné avec succès !");
+                }, (err) => {});
+            }
+        }
+
+        function fermerMultiModal() { 
+            document.getElementById('multiplayerModal').style.display = 'none'; 
+            if(html5QrcodeScanner) { 
+                try { html5QrcodeScanner.clear(); } catch(e){} 
+                html5QrcodeScanner = null;
+            }
+            document.getElementById('qr-reader').style.display = 'none';
+        }
+
         function creerPartieEnLigne() {
             liveSession.gameName = (document.getElementById('multi-game-name').value || '').trim() || 'Partie';
             appState.lastGameName = liveSession.gameName;
@@ -1080,10 +1131,14 @@
                 hostConns[conn.peer] = conn;
             });
         }
+        
         function rejoindrePartieEnLigne() {
             const code = document.getElementById('join-code').value.trim().toUpperCase();
             if (!code) { alert('Indiquez le code de la partie.'); return; }
-            appState.playerName = document.getElementById('multi-pseudo').value || 'Joueur';
+            
+            appState.playerName = document.getElementById('join-pseudo').value || 'Joueur';
+            const desiredTeam = document.getElementById('join-team').value || 'blue';
+            
             appState.isOrga = false;
             appState.isCoHost = false;
             document.getElementById('multi-status').style.display = 'block';
@@ -1102,7 +1157,7 @@
                     document.getElementById('multi-status').style.display = 'none';
                 });
                 myConn.on('open', () => {
-                    myConn.send({ type: 'JOIN', name: appState.playerName });
+                    myConn.send({ type: 'JOIN', name: appState.playerName, teamId: desiredTeam });
                     document.getElementById('btn-multi-icon').classList.add('online');
                     document.getElementById('multi-status').style.display = 'none';
                     fermerMultiModal();
@@ -1115,11 +1170,15 @@
                 myConn.on('data', (d) => handleClientData(d));
             });
         }
+        
         function handleHostData(conn, data) {
             if (!data || !data.type) return;
             if (data.type === 'JOIN') {
-                const firstTeam = (appState.customTeams[0] && appState.customTeams[0].id) || 'blue';
-                playersData[conn.peer] = { id: conn.peer, name: data.name || 'Joueur', teamId: firstTeam, isCoHost: false };
+                let teamToAssign = data.teamId;
+                if (!appState.customTeams.find(t => t.id === teamToAssign)) {
+                    teamToAssign = (appState.customTeams[0] && appState.customTeams[0].id) || 'blue';
+                }
+                playersData[conn.peer] = { id: conn.peer, name: data.name || 'Joueur', teamId: teamToAssign, isCoHost: false };
                 hostPushLog(`${playersData[conn.peer].name} a rejoint`);
                 broadcastFullState();
                 updateDashboard();
@@ -1136,6 +1195,7 @@
                 hostPushLog(`${data.name || 'Joueur'} quitte la partie`);
             }
         }
+        
         function handleClientData(data) {
             if (!data) return;
             if (data.type === 'SYNC_CONFIG') {
@@ -1270,7 +1330,6 @@
             const co = appState.isCoHost ? ' · Co-admin' : '';
             document.getElementById('top-indicator').innerText = `${appState.playerName} | ${teamLabel}${gn}${co}`;
             
-            // Recalcul strict du deck pour l'accueil
             let activeRules = [];
             if (appState.mode.startsWith('d_')) {
                 const cd = appState.customDecks.find(d=>d.id===appState.mode);
