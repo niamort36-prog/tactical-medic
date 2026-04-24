@@ -1084,8 +1084,6 @@
             if (!liveSession.sessionPacks) liveSession.sessionPacks = [];
             appState.playerName = document.getElementById('multi-pseudo').value || 'Orga';
             
-            // Ligne supprimée exprès pour ne pas rendre l'organisateur admin avant d'avoir créé le peer
-            
             document.getElementById('multi-status').style.display = 'block';
             document.getElementById('multi-status').innerText = 'Création de la partie...';
             if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
@@ -1290,6 +1288,8 @@
             hostConns = {};
             playersData = {};
             liveSession.sessionPacks = [];
+            liveSession.gameName = ''; // FIX : Effacer le nom de la partie
+            appState.lastGameName = ''; // FIX : Oublier l'ancien nom
             
             // FIX ICI : Détruire le peer et retirer le statut d'orga pour clore la session côté Admin
             if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
@@ -1301,7 +1301,7 @@
             renderHostSessionPacksList();
             updateDashboard();
             retourAccueilDepuisHost();
-            updateUI_Game();
+            saveState(); // FIX : Enregistrer pour écraser isOrga et lastGameName dans le cache
         }
         function retourAccueilDepuisHost() {
             stopAllAudio();
@@ -1327,7 +1327,7 @@
             document.getElementById('confirmLeaveModal').style.display = 'none';
             clientSessionMeta = { gameName: '', sessionPacks: [] };
             showScreen('screen-game');
-            updateUI_Game();
+            saveState(); // FIX : Enregistrer pour bien écraser isCoHost/isOrga dans le cache
         }
 
         /* --- UI & GAME --- */
