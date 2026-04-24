@@ -454,6 +454,11 @@
             return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
         }
         function cloneCards(cards) { try { return JSON.parse(JSON.stringify(cards || [])); } catch(e) { return []; } }
+        function getCardQtyKey(drawSrc, card) {
+            if (card && card.id) return card.id;
+            const srcKey = drawSrc === 'bille' ? appState.mode : drawSrc;
+            return `${srcKey}_${(card && card.titre) ? card.titre : 'carte'}`;
+        }
         function getRulesArrayForDrawSource(src) {
             if (src === 'explosion') return (DB_REGLES.explosion || []).slice();
             if (src === 'bille') {
@@ -580,6 +585,13 @@
                     if(appState.quantites[rid] === undefined) appState.quantites[rid]=2;
                 });
             });
+            // Initialize quantities for custom deck cards shown on the menu as well.
+            (appState.customDecks || []).forEach(d => {
+                (d.cards || []).forEach(r => {
+                    const rid = r.id || `${d.id}_${r.titre}`;
+                    if (appState.quantites[rid] === undefined) appState.quantites[rid] = 2;
+                });
+            });
         }
 
         /* --- NAVIGATION --- */
@@ -622,8 +634,7 @@
 
             let pool = [];
             rules.forEach(r => { 
-                let rid=r.id||(appState.mode+"_"+r.titre);
-                if(src==='explosion') rid=r.id;
+                let rid = getCardQtyKey(src, r);
                 let q=appState.quantites[rid];
                 const mats = cardMatos(r);
                 if(q>0 && mats.every(m=>appState.materiel[m])) { for(let i=0;i<q;i++) pool.push(r); } 
