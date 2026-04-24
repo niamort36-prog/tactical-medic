@@ -736,7 +736,7 @@
                 // Only show if required by current rules
                 if(requiredMatos.has(m)) {
                     if(appState.materiel[m]===undefined) appState.materiel[m]=true;
-                    lm.innerHTML += `<div class="check-item"><span>${m}</span><input type="checkbox" onchange="setMaterielFlag(${JSON.stringify(m)}, this.checked)" ${appState.materiel[m]?'checked':''}></div>`; 
+                    lm.innerHTML += `<div class="check-item"><span>${m}</span><input type="checkbox" onchange='setMaterielFlag(${JSON.stringify(m)}, this.checked)' ${appState.materiel[m]?'checked':''}></div>`; 
                     matosShownCount++;
                 }
             });
@@ -771,10 +771,10 @@
                     <div class="check-item" style="opacity:${matosOk ? 1 : 0.5}">
                         <div style="flex-grow:1"><strong style="color:${getColor(r.gravite)}">${r.titre}</strong></div>
                         <div style="display:flex; align-items:center; gap:5px;">
-                            <button type="button" class="btn-mini" style="background:#1976d2" onclick="voirCatalogueComplet(${JSON.stringify(rid)})">👁️</button>
-                            <button type="button" class="btn-mini" onclick="changeQty(${JSON.stringify(rid)},-1)">-</button>
+                            <button type="button" class="btn-mini" style="background:#1976d2" onclick='voirCatalogueComplet(${JSON.stringify(rid)})'>👁️</button>
+                            <button type="button" class="btn-mini" onclick='changeQty(${JSON.stringify(rid)},-1)'>-</button>
                             <span style="width:20px;text-align:center">${q}</span>
-                            <button type="button" class="btn-mini" onclick="changeQty(${JSON.stringify(rid)},1)">+</button>
+                            <button type="button" class="btn-mini" onclick='changeQty(${JSON.stringify(rid)},1)'>+</button>
                         </div>
                     </div>`;
             };
@@ -1258,7 +1258,7 @@
             const c = document.getElementById('dynamic-buttons-container'); c.innerHTML="";
             c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring"></div><button class="btn-core-shared main-btn" onclick="lancerSequenceTirage('bille')"><img src="picto-blesse.png" class="icon-wounded"></button><div class="btn-label">BALISTIQUE</div></div>`;
             if(appState.mode==='avance' && appState.explosionEnabled) c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring-blast"></div><button class="btn-core-shared blast-btn" onclick="lancerSequenceTirage('explosion')"><img src="btn-explosion.png" class="icon-blast"></button><div class="btn-label">EXPLOSION</div></div>`;
-            appState.customDecks.forEach(d => { if(d.showOnHome) c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring-custom"></div><button class="btn-core-shared custom-btn-style" onclick="lancerSequenceTirage(${JSON.stringify(d.id)})"><img src="btn-custom.png" class="icon-custom" onerror="this.src='picto-blesse.png'"></button><div class="btn-label">${escapeHtml(d.name)}</div></div>`; });
+            appState.customDecks.forEach(d => { if(d.showOnHome) c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring-custom"></div><button class="btn-core-shared custom-btn-style" onclick='lancerSequenceTirage(${JSON.stringify(d.id)})'><img src="btn-custom.png" class="icon-custom" onerror="this.src='picto-blesse.png'"></button><div class="btn-label">${escapeHtml(d.name)}</div></div>`; });
         }
         function saveState() { localStorage.setItem('medic_v32_smart', JSON.stringify(appState)); updateUI_Game(); }
 
