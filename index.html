@@ -124,8 +124,7 @@
         .host-panel.active { display: block; }
         .join-link-row { display: flex; gap: 8px; align-items: stretch; margin: 10px 0; }
         .join-link-row input { flex: 1; font-size: 0.75em; }
-        #host-qr-wrap { display: flex; justify-content: center; padding: 12px; background: #fff; border-radius: 8px; margin: 10px auto; max-width: 220px; }
-        #host-qr-wrap canvas { display: block; }
+        #host-qr-wrap { text-align: center; padding: 12px; background: #fff; border-radius: 8px; margin: 10px auto; max-width: 220px; min-height: 180px; display: flex; align-items: center; justify-content: center; }
         .log-box { background: #0a0a0a; border: 1px solid #333; border-radius: 6px; padding: 10px; font-family: ui-monospace, monospace; font-size: 0.72em; color: #9ccc65; max-height: 220px; overflow-y: auto; text-align: left; white-space: pre-wrap; }
         .host-inline-form { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
         .host-inline-form .form-input { margin: 0; flex: 1; min-width: 120px; }
@@ -223,8 +222,11 @@
             <div class="join-link-row">
                 <input type="text" id="host-join-link" class="form-input" readonly style="margin:0;">
                 <button type="button" class="btn-mini" style="width:auto;padding:0 14px;" onclick="copierLienInvitation()">Copier</button>
+                <button type="button" class="btn-mini" style="width:auto;padding:0 14px;background:var(--accent-blue);" onclick="window.open(document.getElementById('host-join-link').value, '_blank')">Ouvrir</button>
             </div>
-            <div id="host-qr-wrap"><canvas id="host-qr-canvas" width="180" height="180"></canvas></div>
+            <div id="host-qr-wrap">
+                <span style="color:#aaa;font-size:0.8em;">Génération...</span>
+            </div>
             <p style="font-size:0.75em; color:#888;">Les joueurs ouvrent le lien ou scannent le QR, puis valident avec leur pseudo.</p>
         </div>
         <div id="host-panel-players" class="host-panel box">
@@ -1105,23 +1107,23 @@
                 const inp = document.getElementById('host-join-link');
                 if (inp) inp.value = joinLink;
 
-                // Afficher d'abord l'écran pour que le Canvas soit dessiné avec des dimensions
                 document.getElementById('multi-status').style.display = 'none';
                 document.getElementById('btn-multi-icon').classList.add('online');
                 fermerMultiModal();
                 showScreen('screen-host-dashboard');
                 hostSetTab('join');
                 
-                // Ensuite on génère le QR code
-                setTimeout(() => {
-                    const canvas = document.getElementById('host-qr-canvas');
-                    if (typeof QRCode !== 'undefined' && canvas) {
-                        canvas.style.display = 'block';
-                        QRCode.toCanvas(canvas, joinLink, { width: 180, margin: 2, color: { dark: '#000000', light: '#ffffff' } }, (err) => {
-                            if (err) { console.error("Erreur QR:", err); }
-                        });
-                    }
-                }, 150);
+                // Génération du QR sous forme de véritable balise <img> (100% stable)
+                const wrap = document.getElementById('host-qr-wrap');
+                if (typeof QRCode !== 'undefined' && wrap) {
+                    QRCode.toDataURL(joinLink, { width: 180, margin: 2 }, (err, url) => {
+                        if (!err) {
+                            wrap.innerHTML = `<img src="${url}" alt="QR Code" style="display:block; margin:0 auto; border-radius:4px;">`;
+                        } else {
+                            wrap.innerHTML = `<span style="color:red">Erreur QR</span>`;
+                        }
+                    });
+                }
                 
                 hostPushLog('Session hôte démarrée : ' + id);
                 hostRefreshHostPanels();
