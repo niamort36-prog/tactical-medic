@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tactical Medic V32 - Smart Inventory</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
     
     <style>
         /* --- CHARTE GRAPHIQUE --- */
@@ -124,7 +122,6 @@
         .host-panel.active { display: block; }
         .join-link-row { display: flex; gap: 8px; align-items: stretch; margin: 10px 0; }
         .join-link-row input { flex: 1; font-size: 0.75em; }
-        #host-qr-wrap { text-align: center; padding: 12px; background: #fff; border-radius: 8px; margin: 10px auto; max-width: 220px; min-height: 180px; display: flex; align-items: center; justify-content: center; }
         .log-box { background: #0a0a0a; border: 1px solid #333; border-radius: 6px; padding: 10px; font-family: ui-monospace, monospace; font-size: 0.72em; color: #9ccc65; max-height: 220px; overflow-y: auto; text-align: left; white-space: pre-wrap; }
         .host-inline-form { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
         .host-inline-form .form-input { margin: 0; flex: 1; min-width: 120px; }
@@ -218,16 +215,13 @@
         <div id="host-panel-join" class="host-panel active box" style="border-color:var(--accent-blue);">
             <p style="margin:0; color:#aaa; font-size:0.85em;">Code / ID PeerJS</p>
             <div id="host-connection-id">...</div>
-            <p style="font-size:0.8em; color:#666;">Lien de connexion (partage ou QR)</p>
+            <p style="font-size:0.8em; color:#666;">Lien de connexion</p>
             <div class="join-link-row">
                 <input type="text" id="host-join-link" class="form-input" readonly style="margin:0;">
                 <button type="button" class="btn-mini" style="width:auto;padding:0 14px;" onclick="copierLienInvitation()">Copier</button>
                 <button type="button" class="btn-mini" style="width:auto;padding:0 14px;background:var(--accent-blue);" onclick="window.open(document.getElementById('host-join-link').value, '_blank')">Ouvrir</button>
             </div>
-            <div id="host-qr-wrap">
-                <span style="color:#aaa;font-size:0.8em;">Génération...</span>
-            </div>
-            <p style="font-size:0.75em; color:#888;">Les joueurs ouvrent le lien ou scannent le QR, puis valident avec leur pseudo.</p>
+            <p style="font-size:0.75em; color:#888; margin-top:15px;">Les joueurs ouvrent le lien ou le collent dans le menu "Rejoindre", puis valident avec leur pseudo.</p>
         </div>
         <div id="host-panel-players" class="host-panel box">
             <h3>JOUEURS (<span id="connected-count">0</span>)</h3>
@@ -366,10 +360,8 @@
             <button class="btn-action btn-join" onclick="document.getElementById('join-input-area').style.display='block'">REJOINDRE UNE PARTIE</button>
             
             <div id="join-input-area" style="display:none; margin-top:10px; border-top:1px solid #444; padding-top:10px;">
-                <div id="qr-reader" style="width:100%; display:none; margin-bottom:10px; background:white; color:black; border-radius:8px; overflow:hidden;"></div>
-                <button class="btn-action" style="background:#555; margin-bottom:10px;" onclick="startQRScanner()">📷 SCANNER QR CODE</button>
                 
-                <input type="text" id="join-code" class="form-input" placeholder="Code (ex: MEDIC-1234)" style="text-transform:uppercase;">
+                <input type="text" id="join-code" class="form-input" placeholder="Lien ou Code (ex: MEDIC-1234)">
                 
                 <div class="form-group" style="margin-top:10px;">
                     <label>Votre Pseudo</label>
@@ -468,7 +460,6 @@
         let liveSession = { gameName: '', sessionPacks: [] };
         let clientSessionMeta = { gameName: '', sessionPacks: [] };
         let lastDrawSrc = 'bille';
-        let html5QrcodeScanner = null; // Pour le scanner QR
 
         function cardMatos(r) { return Array.isArray(r.matos) ? r.matos : []; }
         function escapeHtml(s) {
@@ -1053,31 +1044,9 @@
                 populateJoinTeams();
             }
         }
-        
-        function startQRScanner() {
-            document.getElementById('qr-reader').style.display = 'block';
-            if (!html5QrcodeScanner) {
-                html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
-                html5QrcodeScanner.render((decodedText) => {
-                    let code = decodedText;
-                    if(code.includes('?join=')) code = code.split('?join=')[1].split('&')[0];
-                    document.getElementById('join-code').value = code;
-                    
-                    try { html5QrcodeScanner.clear(); } catch(e){}
-                    html5QrcodeScanner = null;
-                    document.getElementById('qr-reader').style.display = 'none';
-                    alert("QR Code scanné avec succès !");
-                }, (err) => {});
-            }
-        }
 
         function fermerMultiModal() { 
             document.getElementById('multiplayerModal').style.display = 'none'; 
-            if(html5QrcodeScanner) { 
-                try { html5QrcodeScanner.clear(); } catch(e){} 
-                html5QrcodeScanner = null;
-            }
-            document.getElementById('qr-reader').style.display = 'none';
         }
 
         function creerPartieEnLigne() {
@@ -1113,18 +1082,6 @@
                 showScreen('screen-host-dashboard');
                 hostSetTab('join');
                 
-                // Génération du QR sous forme de véritable balise <img> (100% stable)
-                const wrap = document.getElementById('host-qr-wrap');
-                if (typeof QRCode !== 'undefined' && wrap) {
-                    QRCode.toDataURL(joinLink, { width: 180, margin: 2 }, (err, url) => {
-                        if (!err) {
-                            wrap.innerHTML = `<img src="${url}" alt="QR Code" style="display:block; margin:0 auto; border-radius:4px;">`;
-                        } else {
-                            wrap.innerHTML = `<span style="color:red">Erreur QR</span>`;
-                        }
-                    });
-                }
-                
                 hostPushLog('Session hôte démarrée : ' + id);
                 hostRefreshHostPanels();
                 updateDashboard();
@@ -1145,8 +1102,14 @@
         }
         
         function rejoindrePartieEnLigne() {
-            const code = document.getElementById('join-code').value.trim().toUpperCase();
-            if (!code) { alert('Indiquez le code de la partie.'); return; }
+            let rawInput = document.getElementById('join-code').value.trim();
+            if (!rawInput) { alert('Indiquez le code ou le lien de la partie.'); return; }
+            
+            let code = rawInput;
+            if(code.includes('?join=')) {
+                code = code.split('?join=')[1].split('&')[0];
+            }
+            code = code.toUpperCase();
             
             appState.playerName = document.getElementById('join-pseudo').value || 'Joueur';
             const desiredTeam = document.getElementById('join-team').value || 'blue';
