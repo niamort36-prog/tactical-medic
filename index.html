@@ -1113,13 +1113,15 @@
                 hostSetTab('join');
                 
                 // Ensuite on génère le QR code
-                const canvas = document.getElementById('host-qr-canvas');
-                if (typeof QRCode !== 'undefined' && canvas) {
-                    canvas.style.display = 'block';
-                    QRCode.toCanvas(canvas, joinLink, { width: 180, margin: 2 }, (err) => {
-                        if (err) { console.error("Erreur QR:", err); }
-                    });
-                }
+                setTimeout(() => {
+                    const canvas = document.getElementById('host-qr-canvas');
+                    if (typeof QRCode !== 'undefined' && canvas) {
+                        canvas.style.display = 'block';
+                        QRCode.toCanvas(canvas, joinLink, { width: 180, margin: 2, color: { dark: '#000000', light: '#ffffff' } }, (err) => {
+                            if (err) { console.error("Erreur QR:", err); }
+                        });
+                    }
+                }, 150);
                 
                 hostPushLog('Session hôte démarrée : ' + id);
                 hostRefreshHostPanels();
