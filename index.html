@@ -585,7 +585,6 @@
                     if(appState.quantites[rid] === undefined) appState.quantites[rid]=2;
                 });
             });
-            // Initialize quantities for custom deck cards shown on the menu as well.
             (appState.customDecks || []).forEach(d => {
                 (d.cards || []).forEach(r => {
                     const rid = r.id || `${d.id}_${r.titre}`;
@@ -723,7 +722,15 @@
             // 2. Identify Required Materials
             let requiredMatos = new Set();
             activeRules.forEach(r => {
-                cardMatos(r).forEach(m => requiredMatos.add(m));
+                let rid = r.id || (appState.mode + "_" + r.titre);
+                if(r.id && r.id.startsWith('e')) rid = r.id; 
+                let q = appState.quantites[rid];
+                if (q === undefined) q = 2; // Default
+                
+                // NOUVEAU: On ajoute le matériel requis uniquement si la carte est active (quantité > 0)
+                if (q > 0) {
+                    cardMatos(r).forEach(m => requiredMatos.add(m));
+                }
             });
 
             // 3. Render Material Checkboxes (Filtered)
@@ -733,15 +740,15 @@
             
             let matosShownCount = 0;
             allPossibleMaterials.forEach(m => { 
-                // Only show if required by current rules
                 if(requiredMatos.has(m)) {
                     if(appState.materiel[m]===undefined) appState.materiel[m]=true;
+                    // Appel direct de setMaterielFlag
                     lm.innerHTML += `<div class="check-item"><span>${m}</span><input type="checkbox" onchange='setMaterielFlag(${JSON.stringify(m)}, this.checked)' ${appState.materiel[m]?'checked':''}></div>`; 
                     matosShownCount++;
                 }
             });
             if(matosShownCount === 0) {
-                lm.innerHTML = "<div style='color:#666; font-style:italic; padding:10px;'>Aucun matériel requis pour ce mode.</div>";
+                lm.innerHTML = "<div style='color:#666; font-style:italic; padding:10px;'>Aucun matériel requis pour ce mode ou cette sélection.</div>";
             }
             
             document.getElementById('box-explosion-opt').style.display=(appState.mode==='avance')?'block':'none';
@@ -750,7 +757,6 @@
             // 4. Render Rules List (Standard)
             const lr=document.getElementById('liste-regles'); lr.innerHTML="";
             
-            // Re-fetch base rules for splitting logic
             let baseRules = [];
             if (appState.mode.startsWith('d_')) {
                 const cd = appState.customDecks.find(d=>d.id===appState.mode);
@@ -763,12 +769,11 @@
                 if(r.id && r.id.startsWith('e')) rid = r.id; 
                 if (appState.quantites[rid] === undefined) appState.quantites[rid] = 2;
                 let q = appState.quantites[rid];
-                // Check against global material state
                 let matosOk = cardMatos(r).every(m => appState.materiel[m]);
                 if (matosOk) total += q;
 
                 lr.innerHTML += `
-                    <div class="check-item" style="opacity:${matosOk ? 1 : 0.5}">
+                    <div class="check-item" style="opacity:${matosOk ? 1 : 0.5}; transition: opacity 0.3s;">
                         <div style="flex-grow:1"><strong style="color:${getColor(r.gravite)}">${r.titre}</strong></div>
                         <div style="display:flex; align-items:center; gap:5px;">
                             <button type="button" class="btn-mini" style="background:#1976d2" onclick='voirCatalogueComplet(${JSON.stringify(rid)})'>👁️</button>
@@ -784,20 +789,29 @@
                 lr.innerHTML += `<div class="separator">💥 PACK EXPLOSION</div>`;
                 DB_REGLES.explosion.forEach(r => renderRow(r));
             }
-            document.getElementById('info-deck').innerText = total + " cartes actives";
+            
+            // Mise à jour de l'affichage dans les réglages et sur l'accueil !
+            const infoText = total + " cartes actives";
+            document.getElementById('info-deck').innerText = infoText;
         }
         
-        function setMaterielFlag(name, v) { appState.materiel[name] = v; }
+        // NOUVEAU: On demande le rafraichissement visuel quand on change un matériel
+        function setMaterielFlag(name, v) { 
+            appState.materiel[name] = v;
+            renderSettingsList();
+            updateUI_Game(); 
+        }
 
         function changeQty(id, d) {
             let cur = appState.quantites[id];
             if (cur === undefined || cur === null) cur = 2;
             appState.quantites[id] = Math.max(0, cur + d);
             renderSettingsList();
+            updateUI_Game();
         }
-        function changerModeMenu(v) { appState.mode=v; renderSettingsList(); }
+        function changerModeMenu(v) { appState.mode=v; renderSettingsList(); updateUI_Game(); }
         function toggleDeathRisk() { appState.deathRisk = document.getElementById('chk-death').checked; }
-        function toggleExplosion() { appState.explosionEnabled=document.getElementById('chk-explosion').checked; renderSettingsList(); }
+        function toggleExplosion() { appState.explosionEnabled=document.getElementById('chk-explosion').checked; renderSettingsList(); updateUI_Game(); }
         function sauvegarderEtQuitter() { saveState(); if(appState.isOrga) broadcastFullState(); retourAccueil(); }
         function annulerReglages() { retourAccueil(); }
 
@@ -1255,6 +1269,28 @@
             const gn = (!appState.isOrga && clientSessionMeta.gameName) ? (' · ' + clientSessionMeta.gameName) : '';
             const co = appState.isCoHost ? ' · Co-admin' : '';
             document.getElementById('top-indicator').innerText = `${appState.playerName} | ${teamLabel}${gn}${co}`;
+            
+            // Recalcul strict du deck pour l'accueil
+            let activeRules = [];
+            if (appState.mode.startsWith('d_')) {
+                const cd = appState.customDecks.find(d=>d.id===appState.mode);
+                activeRules = (cd && cd.cards) ? cd.cards : [];
+            } else activeRules = DB_REGLES[appState.mode] || [];
+            if (appState.mode==='avance' && appState.explosionEnabled) {
+                activeRules = [...activeRules, ...(DB_REGLES.explosion||[])];
+            }
+            let totalCartes = 0;
+            activeRules.forEach(r => {
+                let rid = r.id || (appState.mode + "_" + r.titre);
+                if(r.id && r.id.startsWith('e')) rid = r.id;
+                let q = appState.quantites[rid];
+                if (q === undefined) q = 2;
+                let matosOk = cardMatos(r).every(m => appState.materiel[m]);
+                if (matosOk) totalCartes += q;
+            });
+            const infoDeck = document.getElementById('info-deck');
+            if(infoDeck) infoDeck.innerText = totalCartes + " cartes actives";
+
             const c = document.getElementById('dynamic-buttons-container'); c.innerHTML="";
             c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring"></div><button class="btn-core-shared main-btn" onclick="lancerSequenceTirage('bille')"><img src="picto-blesse.png" class="icon-wounded"></button><div class="btn-label">BALISTIQUE</div></div>`;
             if(appState.mode==='avance' && appState.explosionEnabled) c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring-blast"></div><button class="btn-core-shared blast-btn" onclick="lancerSequenceTirage('explosion')"><img src="btn-explosion.png" class="icon-blast"></button><div class="btn-label">EXPLOSION</div></div>`;
