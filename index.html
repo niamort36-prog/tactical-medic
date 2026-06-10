@@ -1093,7 +1093,6 @@
             let baseName = liveSession.gameName.toUpperCase().replace(/[^A-Z0-9]/g, '');
             let peerId = baseName ? ('TM32-' + baseName) : ('TM32-' + Math.floor(1000 + Math.random() * 9000));
 
-            // Ajout explicite des serveurs STUN gratuits pour forcer le passage WebRTC (Anti-blocage)
             peer = new Peer(peerId, {
                 config: {
                     'iceServers': [
@@ -1184,7 +1183,6 @@
                 code = decodeURIComponent(code);
             } 
             
-            // Sécurité : On applique toujours le nettoyage pour garantir une connexion à la bonne instance (anti-espace)
             let clean = code.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
             if (!clean.startsWith('TM32-')) {
                 clean = 'TM32-' + clean.replace(/-/g, '');
@@ -1200,7 +1198,6 @@
             document.getElementById('multi-status').innerText = 'Recherche de la partie...';
             if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
             
-            // Pareil, ajout explicite STUN
             peer = new Peer({
                 config: {
                     'iceServers': [
@@ -1227,6 +1224,7 @@
                 document.getElementById('multi-status').innerText = 'Connexion réseau en cours...';
                 myConn = peer.connect(code, { reliable: true });
                 
+                // --- CORRECTION : Délai augmenté à 20 secondes ---
                 connectionTimeout = setTimeout(() => {
                     if (!myConn || !myConn.open) {
                         alert("Délai dépassé. L'hôte est injoignable ou votre réseau bloque la connexion (pare-feu).");
@@ -1234,7 +1232,7 @@
                         try { peer.destroy(); } catch(e){}
                         peer = null;
                     }
-                }, 10000);
+                }, 20000);
 
                 myConn.on('error', (err) => {
                     clearTimeout(connectionTimeout);
@@ -1371,10 +1369,9 @@
             hostConns = {};
             playersData = {};
             liveSession.sessionPacks = [];
-            liveSession.gameName = ''; // FIX : Effacer le nom de la partie
-            appState.lastGameName = ''; // FIX : Oublier l'ancien nom
+            liveSession.gameName = ''; 
+            appState.lastGameName = ''; 
             
-            // FIX ICI : Détruire le peer et retirer le statut d'orga pour clore la session côté Admin
             if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
             appState.isOrga = false;
             appState.isCoHost = false;
@@ -1384,7 +1381,7 @@
             renderHostSessionPacksList();
             updateDashboard();
             retourAccueilDepuisHost();
-            saveState(); // FIX : Enregistrer pour écraser isOrga et lastGameName dans le cache
+            saveState(); 
         }
         function retourAccueilDepuisHost() {
             stopAllAudio();
@@ -1410,7 +1407,7 @@
             document.getElementById('confirmLeaveModal').style.display = 'none';
             clientSessionMeta = { gameName: '', sessionPacks: [] };
             showScreen('screen-game');
-            saveState(); // FIX : Enregistrer pour bien écraser isCoHost/isOrga dans le cache
+            saveState(); 
         }
 
         /* --- UI & GAME --- */
