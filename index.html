@@ -467,7 +467,7 @@
         let liveSession = { gameName: '', sessionPacks: [] };
         let clientSessionMeta = { gameName: '', sessionPacks: [] };
         let lastDrawSrc = 'bille';
-        let html5QrcodeScanner = null; // Retour de la variable du scanner
+        let html5QrcodeScanner = null;
 
         function cardMatos(r) { return Array.isArray(r.matos) ? r.matos : []; }
         function escapeHtml(s) {
@@ -1061,12 +1061,12 @@
                 html5QrcodeScanner.render((decodedText) => {
                     let code = decodedText;
                     if(code.includes('?join=')) code = code.split('?join=')[1].split('&')[0];
-                    document.getElementById('join-code').value = code;
+                    document.getElementById('join-code').value = decodeURIComponent(code);
                     
                     try { html5QrcodeScanner.clear(); } catch(e){}
                     html5QrcodeScanner = null;
                     document.getElementById('qr-reader').style.display = 'none';
-                    alert("QR Code scanné avec succès !");
+                    alert("QR Code scanné avec succès ! Cliquez sur CONNEXION.");
                 }, (err) => {});
             }
         }
@@ -1090,11 +1090,19 @@
             document.getElementById('multi-status').innerText = 'Création de la partie...';
             if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
             
-            // Génération de l'ID à partir du nom, avec préfixe sécurisé pour éviter les conflits PeerJS globaux
             let baseName = liveSession.gameName.toUpperCase().replace(/[^A-Z0-9]/g, '');
             let peerId = baseName ? ('TM32-' + baseName) : ('TM32-' + Math.floor(1000 + Math.random() * 9000));
 
-            peer = new Peer(peerId);
+            // Ajout explicite des serveurs STUN gratuits pour forcer le passage WebRTC (Anti-blocage)
+            peer = new Peer(peerId, {
+                config: {
+                    'iceServers': [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:global.stun.twilio.com:3478' }
+                    ]
+                }
+            });
+            
             peer.on('error', (err) => {
                 document.getElementById('multi-status').style.display = 'block';
                 document.getElementById('multi-status').innerText = (err && err.message) ? err.message : 'Erreur PeerJS';
@@ -1118,7 +1126,6 @@
                 showScreen('screen-host-dashboard');
                 hostSetTab('join');
                 
-                // Génération du QR Code avec double sécurité (Bibliothèque locale ou API externe en secours)
                 function genererQR(link) {
                     const wrap = document.getElementById('host-qr-wrap');
                     if (!wrap) return;
@@ -1163,20 +1170,26 @@
         }
         
         function rejoindrePartieEnLigne() {
+            if (appState.isOrga) {
+                alert("Vous hébergez déjà une partie. Vous ne pouvez pas la rejoindre en tant que client. Si vous souhaitez jouer, clôturez la partie ou revenez à l'accueil via l'interface Hôte.");
+                return;
+            }
+
             let rawInput = document.getElementById('join-code').value.trim();
             if (!rawInput) { alert('Indiquez le nom de la partie ou scannez le QR code.'); return; }
             
             let code = rawInput;
             if(code.includes('?join=')) {
                 code = code.split('?join=')[1].split('&')[0];
-            } else {
-                // Reconstruction de l'ID avec le préfixe sécurisé
-                let clean = code.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
-                if (!clean.startsWith('TM32-')) {
-                    clean = 'TM32-' + clean.replace(/-/g, '');
-                }
-                code = clean;
+                code = decodeURIComponent(code);
+            } 
+            
+            // Sécurité : On applique toujours le nettoyage pour garantir une connexion à la bonne instance (anti-espace)
+            let clean = code.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
+            if (!clean.startsWith('TM32-')) {
+                clean = 'TM32-' + clean.replace(/-/g, '');
             }
+            code = clean;
             
             appState.playerName = document.getElementById('join-pseudo').value || 'Joueur';
             const desiredTeam = document.getElementById('join-team').value || 'blue';
@@ -1184,14 +1197,26 @@
             appState.isOrga = false;
             appState.isCoHost = false;
             document.getElementById('multi-status').style.display = 'block';
-            document.getElementById('multi-status').innerText = 'Connexion...';
+            document.getElementById('multi-status').innerText = 'Recherche de la partie...';
             if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
-            peer = new Peer();
+            
+            // Pareil, ajout explicite STUN
+            peer = new Peer({
+                config: {
+                    'iceServers': [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:global.stun.twilio.com:3478' }
+                    ]
+                }
+            });
+            
+            let connectionTimeout;
+
             peer.on('error', (err) => {
+                clearTimeout(connectionTimeout);
                 document.getElementById('multi-status').style.display = 'block';
                 document.getElementById('multi-status').innerText = (err && err.message) ? err.message : 'Erreur PeerJS';
                 
-                // Alerte explicite si la partie n'existe pas
                 if (err && err.type === 'peer-unavailable') {
                     alert("La partie est introuvable. Vérifiez le nom.");
                     document.getElementById('multi-status').style.display = 'none';
@@ -1199,12 +1224,25 @@
                 console.error(err);
             });
             peer.on('open', () => {
+                document.getElementById('multi-status').innerText = 'Connexion réseau en cours...';
                 myConn = peer.connect(code, { reliable: true });
+                
+                connectionTimeout = setTimeout(() => {
+                    if (!myConn || !myConn.open) {
+                        alert("Délai dépassé. L'hôte est injoignable ou votre réseau bloque la connexion (pare-feu).");
+                        document.getElementById('multi-status').style.display = 'none';
+                        try { peer.destroy(); } catch(e){}
+                        peer = null;
+                    }
+                }, 10000);
+
                 myConn.on('error', (err) => {
+                    clearTimeout(connectionTimeout);
                     alert('Connexion impossible : hôte introuvable ou nom invalide.');
                     document.getElementById('multi-status').style.display = 'none';
                 });
                 myConn.on('open', () => {
+                    clearTimeout(connectionTimeout);
                     myConn.send({ type: 'JOIN', name: appState.playerName, teamId: desiredTeam });
                     document.getElementById('btn-multi-icon').classList.add('online');
                     document.getElementById('multi-status').style.display = 'none';
