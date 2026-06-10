@@ -1118,26 +1118,30 @@
                 showScreen('screen-host-dashboard');
                 hostSetTab('join');
                 
-                // Génération sécurisée et différée du Canvas pour pallier au délai de chargement du script CDN
-                function genererQR(link, attempts) {
+                // Génération du QR Code avec double sécurité (Bibliothèque locale ou API externe en secours)
+                function genererQR(link) {
                     const wrap = document.getElementById('host-qr-wrap');
                     if (!wrap) return;
-                    if (typeof QRCode === 'undefined') {
-                        if (attempts > 10) {
-                            wrap.innerHTML = `<span style="color:red">Erreur chargement QR</span>`;
-                            return;
+                    
+                    const fallbackApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(link)}`;
+                    
+                    if (typeof window.QRCode !== 'undefined') {
+                        try {
+                            window.QRCode.toDataURL(link, { width: 180, margin: 2 }, (err, url) => {
+                                if (err) {
+                                    wrap.innerHTML = `<img src="${fallbackApiUrl}" alt="QR Code" style="display:block; margin:0 auto; border-radius:4px;">`;
+                                } else {
+                                    wrap.innerHTML = `<img src="${url}" alt="QR Code" style="display:block; margin:0 auto; border-radius:4px;">`;
+                                }
+                            });
+                        } catch(e) {
+                            wrap.innerHTML = `<img src="${fallbackApiUrl}" alt="QR Code" style="display:block; margin:0 auto; border-radius:4px;">`;
                         }
-                        setTimeout(() => genererQR(link, attempts + 1), 500);
-                        return;
+                    } else {
+                        wrap.innerHTML = `<img src="${fallbackApiUrl}" alt="QR Code" style="display:block; margin:0 auto; border-radius:4px;">`;
                     }
-                    wrap.innerHTML = '';
-                    const canvas = document.createElement('canvas');
-                    wrap.appendChild(canvas);
-                    QRCode.toCanvas(canvas, link, { width: 180, margin: 2, color: { dark: '#000000', light: '#ffffff' } }, (err) => {
-                        if (err) wrap.innerHTML = `<span style="color:red">Erreur QR</span>`;
-                    });
                 }
-                genererQR(joinLink, 0);
+                genererQR(joinLink);
                 
                 hostPushLog('Session hôte démarrée : ' + id);
                 hostRefreshHostPanels();
