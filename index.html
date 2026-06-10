@@ -1090,9 +1090,9 @@
             document.getElementById('multi-status').innerText = 'Création de la partie...';
             if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
             
-            // Génération de l'ID à partir du nom pour faciliter la connexion
-            let peerId = liveSession.gameName.toUpperCase().replace(/[^A-Z0-9]/g, '');
-            if (!peerId) peerId = 'MEDIC' + Math.floor(1000 + Math.random() * 9000);
+            // Génération de l'ID à partir du nom, avec préfixe sécurisé pour éviter les conflits PeerJS globaux
+            let baseName = liveSession.gameName.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            let peerId = baseName ? ('TM32-' + baseName) : ('TM32-' + Math.floor(1000 + Math.random() * 9000));
 
             peer = new Peer(peerId);
             peer.on('error', (err) => {
@@ -1118,17 +1118,26 @@
                 showScreen('screen-host-dashboard');
                 hostSetTab('join');
                 
-                // Génération du QR sous forme de véritable balise <img>
-                const wrap = document.getElementById('host-qr-wrap');
-                if (typeof QRCode !== 'undefined' && wrap) {
-                    QRCode.toDataURL(joinLink, { width: 180, margin: 2 }, (err, url) => {
-                        if (!err) {
-                            wrap.innerHTML = `<img src="${url}" alt="QR Code" style="display:block; margin:0 auto; border-radius:4px;">`;
-                        } else {
-                            wrap.innerHTML = `<span style="color:red">Erreur QR</span>`;
+                // Génération sécurisée et différée du Canvas pour pallier au délai de chargement du script CDN
+                function genererQR(link, attempts) {
+                    const wrap = document.getElementById('host-qr-wrap');
+                    if (!wrap) return;
+                    if (typeof QRCode === 'undefined') {
+                        if (attempts > 10) {
+                            wrap.innerHTML = `<span style="color:red">Erreur chargement QR</span>`;
+                            return;
                         }
+                        setTimeout(() => genererQR(link, attempts + 1), 500);
+                        return;
+                    }
+                    wrap.innerHTML = '';
+                    const canvas = document.createElement('canvas');
+                    wrap.appendChild(canvas);
+                    QRCode.toCanvas(canvas, link, { width: 180, margin: 2, color: { dark: '#000000', light: '#ffffff' } }, (err) => {
+                        if (err) wrap.innerHTML = `<span style="color:red">Erreur QR</span>`;
                     });
                 }
+                genererQR(joinLink, 0);
                 
                 hostPushLog('Session hôte démarrée : ' + id);
                 hostRefreshHostPanels();
@@ -1157,8 +1166,12 @@
             if(code.includes('?join=')) {
                 code = code.split('?join=')[1].split('&')[0];
             } else {
-                // Nettoyage pour faire correspondre le "Nom tapé" à "l'ID" de l'hôte
-                code = code.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                // Reconstruction de l'ID avec le préfixe sécurisé
+                let clean = code.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
+                if (!clean.startsWith('TM32-')) {
+                    clean = 'TM32-' + clean.replace(/-/g, '');
+                }
+                code = clean;
             }
             
             appState.playerName = document.getElementById('join-pseudo').value || 'Joueur';
@@ -1173,6 +1186,12 @@
             peer.on('error', (err) => {
                 document.getElementById('multi-status').style.display = 'block';
                 document.getElementById('multi-status').innerText = (err && err.message) ? err.message : 'Erreur PeerJS';
+                
+                // Alerte explicite si la partie n'existe pas
+                if (err && err.type === 'peer-unavailable') {
+                    alert("La partie est introuvable. Vérifiez le nom.");
+                    document.getElementById('multi-status').style.display = 'none';
+                }
                 console.error(err);
             });
             peer.on('open', () => {
