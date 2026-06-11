@@ -1093,11 +1093,15 @@
             let baseName = liveSession.gameName.toUpperCase().replace(/[^A-Z0-9]/g, '');
             let peerId = baseName ? ('TM32-' + baseName) : ('TM32-' + Math.floor(1000 + Math.random() * 9000));
 
+            // --- CORRECTION : Ajout du serveur relais (TURN) pour garantir le passage en 4G/5G ---
             peer = new Peer(peerId, {
                 config: {
                     'iceServers': [
                         { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:global.stun.twilio.com:3478' }
+                        { urls: 'stun:global.stun.twilio.com:3478' },
+                        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+                        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+                        { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
                     ]
                 }
             });
@@ -1177,20 +1181,18 @@
             let rawInput = document.getElementById('join-code').value.trim();
             if (!rawInput) { alert('Indiquez le nom de la partie ou scannez le QR code.'); return; }
             
-            // On isole uniquement le texte saisi ou parsé via l'URL
             let code = rawInput;
             if(code.includes('?join=')) {
                 code = code.split('?join=')[1].split('&')[0];
                 code = decodeURIComponent(code);
             } 
             
-            // Nettoyage impitoyable de l'ID pour s'assurer que ça matche l'hôte
             let clean = code.toUpperCase();
             if (clean.startsWith('TM32-')) {
-                clean = clean.substring(5); // On enlève le préfixe s'il y est déjà pour éviter TM32-TM32-
+                clean = clean.substring(5);
             }
-            clean = clean.replace(/[^A-Z0-9]/g, ''); // On supprime absolument tout ce qui n'est pas lettre ou chiffre
-            code = 'TM32-' + clean; // On reforme l'ID parfait
+            clean = clean.replace(/[^A-Z0-9]/g, ''); 
+            code = 'TM32-' + clean; 
             
             appState.playerName = document.getElementById('join-pseudo').value || 'Joueur';
             const desiredTeam = document.getElementById('join-team').value || 'blue';
@@ -1201,11 +1203,15 @@
             document.getElementById('multi-status').innerText = 'Recherche de la partie...';
             if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
             
+            // --- CORRECTION : Ajout du serveur relais (TURN) ici aussi ---
             peer = new Peer({
                 config: {
                     'iceServers': [
                         { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:global.stun.twilio.com:3478' }
+                        { urls: 'stun:global.stun.twilio.com:3478' },
+                        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+                        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+                        { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
                     ]
                 }
             });
@@ -1227,7 +1233,6 @@
             peer.on('open', () => {
                 document.getElementById('multi-status').innerText = 'Connexion réseau en cours...';
                 
-                // Modification ici : suppression du canal de données forcées (parfois bloquant sur mobile)
                 myConn = peer.connect(code);
                 
                 connectionTimeout = setTimeout(() => {
