@@ -1170,24 +1170,27 @@
         
         function rejoindrePartieEnLigne() {
             if (appState.isOrga) {
-                alert("Vous hébergez déjà une partie. Vous ne pouvez pas la rejoindre en tant que client. Si vous souhaitez jouer, clôturez la partie ou revenez à l'accueil via l'interface Hôte.");
+                alert("Vous hébergez déjà une partie sur cet appareil. Quittez l'ancienne partie via l'interface Hôte pour pouvoir en rejoindre une autre en tant que joueur.");
                 return;
             }
 
             let rawInput = document.getElementById('join-code').value.trim();
             if (!rawInput) { alert('Indiquez le nom de la partie ou scannez le QR code.'); return; }
             
+            // On isole uniquement le texte saisi ou parsé via l'URL
             let code = rawInput;
             if(code.includes('?join=')) {
                 code = code.split('?join=')[1].split('&')[0];
                 code = decodeURIComponent(code);
             } 
             
-            let clean = code.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
-            if (!clean.startsWith('TM32-')) {
-                clean = 'TM32-' + clean.replace(/-/g, '');
+            // Nettoyage impitoyable de l'ID pour s'assurer que ça matche l'hôte
+            let clean = code.toUpperCase();
+            if (clean.startsWith('TM32-')) {
+                clean = clean.substring(5); // On enlève le préfixe s'il y est déjà pour éviter TM32-TM32-
             }
-            code = clean;
+            clean = clean.replace(/[^A-Z0-9]/g, ''); // On supprime absolument tout ce qui n'est pas lettre ou chiffre
+            code = 'TM32-' + clean; // On reforme l'ID parfait
             
             appState.playerName = document.getElementById('join-pseudo').value || 'Joueur';
             const desiredTeam = document.getElementById('join-team').value || 'blue';
@@ -1215,19 +1218,21 @@
                 document.getElementById('multi-status').innerText = (err && err.message) ? err.message : 'Erreur PeerJS';
                 
                 if (err && err.type === 'peer-unavailable') {
-                    alert("La partie est introuvable. Vérifiez le nom.");
+                    alert("La partie est introuvable. Vérifiez que l'Hôte n'a pas fermé sa page web ou annulé la partie.");
                     document.getElementById('multi-status').style.display = 'none';
                 }
                 console.error(err);
             });
+            
             peer.on('open', () => {
                 document.getElementById('multi-status').innerText = 'Connexion réseau en cours...';
-                myConn = peer.connect(code, { reliable: true });
                 
-                // --- CORRECTION : Délai augmenté à 20 secondes ---
+                // Modification ici : suppression du canal de données forcées (parfois bloquant sur mobile)
+                myConn = peer.connect(code);
+                
                 connectionTimeout = setTimeout(() => {
                     if (!myConn || !myConn.open) {
-                        alert("Délai dépassé. L'hôte est injoignable ou votre réseau bloque la connexion (pare-feu).");
+                        alert("Délai dépassé. L'Hôte est introuvable (vérifiez que la page du créateur est bien ouverte !) ou un pare-feu bloque la communication réseau.");
                         document.getElementById('multi-status').style.display = 'none';
                         try { peer.destroy(); } catch(e){}
                         peer = null;
@@ -1236,7 +1241,7 @@
 
                 myConn.on('error', (err) => {
                     clearTimeout(connectionTimeout);
-                    alert('Connexion impossible : hôte introuvable ou nom invalide.');
+                    alert('Connexion impossible : hôte introuvable ou réseau instable.');
                     document.getElementById('multi-status').style.display = 'none';
                 });
                 myConn.on('open', () => {
