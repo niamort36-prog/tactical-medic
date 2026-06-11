@@ -268,6 +268,15 @@
 
     <div id="screen-settings" class="screen">
         <h2 style="margin-top:40px;">RÉGLAGES</h2>
+        
+        <div class="box">
+            <h3 style="color:var(--accent-blue);">👤 Profil Multijoueur</h3>
+            <div class="form-group">
+                <label style="font-size:0.8em; color:#888;">Votre Pseudo de joueur</label>
+                <input type="text" id="settings-pseudo" class="form-input" placeholder="Ex: Doc" onchange="changerPseudoSettings(this.value)" style="margin-top:5px; margin-bottom:0;">
+            </div>
+        </div>
+
         <div class="box">
             <h3>Mode de Jeu</h3>
             <select id="select-mode" class="form-input" style="width:100%" onchange="changerModeMenu(this.value)"></select>
@@ -370,20 +379,22 @@
                 
                 <input type="text" id="join-code" class="form-input" placeholder="Nom de la partie ou Lien">
                 
-                <div class="form-group" style="margin-top:10px;">
-                    <label>Votre Pseudo</label>
-                    <input type="text" id="join-pseudo" class="form-input" placeholder="Ex: Doc">
-                </div>
-                <div class="form-group">
-                    <label>Équipe souhaitée</label>
-                    <select id="join-team" class="form-input"></select>
-                </div>
-                
                 <button type="button" class="btn-action btn-join" onclick="rejoindrePartieEnLigne()">CONNEXION</button>
             </div>
             
             <button type="button" onclick="fermerMultiModal()" class="btn-action" style="background:#333; margin-top:20px;">ANNULER</button>
             <div id="multi-status" style="display:none; text-align:center; padding:10px; color:#aaa;">Connexion...</div>
+        </div>
+    </div>
+
+    <div id="teamSelectionModal" class="modal" style="z-index: 220;">
+        <div class="modal-content" style="border: 2px solid var(--accent-blue);">
+            <h3 style="color:var(--accent-blue); text-align:center; margin-top:0;">CHOIX DE L'ÉQUIPE</h3>
+            <p style="text-align:center; font-size:0.9em; color:#ccc;">Connexion établie.<br>Choisissez votre rôle :</p>
+            <div class="form-group" style="margin-top:20px;">
+                <select id="modal-join-team" class="form-input"></select>
+            </div>
+            <button type="button" class="btn-action btn-join" style="margin-top:20px;" onclick="validerEquipeRejoindre()">REJOINDRE LA PARTIE</button>
         </div>
     </div>
 
@@ -468,6 +479,7 @@
         let clientSessionMeta = { gameName: '', sessionPacks: [] };
         let lastDrawSrc = 'bille';
         let html5QrcodeScanner = null;
+        let isWaitingForTeamSelection = false;
 
         function cardMatos(r) { return Array.isArray(r.matos) ? r.matos : []; }
         function escapeHtml(s) {
@@ -588,13 +600,12 @@
                 appState.customTeams = [{id:'blue',name:'Bleu',color:'#1976d2'},{id:'red',name:'Rouge',color:'#d32f2f'}];
             }
             initDefaults();
+            
+            // Auto Join via URL ?join=
             const jp = new URLSearchParams(location.search).get('join');
             if (jp) {
-                document.getElementById('join-input-area').style.display = 'block';
                 document.getElementById('join-code').value = jp.trim();
-                document.getElementById('multiplayerModal').style.display = 'block';
-                document.getElementById('join-pseudo').value = appState.playerName;
-                populateJoinTeams();
+                rejoindrePartieEnLigne(jp.trim()); // Skip modal, auto join!
             }
             updateUI_Game();
         };
@@ -720,7 +731,17 @@
         }
 
         /* --- SETTINGS (SMART DISPLAY) --- */
+        function changerPseudoSettings(val) {
+            if(val.trim()) {
+                appState.playerName = val.trim();
+                saveState();
+                updateUI_Game();
+            }
+        }
+
         function ouvrirReglages() { 
+            document.getElementById('settings-pseudo').value = appState.playerName || '';
+
             const s=document.getElementById('select-mode'); s.innerHTML=`<option value="classique">CLASSIQUE</option><option value="avance">AVANCÉ</option>`;
             appState.customDecks.forEach(d=>s.innerHTML+=`<option value="${d.id}">${d.name} (Custom)</option>`);
             if (![...s.options].some(o => o.value === appState.mode)) appState.mode = 'classique';
@@ -1029,14 +1050,6 @@
             };
             Object.values(hostConns).forEach(c => { try { c.send(payload); } catch (e) {} });
         }
-        
-        function populateJoinTeams() {
-            const jt = document.getElementById('join-team');
-            if (jt) {
-                jt.innerHTML = (appState.customTeams || [{id:'blue',name:'Bleu'},{id:'red',name:'Rouge'}])
-                               .map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
-            }
-        }
 
         function ouvrirMenuMultijoueur() {
             if (appState.isOrga && peer) {
@@ -1047,13 +1060,11 @@
             } else {
                 document.getElementById('multiplayerModal').style.display = 'block';
                 document.getElementById('multi-pseudo').value = appState.playerName;
-                document.getElementById('join-pseudo').value = appState.playerName;
                 document.getElementById('multi-game-name').value = appState.lastGameName || liveSession.gameName || '';
-                populateJoinTeams();
             }
         }
 
-        // Fonction pour démarrer le scanner QR Code
+        // --- NOUVELLE FONCTION SCAN QR CODE (Auto-Join) ---
         function startQRScanner() {
             document.getElementById('qr-reader').style.display = 'block';
             if (!html5QrcodeScanner) {
@@ -1061,12 +1072,16 @@
                 html5QrcodeScanner.render((decodedText) => {
                     let code = decodedText;
                     if(code.includes('?join=')) code = code.split('?join=')[1].split('&')[0];
-                    document.getElementById('join-code').value = decodeURIComponent(code);
+                    code = decodeURIComponent(code);
+                    
+                    document.getElementById('join-code').value = code;
                     
                     try { html5QrcodeScanner.clear(); } catch(e){}
                     html5QrcodeScanner = null;
                     document.getElementById('qr-reader').style.display = 'none';
-                    alert("QR Code scanné avec succès ! Cliquez sur CONNEXION.");
+                    
+                    // Lancement automatique de la connexion réseau
+                    rejoindrePartieEnLigne(code);
                 }, (err) => {});
             }
         }
@@ -1084,7 +1099,10 @@
             liveSession.gameName = (document.getElementById('multi-game-name').value || '').trim() || 'Partie';
             appState.lastGameName = liveSession.gameName;
             if (!liveSession.sessionPacks) liveSession.sessionPacks = [];
-            appState.playerName = document.getElementById('multi-pseudo').value || 'Orga';
+            
+            // On met à jour le pseudo de l'orga si modifié ici
+            let hostPseudo = document.getElementById('multi-pseudo').value.trim();
+            if(hostPseudo) appState.playerName = hostPseudo;
             
             document.getElementById('multi-status').style.display = 'block';
             document.getElementById('multi-status').innerText = 'Création de la partie...';
@@ -1093,15 +1111,13 @@
             let baseName = liveSession.gameName.toUpperCase().replace(/[^A-Z0-9]/g, '');
             let peerId = baseName ? ('TM32-' + baseName) : ('TM32-' + Math.floor(1000 + Math.random() * 9000));
 
-            // --- CORRECTION : Ajout du serveur relais (TURN) pour garantir le passage en 4G/5G ---
+            // STUN Google officiels (ultra rapides et fiables)
             peer = new Peer(peerId, {
                 config: {
                     'iceServers': [
                         { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:global.stun.twilio.com:3478' },
-                        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-                        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-                        { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' }
                     ]
                 }
             });
@@ -1158,7 +1174,26 @@
                 updateDashboard();
                 saveState();
             });
+            
             peer.on('connection', (conn) => {
+                conn.on('open', () => {
+                    // L'hôte envoie immédiatement les infos des équipes réelles au client qui vient de se connecter
+                    try {
+                        conn.send({
+                            type: 'SYNC_CONFIG',
+                            mode: appState.mode,
+                            decks: appState.customDecks,
+                            teams: appState.customTeams,
+                            explosionEnabled: appState.explosionEnabled,
+                            deathRisk: appState.deathRisk,
+                            materiel: appState.materiel,
+                            quantites: appState.quantites,
+                            gameName: liveSession.gameName,
+                            sessionPacks: liveSession.sessionPacks || []
+                        });
+                    } catch(e) {}
+                });
+
                 conn.on('data', (d) => handleHostData(conn, d));
                 conn.on('close', () => {
                     const n = (playersData[conn.peer] && playersData[conn.peer].name) || conn.peer;
@@ -1172,13 +1207,14 @@
             });
         }
         
-        function rejoindrePartieEnLigne() {
+        // --- NOUVEAU FLUX DE CONNEXION ---
+        function rejoindrePartieEnLigne(autoCode = null) {
             if (appState.isOrga) {
                 alert("Vous hébergez déjà une partie sur cet appareil. Quittez l'ancienne partie via l'interface Hôte pour pouvoir en rejoindre une autre en tant que joueur.");
                 return;
             }
 
-            let rawInput = document.getElementById('join-code').value.trim();
+            let rawInput = autoCode || document.getElementById('join-code').value.trim();
             if (!rawInput) { alert('Indiquez le nom de la partie ou scannez le QR code.'); return; }
             
             let code = rawInput;
@@ -1194,24 +1230,21 @@
             clean = clean.replace(/[^A-Z0-9]/g, ''); 
             code = 'TM32-' + clean; 
             
-            appState.playerName = document.getElementById('join-pseudo').value || 'Joueur';
-            const desiredTeam = document.getElementById('join-team').value || 'blue';
-            
             appState.isOrga = false;
             appState.isCoHost = false;
+            isWaitingForTeamSelection = true; // Active l'attente du menu de sélection d'équipe
+            
             document.getElementById('multi-status').style.display = 'block';
             document.getElementById('multi-status').innerText = 'Recherche de la partie...';
             if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
             
-            // --- CORRECTION : Ajout du serveur relais (TURN) ici aussi ---
+            // STUN Google officiels
             peer = new Peer({
                 config: {
                     'iceServers': [
                         { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:global.stun.twilio.com:3478' },
-                        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-                        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-                        { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' }
                     ]
                 }
             });
@@ -1233,7 +1266,7 @@
             peer.on('open', () => {
                 document.getElementById('multi-status').innerText = 'Connexion réseau en cours...';
                 
-                myConn = peer.connect(code);
+                myConn = peer.connect(code, { reliable: true });
                 
                 connectionTimeout = setTimeout(() => {
                     if (!myConn || !myConn.open) {
@@ -1249,22 +1282,53 @@
                     alert('Connexion impossible : hôte introuvable ou réseau instable.');
                     document.getElementById('multi-status').style.display = 'none';
                 });
+                
                 myConn.on('open', () => {
                     clearTimeout(connectionTimeout);
-                    myConn.send({ type: 'JOIN', name: appState.playerName, teamId: desiredTeam });
-                    document.getElementById('btn-multi-icon').classList.add('online');
-                    document.getElementById('multi-status').style.display = 'none';
-                    fermerMultiModal();
-                    alert('Connecté à la partie !');
+                    document.getElementById('multi-status').innerText = 'Récupération des données...';
+                    
+                    // Sécurité si l'hôte est lent à envoyer la liste des équipes
+                    setTimeout(() => {
+                        if (isWaitingForTeamSelection) {
+                            afficherModalChoixEquipe();
+                        }
+                    }, 3000);
                 });
+                
                 myConn.on('close', () => {
                     document.getElementById('btn-multi-icon').classList.remove('online');
                     document.getElementById('btn-quitter-partie').style.display = 'none';
                 });
+                
                 myConn.on('data', (d) => handleClientData(d));
             });
         }
         
+        function afficherModalChoixEquipe() {
+            fermerMultiModal(); 
+            document.getElementById('multi-status').style.display = 'none';
+            
+            const select = document.getElementById('modal-join-team');
+            select.innerHTML = (appState.customTeams || [{id:'blue',name:'Bleu'}]).map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+            
+            document.getElementById('teamSelectionModal').style.display = 'block';
+        }
+
+        function validerEquipeRejoindre() {
+            const teamId = document.getElementById('modal-join-team').value;
+            appState.playerTeamId = teamId;
+            isWaitingForTeamSelection = false;
+            
+            try {
+                myConn.send({ type: 'JOIN', name: appState.playerName, teamId: teamId });
+            } catch(e){}
+            
+            document.getElementById('teamSelectionModal').style.display = 'none';
+            document.getElementById('btn-multi-icon').classList.add('online');
+            updateUI_Game();
+            alert('Connecté à la partie !');
+        }
+
         function handleHostData(conn, data) {
             if (!data || !data.type) return;
             if (data.type === 'JOIN') {
@@ -1303,6 +1367,11 @@
                 clientSessionMeta.sessionPacks = data.sessionPacks || [];
                 clientSessionMeta.gameName = data.gameName || '';
                 updateUI_Game();
+
+                // Si le joueur vient de se connecter et attend la liste des équipes
+                if (isWaitingForTeamSelection) {
+                    afficherModalChoixEquipe();
+                }
                 return;
             }
             if (data.type === 'CMD_TEAM') {
