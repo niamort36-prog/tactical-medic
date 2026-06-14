@@ -118,7 +118,7 @@
         .btn-dash { padding: 5px 10px; font-size: 0.8em; border-radius: 4px; border: none; cursor: pointer; white-space: nowrap; color: white;}
         #host-connection-id { font-family: monospace; font-size: 1.3em; color: var(--accent-blue); background: black; padding: 10px; border-radius: 4px; border: 1px dashed #444; text-align: center; margin-bottom: 10px; word-break: break-all;}
         .host-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-        .host-tab { flex: 1; min-width: 72px; padding: 10px 6px; border: 1px solid #444; background: #1a1a1a; color: #aaa; border-radius: 6px; font-size: 0.7em; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .host-tab { flex: 1; min-width: 60px; padding: 10px 4px; border: 1px solid #444; background: #1a1a1a; color: #aaa; border-radius: 6px; font-size: 0.7em; font-weight: bold; cursor: pointer; text-transform: uppercase; }
         .host-tab.active { border-color: var(--accent-blue); color: #fff; background: rgba(25, 118, 210, 0.25); }
         .host-panel { display: none; }
         .host-panel.active { display: block; }
@@ -211,6 +211,7 @@
             <button type="button" class="host-tab active" data-host-tab="join" onclick="hostSetTab('join')">Invitation</button>
             <button type="button" class="host-tab" data-host-tab="players" onclick="hostSetTab('players')">Joueurs</button>
             <button type="button" class="host-tab" data-host-tab="teams" onclick="hostSetTab('teams')">Équipes</button>
+            <button type="button" class="host-tab" data-host-tab="builder" onclick="hostSetTab('builder')">Éditeur</button>
             <button type="button" class="host-tab" data-host-tab="packs" onclick="hostSetTab('packs')">Paquets</button>
             <button type="button" class="host-tab" data-host-tab="logs" onclick="hostSetTab('logs')">Logs</button>
         </div>
@@ -240,6 +241,12 @@
                 <input type="text" id="host-new-team-color" class="form-input" placeholder="#hex couleur" style="max-width:120px;">
                 <button type="button" class="btn-action btn-create" style="margin:0;padding:12px;width:auto;" onclick="hostAjouterEquipe()">+ ÉQUIPE</button>
             </div>
+        </div>
+        <div id="host-panel-builder" class="host-panel box">
+            <h3>MES PAQUETS PERSONNALISÉS</h3>
+            <p style="font-size:0.8em; color:#888; margin-top:0;">Créez et modifiez ici les protocoles et les blessures que vous pourrez distribuer dans l'onglet "Paquets".</p>
+            <button type="button" class="btn-action btn-create" style="margin-bottom:10px;" onclick="hostCreerPaquet()">+ CRÉER NOUVEAU PAQUET</button>
+            <div id="host-decks-list"></div>
         </div>
         <div id="host-panel-packs" class="host-panel box">
             <h3>PAQUETS SUPPLÉMENTAIRES</h3>
@@ -653,12 +660,11 @@
             let rules = [];
             let drawSrcForQty = src;
 
-            // Détection si on pioche dans un paquet personnalisé envoyé par l'Hôte
             if (String(src).startsWith('sp_')) {
                 const sp = (clientSessionMeta.sessionPacks || []).find(p => p.id === src);
                 if (sp) {
                     rules = sp.cards || [];
-                    drawSrcForQty = sp.src; // Utilise l'ID d'origine du créateur pour trouver les quantités
+                    drawSrcForQty = sp.src; 
                 }
             } else if(src==='explosion') {
                 rules = DB_REGLES.explosion || [];
@@ -681,14 +687,13 @@
             rules.forEach(r => { 
                 let rid = getCardQtyKey(drawSrcForQty, r);
                 let q = appState.quantites[rid];
-                if (q === undefined) q = 2; // Sécurité si un paquet n'a pas de quantité définie
+                if (q === undefined) q = 2; 
                 const mats = cardMatos(r);
                 if(q>0 && mats.every(m=>appState.materiel[m] !== false)) { 
                     for(let i=0;i<q;i++) pool.push(r); 
                 } 
             });
             
-            // On ajoute les modificateurs partagés par l'hôte (sauf si on est déjà sur un bouton spécifique de l'hôte)
             if (!String(src).startsWith('sp_')) {
                 appendSessionPackPool(src, pool);
             }
@@ -902,30 +907,96 @@
         function sauvegarderEtQuitter() { saveState(); if(appState.isOrga) broadcastFullState(); retourAccueil(); }
         function annulerReglages() { retourAccueil(); }
 
-        /* --- BUILDER --- */
+        /* --- BUILDER (SOLO & HOST) --- */
         let currentDeckId = null; let currentCardIndex = -1; let tempMatos = [];
+        
         function ouvrirBuilder() { showScreen('screen-builder'); renderDecksList(); }
-        function creerNouveauPaquet() { let id="d_"+Date.now(); appState.customDecks.push({id:id, name:"Nouveau", showOnHome:true, cards:[]}); editDeck(id); }
-        function renderDecksList() { const l=document.getElementById('custom-decks-list'); l.innerHTML=""; appState.customDecks.forEach(d=>{ l.innerHTML+=`<div class="builder-item"><span>${d.name}</span><button class="header-btn" onclick="editDeck('${d.id}')">✏️</button></div>`; }); }
+        
+        function hostCreerPaquet() { 
+            let id="d_"+Date.now(); 
+            appState.customDecks.push({id:id, name:"Nouveau", showOnHome:true, cards:[]}); 
+            editDeck(id); 
+        }
+        function creerNouveauPaquet() { 
+            hostCreerPaquet(); 
+        }
+
+        function renderDecksList() { 
+            const l=document.getElementById('custom-decks-list'); l.innerHTML=""; 
+            appState.customDecks.forEach(d=>{ l.innerHTML+=`<div class="builder-item"><span>${d.name}</span><button class="header-btn" onclick="editDeck('${d.id}')">✏️</button></div>`; }); 
+        }
+
+        function hostRenderDecksList() {
+            const l = document.getElementById('host-decks-list');
+            if(!l) return;
+            l.innerHTML = "";
+            appState.customDecks.forEach(d => {
+                l.innerHTML += `<div class="player-row" style="border-left:4px solid var(--accent-orange); flex-direction:row; justify-content:space-between; align-items:center;">
+                    <strong>${escapeHtml(d.name)}</strong>
+                    <button type="button" class="btn-dash" style="background:var(--accent-blue);" onclick="editDeck('${d.id}')">Modifier</button>
+                </div>`;
+            });
+            if(appState.customDecks.length === 0) {
+                l.innerHTML = `<p style="font-size:0.8em; color:#666;">Aucun paquet personnalisé.</p>`;
+            }
+        }
+
         function editDeck(id) {
             currentDeckId=id;
             const d=appState.customDecks.find(x=>x.id===id);
-            if (!d) { ouvrirBuilder(); return; }
+            if (!d) { if (appState.isOrga) { showScreen('screen-host-dashboard'); hostSetTab('builder'); } else { ouvrirBuilder(); } return; }
             document.getElementById('deck-name').value=d.name;
             document.getElementById('deck-show-home').checked=!!d.showOnHome;
             renderCardsList(d);
             showScreen('screen-deck-edit');
         }
+
         function renderCardsList(d) { const l=document.getElementById('deck-cards-list'); l.innerHTML=""; d.cards.forEach((c,i)=>{ l.innerHTML+=`<div class="builder-item"><span>${c.titre}</span><button class="btn-mini" onclick="editCard(${i})">✏️</button></div>`; }); }
+        
         function sauvegarderPaquetCourant() {
             const d=appState.customDecks.find(x=>x.id===currentDeckId);
-            if (!d) { ouvrirBuilder(); return; }
+            if (!d) { 
+                if (appState.isOrga) { showScreen('screen-host-dashboard'); hostSetTab('builder'); } else { ouvrirBuilder(); }
+                return; 
+            }
             d.name=document.getElementById('deck-name').value;
             d.showOnHome=document.getElementById('deck-show-home').checked;
             saveState();
-            ouvrirBuilder();
+            
+            if (appState.isOrga) {
+                if (liveSession.sessionPacks) {
+                    liveSession.sessionPacks.forEach(sp => {
+                        if (sp.src === d.id) {
+                            sp.cards = cloneCards(d.cards);
+                            sp.label = d.name;
+                        }
+                    });
+                }
+                broadcastFullState();
+                hostRefreshHostPanels();
+                showScreen('screen-host-dashboard');
+                hostSetTab('builder');
+            } else {
+                ouvrirBuilder();
+            }
         }
-        function supprimerPaquetCourant() { appState.customDecks = appState.customDecks.filter(x=>x.id!==currentDeckId); saveState(); ouvrirBuilder(); }
+        
+        function supprimerPaquetCourant() { 
+            appState.customDecks = appState.customDecks.filter(x=>x.id!==currentDeckId); 
+            saveState(); 
+            if (appState.isOrga) {
+                if (liveSession.sessionPacks) {
+                    liveSession.sessionPacks = liveSession.sessionPacks.filter(sp => sp.src !== currentDeckId);
+                }
+                broadcastFullState();
+                hostRefreshHostPanels();
+                showScreen('screen-host-dashboard');
+                hostSetTab('builder');
+            } else {
+                ouvrirBuilder();
+            }
+        }
+
         function ajouterCarteCustom() { currentCardIndex=-1; document.getElementById('card-title').value=""; tempMatos=[]; showScreen('screen-card-edit'); renderMatosCheck(); }
         function editCard(i) { currentCardIndex=i; const c=appState.customDecks.find(x=>x.id===currentDeckId).cards[i]; document.getElementById('card-title').value=c.titre; document.getElementById('card-gravity').value=c.gravite; document.getElementById('card-zone').value=c.zone; document.getElementById('card-effect').value=c.effet; tempMatos=[...cardMatos(c)]; renderMatosCheck(); showScreen('screen-card-edit'); }
         
@@ -1014,6 +1085,7 @@
             renderHostSessionPacksList();
             hostPopulatePackTeamPlayerSelects();
             renderHostLogs();
+            if (typeof hostRenderDecksList === 'function') hostRenderDecksList();
         }
         function hostAjouterEquipe() {
             const nm = document.getElementById('host-new-team-name').value.trim();
