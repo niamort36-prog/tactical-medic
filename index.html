@@ -1064,7 +1064,7 @@
             }
         }
 
-        // --- NOUVELLE FONCTION SCAN QR CODE (Auto-Join) ---
+        // Fonction Scan QR Code (Auto-Join)
         function startQRScanner() {
             document.getElementById('qr-reader').style.display = 'block';
             if (!html5QrcodeScanner) {
@@ -1080,7 +1080,6 @@
                     html5QrcodeScanner = null;
                     document.getElementById('qr-reader').style.display = 'none';
                     
-                    // Lancement automatique de la connexion réseau
                     rejoindrePartieEnLigne(code);
                 }, (err) => {});
             }
@@ -1100,7 +1099,6 @@
             appState.lastGameName = liveSession.gameName;
             if (!liveSession.sessionPacks) liveSession.sessionPacks = [];
             
-            // On met à jour le pseudo de l'orga si modifié ici
             let hostPseudo = document.getElementById('multi-pseudo').value.trim();
             if(hostPseudo) appState.playerName = hostPseudo;
             
@@ -1111,7 +1109,7 @@
             let baseName = liveSession.gameName.toUpperCase().replace(/[^A-Z0-9]/g, '');
             let peerId = baseName ? ('TM32-' + baseName) : ('TM32-' + Math.floor(1000 + Math.random() * 9000));
 
-            // STUN Google officiels (ultra rapides et fiables)
+            // STUN Google officiels
             peer = new Peer(peerId, {
                 config: {
                     'iceServers': [
@@ -1177,7 +1175,6 @@
             
             peer.on('connection', (conn) => {
                 conn.on('open', () => {
-                    // L'hôte envoie immédiatement les infos des équipes réelles au client qui vient de se connecter
                     try {
                         conn.send({
                             type: 'SYNC_CONFIG',
@@ -1207,7 +1204,6 @@
             });
         }
         
-        // --- NOUVEAU FLUX DE CONNEXION ---
         function rejoindrePartieEnLigne(autoCode = null) {
             if (appState.isOrga) {
                 alert("Vous hébergez déjà une partie sur cet appareil. Quittez l'ancienne partie via l'interface Hôte pour pouvoir en rejoindre une autre en tant que joueur.");
@@ -1232,7 +1228,7 @@
             
             appState.isOrga = false;
             appState.isCoHost = false;
-            isWaitingForTeamSelection = true; // Active l'attente du menu de sélection d'équipe
+            isWaitingForTeamSelection = true; 
             
             document.getElementById('multi-status').style.display = 'block';
             document.getElementById('multi-status').innerText = 'Recherche de la partie...';
@@ -1287,7 +1283,6 @@
                     clearTimeout(connectionTimeout);
                     document.getElementById('multi-status').innerText = 'Récupération des données...';
                     
-                    // Sécurité si l'hôte est lent à envoyer la liste des équipes
                     setTimeout(() => {
                         if (isWaitingForTeamSelection) {
                             afficherModalChoixEquipe();
@@ -1368,7 +1363,6 @@
                 clientSessionMeta.gameName = data.gameName || '';
                 updateUI_Game();
 
-                // Si le joueur vient de se connecter et attend la liste des équipes
                 if (isWaitingForTeamSelection) {
                     afficherModalChoixEquipe();
                 }
@@ -1391,6 +1385,8 @@
                 executerQuitterPartie();
             }
         }
+
+        // --- VISUEL RECOMPOSÉ POUR LE CHANGEMENT D'ÉQUIPE ---
         function updateDashboard() {
             const l = document.getElementById('host-player-list');
             if (!l) return;
@@ -1399,20 +1395,24 @@
             Object.values(playersData).forEach(p => {
                 const team = appState.customTeams.find(t => t.id === p.teamId) || appState.customTeams[0];
                 if (!team) return;
+                
+                // Génération des boutons d'équipes solides et colorés (Pleinement visibles)
                 let btns = '';
                 appState.customTeams.forEach(t => {
-                    btns += `<button type="button" class="btn-dash" style="border-color:${t.color}" onclick="cmdTeam(${JSON.stringify(p.id)},${JSON.stringify(t.id)})">${escapeHtml(t.name)}</button>`;
+                    btns += `<button type="button" class="btn-dash" style="background:${t.color}; color:white; font-weight:bold; margin-right:5px; border:1px solid rgba(255,255,255,0.4);" onclick="cmdTeam(${JSON.stringify(p.id)},${JSON.stringify(t.id)})">${escapeHtml(t.name)}</button>`;
                 });
+                
                 const badge = p.isCoHost ? '<span class="badge-role admin">Co-admin</span>' : '';
                 l.innerHTML += `<div class="player-row" style="border-left:4px solid ${team.color}">
-                    <div class="player-row-header"><strong>${escapeHtml(p.name)}</strong>${badge} <span style="color:${team.color}">${escapeHtml(team.name)}</span></div>
-                    <div class="player-actions">${btns}
+                    <div class="player-row-header"><strong>${escapeHtml(p.name)}</strong>${badge} <span style="color:${team.color}">(${escapeHtml(team.name)})</span></div>
+                    <div class="player-actions" style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;">${btns}
                         <button type="button" class="btn-dash" style="background:#f57c00" onclick="cmdToggleCohost(${JSON.stringify(p.id)})">Admin</button>
                         <button type="button" class="btn-dash" style="background:#d32f2f" onclick="cmdKick(${JSON.stringify(p.id)})">Kick</button>
                     </div>
                 </div>`;
             });
         }
+
         function cmdToggleCohost(pid) {
             const p = playersData[pid];
             const c = hostConns[pid];
