@@ -387,6 +387,7 @@
         </div>
     </div>
 
+    <!-- NOUVEAU MODAL POUR LE CHOIX D'ÉQUIPE (Auto-Join) -->
     <div id="teamSelectionModal" class="modal" style="z-index: 220;">
         <div class="modal-content" style="border: 2px solid var(--accent-blue);">
             <h3 style="color:var(--accent-blue); text-align:center; margin-top:0;">CHOIX DE L'ÉQUIPE</h3>
@@ -650,8 +651,18 @@
 
         function preparerTirage(src) {
             let rules = [];
-            if(src==='explosion') rules = DB_REGLES.explosion || [];
-            else if(src==='bille') {
+            let drawSrcForQty = src;
+
+            // Détection si on pioche dans un paquet personnalisé envoyé par l'Hôte
+            if (String(src).startsWith('sp_')) {
+                const sp = (clientSessionMeta.sessionPacks || []).find(p => p.id === src);
+                if (sp) {
+                    rules = sp.cards || [];
+                    drawSrcForQty = sp.src; // Utilise l'ID d'origine du créateur pour trouver les quantités
+                }
+            } else if(src==='explosion') {
+                rules = DB_REGLES.explosion || [];
+            } else if(src==='bille') {
                 if (appState.mode.startsWith('d_')) {
                     const deck = appState.customDecks.find(d=>d.id===appState.mode);
                     rules = (deck && deck.cards) ? deck.cards : [];
@@ -660,21 +671,32 @@
                 const deck = appState.customDecks.find(d=>d.id===src);
                 rules = (deck && deck.cards) ? deck.cards : [];
             }
-            if (!rules.length) {
+
+            if (!rules.length && !String(src).startsWith('sp_')) {
                 alert("Aucun paquet de cartes pour ce mode. Vérifiez les réglages ou le paquet personnalisé.");
                 return null;
             }
 
             let pool = [];
             rules.forEach(r => { 
-                let rid = getCardQtyKey(src, r);
-                let q=appState.quantites[rid];
+                let rid = getCardQtyKey(drawSrcForQty, r);
+                let q = appState.quantites[rid];
+                if (q === undefined) q = 2; // Sécurité si un paquet n'a pas de quantité définie
                 const mats = cardMatos(r);
-                if(q>0 && mats.every(m=>appState.materiel[m])) { for(let i=0;i<q;i++) pool.push(r); } 
+                if(q>0 && mats.every(m=>appState.materiel[m] !== false)) { 
+                    for(let i=0;i<q;i++) pool.push(r); 
+                } 
             });
-            appendSessionPackPool(src, pool);
             
-            if(pool.length===0) { alert("Aucune carte disponible. Vérifiez que vous avez le matériel requis (Réglages)."); return null; }
+            // On ajoute les modificateurs partagés par l'hôte (sauf si on est déjà sur un bouton spécifique de l'hôte)
+            if (!String(src).startsWith('sp_')) {
+                appendSessionPackPool(src, pool);
+            }
+            
+            if(pool.length===0) { 
+                alert("Aucune carte disponible. Vérifiez que vous avez le matériel requis (Réglages)."); 
+                return null; 
+            }
             return pool[Math.floor(Math.random()*pool.length)];
         }
 
@@ -1552,9 +1574,30 @@
             if(infoDeck) infoDeck.innerText = totalCartes + " cartes actives";
 
             const c = document.getElementById('dynamic-buttons-container'); c.innerHTML="";
+            
+            // Toujours afficher Balistique et Explosion
             c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring"></div><button class="btn-core-shared main-btn" onclick="lancerSequenceTirage('bille')"><img src="picto-blesse.png" class="icon-wounded"></button><div class="btn-label">BALISTIQUE</div></div>`;
             if(appState.mode==='avance' && appState.explosionEnabled) c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring-blast"></div><button class="btn-core-shared blast-btn" onclick="lancerSequenceTirage('explosion')"><img src="btn-explosion.png" class="icon-blast"></button><div class="btn-label">EXPLOSION</div></div>`;
-            appState.customDecks.forEach(d => { if(d.showOnHome) c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring-custom"></div><button class="btn-core-shared custom-btn-style" onclick='lancerSequenceTirage(${JSON.stringify(d.id)})'><img src="btn-custom.png" class="icon-custom" onerror="this.src='picto-blesse.png'"></button><div class="btn-label">${escapeHtml(d.name)}</div></div>`; });
+            
+            // Rendu conditionnel des paquets personnalisés
+            if (inPartie) {
+                // Connecté comme joueur : On montre les paquets distribués par l'Hôte et on cache les paquets locaux
+                (clientSessionMeta.sessionPacks || []).forEach(p => {
+                    if (sessionPackApplies(p, peer ? peer.id : null, appState.playerTeamId)) {
+                        // On n'affiche un bouton que si le paquet envoyé est un paquet personnalisé (commençant par d_)
+                        if (p.src.startsWith('d_')) {
+                            c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring-custom"></div><button class="btn-core-shared custom-btn-style" onclick='lancerSequenceTirage(${JSON.stringify(p.id)})'><img src="btn-custom.png" class="icon-custom" onerror="this.src='picto-blesse.png'"></button><div class="btn-label">${escapeHtml(p.label)}</div></div>`;
+                        }
+                    }
+                });
+            } else {
+                // Solo ou Hôte : On affiche ses propres paquets locaux
+                appState.customDecks.forEach(d => { 
+                    if(d.showOnHome) {
+                        c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring-custom"></div><button class="btn-core-shared custom-btn-style" onclick='lancerSequenceTirage(${JSON.stringify(d.id)})'><img src="btn-custom.png" class="icon-custom" onerror="this.src='picto-blesse.png'"></button><div class="btn-label">${escapeHtml(d.name)}</div></div>`; 
+                    }
+                });
+            }
         }
         function saveState() { localStorage.setItem('medic_v32_smart', JSON.stringify(appState)); updateUI_Game(); }
 
