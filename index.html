@@ -747,6 +747,33 @@
             if (![...s.options].some(o => o.value === appState.mode)) appState.mode = 'classique';
             s.value=appState.mode; 
             document.getElementById('chk-death').checked = appState.deathRisk;
+
+            const isLocked = (myConn && myConn.open && !appState.isOrga);
+            s.disabled = isLocked;
+            document.getElementById('chk-death').disabled = isLocked;
+            document.getElementById('chk-explosion').disabled = isLocked;
+            document.getElementById('settings-pseudo').disabled = isLocked;
+
+            let lockMsg = document.getElementById('settings-lock-msg');
+            if(!lockMsg) {
+                lockMsg = document.createElement('div');
+                lockMsg.id = 'settings-lock-msg';
+                lockMsg.style.backgroundColor = 'rgba(211, 47, 47, 0.2)';
+                lockMsg.style.color = '#d32f2f';
+                lockMsg.style.padding = '10px';
+                lockMsg.style.borderRadius = '8px';
+                lockMsg.style.marginTop = '15px';
+                lockMsg.style.marginBottom = '-10px';
+                lockMsg.style.textAlign = 'center';
+                lockMsg.style.fontWeight = 'bold';
+                lockMsg.style.border = '1px solid #d32f2f';
+                lockMsg.innerHTML = '🔒 Paramètres verrouillés par l\'hôte';
+                const screenSettings = document.getElementById('screen-settings');
+                const h2 = screenSettings.querySelector('h2');
+                h2.insertAdjacentElement('afterend', lockMsg);
+            }
+            lockMsg.style.display = isLocked ? 'block' : 'none';
+
             renderSettingsList(); showScreen('screen-settings'); 
         }
 
@@ -778,11 +805,13 @@
             lm.innerHTML = "";
             const allPossibleMaterials = [...new Set([...DB_MATERIEL_BASE, ...(appState.customMaterials || [])])];
             
+            const isLocked = (myConn && myConn.open && !appState.isOrga);
             let matosShownCount = 0;
+
             allPossibleMaterials.forEach(m => { 
                 if(requiredMatos.has(m)) {
                     if(appState.materiel[m]===undefined) appState.materiel[m]=true;
-                    lm.innerHTML += `<div class="check-item"><span>${m}</span><input type="checkbox" onchange='setMaterielFlag(${JSON.stringify(m)}, this.checked)' ${appState.materiel[m]?'checked':''}></div>`; 
+                    lm.innerHTML += `<div class="check-item"><span style="${isLocked ? 'opacity:0.5' : ''}">${m}</span><input type="checkbox" onchange='setMaterielFlag(${JSON.stringify(m)}, this.checked)' ${appState.materiel[m]?'checked':''} ${isLocked ? 'disabled' : ''}></div>`; 
                     matosShownCount++;
                 }
             });
@@ -815,9 +844,9 @@
                         <div style="flex-grow:1"><strong style="color:${getColor(r.gravite)}">${r.titre}</strong></div>
                         <div style="display:flex; align-items:center; gap:5px;">
                             <button type="button" class="btn-mini" style="background:#1976d2" onclick='voirCatalogueComplet(${JSON.stringify(rid)})'>👁️</button>
-                            <button type="button" class="btn-mini" onclick='changeQty(${JSON.stringify(rid)},-1)'>-</button>
-                            <span style="width:20px;text-align:center">${q}</span>
-                            <button type="button" class="btn-mini" onclick='changeQty(${JSON.stringify(rid)},1)'>+</button>
+                            <button type="button" class="btn-mini" style="${isLocked ? 'opacity:0.3; cursor:not-allowed;' : ''}" onclick='changeQty(${JSON.stringify(rid)},-1)' ${isLocked ? 'disabled' : ''}>-</button>
+                            <span style="width:20px;text-align:center; ${isLocked ? 'opacity:0.5' : ''}">${q}</span>
+                            <button type="button" class="btn-mini" style="${isLocked ? 'opacity:0.3; cursor:not-allowed;' : ''}" onclick='changeQty(${JSON.stringify(rid)},1)' ${isLocked ? 'disabled' : ''}>+</button>
                         </div>
                     </div>`;
             };
