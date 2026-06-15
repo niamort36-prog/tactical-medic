@@ -243,9 +243,8 @@
             </div>
         </div>
         <div id="host-panel-builder" class="host-panel box">
-            <h3>MES PAQUETS PERSONNALISÉS</h3>
-            <p style="font-size:0.8em; color:#888; margin-top:0;">Créez et modifiez ici les protocoles et les blessures que vous pourrez distribuer dans l'onglet "Paquets".</p>
-            <button type="button" class="btn-action btn-create" style="margin-bottom:10px;" onclick="hostCreerPaquet()">+ CRÉER NOUVEAU PAQUET</button>
+            <h3>ÉDITEUR DE PAQUETS</h3>
+            <p style="font-size:0.8em; color:#888; margin-top:0;">Cliquez sur "Modifier" pour ajuster les cartes de vos paquets personnalisés.</p>
             <div id="host-decks-list"></div>
         </div>
         <div id="host-panel-packs" class="host-panel box">
@@ -394,7 +393,6 @@
         </div>
     </div>
 
-    <!-- NOUVEAU MODAL POUR LE CHOIX D'ÉQUIPE (Auto-Join) -->
     <div id="teamSelectionModal" class="modal" style="z-index: 220;">
         <div class="modal-content" style="border: 2px solid var(--accent-blue);">
             <h3 style="color:var(--accent-blue); text-align:center; margin-top:0;">CHOIX DE L'ÉQUIPE</h3>
@@ -912,13 +910,10 @@
         
         function ouvrirBuilder() { showScreen('screen-builder'); renderDecksList(); }
         
-        function hostCreerPaquet() { 
+        function creerNouveauPaquet() { 
             let id="d_"+Date.now(); 
             appState.customDecks.push({id:id, name:"Nouveau", showOnHome:true, cards:[]}); 
             editDeck(id); 
-        }
-        function creerNouveauPaquet() { 
-            hostCreerPaquet(); 
         }
 
         function renderDecksList() { 
