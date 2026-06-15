@@ -244,7 +244,7 @@
         </div>
         <div id="host-panel-builder" class="host-panel box">
             <h3>ÉDITEUR DE PAQUETS</h3>
-            <p style="font-size:0.8em; color:#888; margin-top:0;">Cliquez sur "Modifier" pour ajuster les cartes de vos paquets personnalisés.</p>
+            <p style="font-size:0.8em; color:#888; margin-top:0;">Ajustez les quantités, le matériel et le risque de mort pour tous vos paquets avant de les distribuer.</p>
             <div id="host-decks-list"></div>
         </div>
         <div id="host-panel-packs" class="host-panel box">
@@ -902,8 +902,26 @@
         function changerModeMenu(v) { appState.mode=v; renderSettingsList(); updateUI_Game(); }
         function toggleDeathRisk() { appState.deathRisk = document.getElementById('chk-death').checked; }
         function toggleExplosion() { appState.explosionEnabled=document.getElementById('chk-explosion').checked; renderSettingsList(); updateUI_Game(); }
-        function sauvegarderEtQuitter() { saveState(); if(appState.isOrga) broadcastFullState(); retourAccueil(); }
-        function annulerReglages() { retourAccueil(); }
+        
+        function sauvegarderEtQuitter() { 
+            saveState(); 
+            if(appState.isOrga) {
+                broadcastFullState(); 
+                showScreen('screen-host-dashboard');
+                hostSetTab('builder'); // Retourne à l'éditeur dans le QG Hôte
+            } else {
+                retourAccueil(); 
+            }
+        }
+        
+        function annulerReglages() { 
+            if(appState.isOrga) {
+                showScreen('screen-host-dashboard');
+                hostSetTab('builder'); // Retourne à l'éditeur dans le QG Hôte
+            } else {
+                retourAccueil(); 
+            }
+        }
 
         /* --- BUILDER (SOLO & HOST) --- */
         let currentDeckId = null; let currentCardIndex = -1; let tempMatos = [];
@@ -925,15 +943,31 @@
             const l = document.getElementById('host-decks-list');
             if(!l) return;
             l.innerHTML = "";
-            appState.customDecks.forEach(d => {
-                l.innerHTML += `<div class="player-row" style="border-left:4px solid var(--accent-orange); flex-direction:row; justify-content:space-between; align-items:center;">
+            
+            const baseDecks = [
+                { id: 'classique', name: 'Mode : Classique' },
+                { id: 'avance', name: 'Mode : Avancé' }
+            ];
+            
+            baseDecks.forEach(d => {
+                l.innerHTML += `<div class="player-row" style="border-left:4px solid var(--accent-blue); flex-direction:row; justify-content:space-between; align-items:center;">
                     <strong>${escapeHtml(d.name)}</strong>
-                    <button type="button" class="btn-dash" style="background:var(--accent-blue);" onclick="editDeck('${d.id}')">Modifier</button>
+                    <button type="button" class="btn-dash" style="background:var(--accent-blue);" onclick="hostEditSettings('${d.id}')">Réglages</button>
                 </div>`;
             });
-            if(appState.customDecks.length === 0) {
-                l.innerHTML = `<p style="font-size:0.8em; color:#666;">Aucun paquet personnalisé.</p>`;
-            }
+
+            appState.customDecks.forEach(d => {
+                l.innerHTML += `<div class="player-row" style="border-left:4px solid var(--accent-orange); flex-direction:row; justify-content:space-between; align-items:center;">
+                    <strong>Perso : ${escapeHtml(d.name)}</strong>
+                    <button type="button" class="btn-dash" style="background:var(--accent-blue);" onclick="hostEditSettings('${d.id}')">Réglages</button>
+                </div>`;
+            });
+        }
+        
+        function hostEditSettings(id) {
+            appState.mode = id;
+            saveState();
+            ouvrirReglages();
         }
 
         function editDeck(id) {
