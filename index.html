@@ -393,6 +393,7 @@
         </div>
     </div>
 
+    <!-- NOUVEAU MODAL POUR LE CHOIX D'ÉQUIPE (Auto-Join) -->
     <div id="teamSelectionModal" class="modal" style="z-index: 220;">
         <div class="modal-content" style="border: 2px solid var(--accent-blue);">
             <h3 style="color:var(--accent-blue); text-align:center; margin-top:0;">CHOIX DE L'ÉQUIPE</h3>
@@ -434,8 +435,8 @@
                 { id: "c4", titre: "Saignement", typeZone: "membre", gravite: "Grave", effet: "Bandage + Poche", matos: ["Bandage", "Poche de transfusion"] },
                 { id: "c5", titre: "Fracture", typeZone: "membre", gravite: "Grave", effet: "Attelle", matos: ["Bandage", "Attelle"] },
                 { id: "c6", titre: "Éraflure", typeZone: "membre", gravite: "Légère", effet: "Bandage", matos: ["Bandage"] },
-                { id: "a12", titre: "Choc Casque", zone: "Tête", gravite: "Spécial", effet: "Si Prot: Sonné (Relevé). Sinon: DCD", matos: [] },
-                { id: "a13", titre: "Choc Gilet", zone: "Torse", gravite: "Spécial", effet: "Si Prot: Sonné (Relevé). Sinon: DCD", matos: [] }
+                { id: "a12", titre: "Choc Casque", zone: "Tête", gravite: "Spécial", effet: "Si Protégé : Sonné (Médic aide à relever). Sinon : Bandage sur zone concernée", matos: ["Bandage"] },
+                { id: "a13", titre: "Choc Gilet", zone: "Torse", gravite: "Spécial", effet: "Si Protégé : Sonné (Médic aide à relever). Sinon : Bandage sur zone concernée", matos: ["Bandage"] }
             ],
             avance: [
                 { id: "a1", titre: "DCD", zone: "Tête", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] },
