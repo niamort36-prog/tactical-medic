@@ -7,21 +7,21 @@
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    
+
     <style>
         /* --- CHARTE GRAPHIQUE --- */
-        :root { 
-            --bg-dark: #121212; 
+        :root {
+            --bg-dark: #121212;
             --text-main: #f0f0f0;
-            --accent-red: #d32f2f; 
-            --accent-orange: #f57c00; 
+            --accent-red: #d32f2f;
+            --accent-orange: #f57c00;
             --accent-green: #388e3c;
             --accent-blue: #1976d2;
             --card-bg: #1c1c1c;
             --font-stack: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
 
-        body { 
+        body {
             font-family: var(--font-stack); background-color: var(--bg-dark); color: var(--text-main);
             margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden;
             user-select: none;
@@ -34,9 +34,9 @@
 
         /* --- HEADER --- */
         header {
-            padding: 10px 15px; 
-            display: grid; 
-            grid-template-columns: 50px 1fr auto; 
+            padding: 10px 15px;
+            display: grid;
+            grid-template-columns: 50px 1fr auto;
             align-items: center;
             z-index: 10; background: linear-gradient(to bottom, rgba(0,0,0,0.95), transparent);
             border-bottom: 4px solid #333; transition: border-color 0.3s;
@@ -45,7 +45,7 @@
         .mode-subtitle { font-size: 0.7em; color: #888; display: block; text-align: center; font-weight: bold; text-transform: uppercase; }
         .header-actions { display: flex; flex-direction: row; gap: 8px; justify-content: flex-end; }
         .header-btn {
-            background: rgba(40,40,40,0.9); border: 1px solid #555; color: white; border-radius: 8px; 
+            background: rgba(40,40,40,0.9); border: 1px solid #555; color: white; border-radius: 8px;
             width: 38px; height: 38px; font-size: 1.2em; cursor: pointer; display: flex; align-items: center; justify-content: center;
         }
         .header-btn.multi { border-color: var(--accent-blue); color: var(--accent-blue); }
@@ -274,7 +274,7 @@
 
     <div id="screen-settings" class="screen">
         <h2 style="margin-top:40px;">RÉGLAGES</h2>
-        
+
         <div class="box">
             <h3 style="color:var(--accent-blue);">👤 Profil Multijoueur</h3>
             <div class="form-group">
@@ -374,26 +374,26 @@
                 <input type="text" id="multi-pseudo" class="form-input" placeholder="Ex: Orga">
             </div>
             <button type="button" class="btn-action btn-create" onclick="creerPartieEnLigne()">CRÉER UNE PARTIE (HOST)</button>
-            
+
             <hr style="border-color:#444; margin:20px 0;">
-            
+
             <button type="button" class="btn-action btn-join" onclick="document.getElementById('join-input-area').style.display='block'">REJOINDRE UNE PARTIE</button>
-            
+
             <div id="join-input-area" style="display:none; margin-top:10px; border-top:1px solid #444; padding-top:10px;">
                 <div id="qr-reader" style="width:100%; display:none; margin-bottom:10px; background:white; color:black; border-radius:8px; overflow:hidden;"></div>
                 <button type="button" class="btn-action" style="background:#555; margin-bottom:10px;" onclick="startQRScanner()">📷 SCANNER QR CODE</button>
-                
+
                 <input type="text" id="join-code" class="form-input" placeholder="Nom de la partie ou Lien">
-                
+
                 <button type="button" class="btn-action btn-join" onclick="rejoindrePartieEnLigne()">CONNEXION</button>
             </div>
-            
+
             <button type="button" onclick="fermerMultiModal()" class="btn-action" style="background:#333; margin-top:20px;">ANNULER</button>
             <div id="multi-status" style="display:none; text-align:center; padding:10px; color:#aaa;">Connexion...</div>
         </div>
     </div>
 
-    <!-- NOUVEAU MODAL POUR LE CHOIX D'ÉQUIPE (Auto-Join) -->
+    <!-- MODAL POUR LE CHOIX D'ÉQUIPE (Auto-Join) -->
     <div id="teamSelectionModal" class="modal" style="z-index: 220;">
         <div class="modal-content" style="border: 2px solid var(--accent-blue);">
             <h3 style="color:var(--accent-blue); text-align:center; margin-top:0;">CHOIX DE L'ÉQUIPE</h3>
@@ -426,7 +426,7 @@
         /* --- DATA --- */
         const DB_MATERIEL_BASE = ["Garrot", "Bandage", "Poche de transfusion", "Attelle", "Morphine", "Épinéphrine", "Pansement 3 côtés"];
         const MEMBRES = ["Bras Gauche", "Bras Droit", "Jambe Gauche", "Jambe Droite"];
-        
+
         const DB_REGLES = {
             classique: [
                 { id: "c1", titre: "DCD", zone: "Tête ou Torse", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] },
@@ -436,8 +436,8 @@
                 { id: "c5", titre: "Fracture", typeZone: "membre", gravite: "Grave", effet: "Attelle", matos: ["Bandage", "Attelle"] },
                 { id: "c6", titre: "Éraflure", typeZone: "membre", gravite: "Légère", effet: "Bandage", matos: ["Bandage"] },
                 { id: "c7", titre: "Blessure très grave", zone: "Torse", gravite: "Critique", effet: "Victime dans le coma. Médecin de Niveau 2 requis.", matos: [] },
-                { id: "a12", titre: "Choc Casque", zone: "Tête", gravite: "Spécial", effet: "Si Protégé : Sonné (Médic aide à relever). Sinon : Bandage ([MEMBRE_ALEATOIRE])", matos: ["Bandage"] },
-                { id: "a13", titre: "Choc Gilet", zone: "Torse", gravite: "Spécial", effet: "Si Protégé : Sonné (Médic aide à relever). Sinon : Bandage ([MEMBRE_ALEATOIRE])", matos: ["Bandage"] }
+                { id: "c8", titre: "Choc Casque", zone: "Tête", gravite: "Spécial", effet: "Si Protégé : Sonné (Médic aide à relever). Sinon : Bandage ([MEMBRE_ALEATOIRE])", matos: ["Bandage"] },
+                { id: "c9", titre: "Choc Gilet", zone: "Torse", gravite: "Spécial", effet: "Si Protégé : Sonné (Médic aide à relever). Sinon : Bandage ([MEMBRE_ALEATOIRE])", matos: ["Bandage"] }
             ],
             avance: [
                 { id: "a1", titre: "DCD", zone: "Tête", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] },
@@ -472,12 +472,25 @@
         };
 
         /* --- STATE --- */
-        let appState = { 
+        const STORAGE_KEY = 'medic_v32_smart';
+        const BACKUP_KEY = 'medic_v32_smart_backup';
+        const DEFAULT_TEAMS = [{id:'blue',name:'Bleu',color:'#1976d2'},{id:'red',name:'Rouge',color:'#d32f2f'}];
+        const PEER_CONFIG = {
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' }
+                ]
+            }
+        };
+
+        let appState = {
             mode: "classique", explosionEnabled: false, deathRisk: false,
             materiel: {}, quantites: {}, customDecks: [], customMaterials: [],
             playerName: "Joueur", playerTeamId: "blue", isOrga: false, isCoHost: false,
             lastGameName: "",
-            customTeams: [{id:'blue',name:'Bleu',color:'#1976d2'},{id:'red',name:'Rouge',color:'#d32f2f'}]
+            customTeams: DEFAULT_TEAMS.map(t => ({...t}))
         };
 
         let peer = null; let myConn = null; let hostConns = {}; let playersData = {};
@@ -488,18 +501,30 @@
         let lastDrawSrc = 'bille';
         let html5QrcodeScanner = null;
         let isWaitingForTeamSelection = false;
+        let teamSelectFallback = null;
+        let settingsSnapshot = null;
 
-        function cardMatos(r) { return Array.isArray(r.matos) ? r.matos : []; }
+        /* --- HELPERS --- */
         function escapeHtml(s) {
             if (s === undefined || s === null) return '';
-            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
         }
+        // Encode une valeur JS pour l'insérer sans risque dans un attribut onclick="..."
+        function jsAttr(v) { return escapeHtml(JSON.stringify(v)); }
+        function cardMatos(r) { return Array.isArray(r.matos) ? r.matos : []; }
         function cloneCards(cards) { try { return JSON.parse(JSON.stringify(cards || [])); } catch(e) { return []; } }
+        // Un matériel non répertorié (undefined) est considéré disponible, comme dans initDefaults
+        function hasMateriel(m) { return appState.materiel[m] !== false; }
+        function qtyFor(rid) { const q = appState.quantites[rid]; return (q === undefined || q === null) ? 2 : q; }
+        function ridForMode(r) { return r.id || (appState.mode + "_" + r.titre); }
+        function estEnPartieClient() { return !!(myConn && myConn.open && !appState.isOrga); }
+
         function getCardQtyKey(drawSrc, card) {
             if (card && card.id) return card.id;
             const srcKey = drawSrc === 'bille' ? appState.mode : drawSrc;
             return `${srcKey}_${(card && card.titre) ? card.titre : 'carte'}`;
         }
+
         function getRulesArrayForDrawSource(src) {
             if (src === 'explosion') return (DB_REGLES.explosion || []).slice();
             if (src === 'bille') {
@@ -512,32 +537,50 @@
             const deck = appState.customDecks.find(d => d.id === src);
             return (deck && deck.cards) ? deck.cards.slice() : [];
         }
+
+        // Règles actives du mode courant (avec pack explosion si activé)
+        function getActiveRulesForMode() {
+            let rules;
+            if (appState.mode.startsWith('d_')) {
+                const cd = appState.customDecks.find(d => d.id === appState.mode);
+                rules = (cd && cd.cards) ? cd.cards : [];
+            } else {
+                rules = DB_REGLES[appState.mode] || [];
+            }
+            if (appState.mode === 'avance' && appState.explosionEnabled) {
+                rules = [...rules, ...(DB_REGLES.explosion || [])];
+            }
+            return rules;
+        }
+
+        function computeActiveCardCount() {
+            let total = 0;
+            getActiveRulesForMode().forEach(r => {
+                if (cardMatos(r).every(hasMateriel)) total += qtyFor(ridForMode(r));
+            });
+            return total;
+        }
+
         function getCatalogRulesFlat() {
-            const mode = appState.mode;
             const rows = [];
-            if (mode.startsWith('d_')) {
-                const cd = appState.customDecks.find(d => d.id === mode);
-                (cd && cd.cards ? cd.cards : []).forEach(r => {
-                    rows.push({ r, rid: r.id || (mode + '_' + r.titre), sec: 'Paquet perso' });
-                });
+            if (appState.mode.startsWith('d_')) {
+                const cd = appState.customDecks.find(d => d.id === appState.mode);
+                (cd && cd.cards ? cd.cards : []).forEach(r => rows.push({ r, rid: ridForMode(r), sec: 'Paquet perso' }));
                 return rows;
             }
-            (DB_REGLES[mode] || []).forEach(r => {
-                rows.push({ r, rid: r.id || (mode + '_' + r.titre), sec: 'Mode' });
-            });
-            if (mode === 'avance' && appState.explosionEnabled) {
-                (DB_REGLES.explosion || []).forEach(r => {
-                    rows.push({ r, rid: r.id, sec: 'Explosion' });
-                });
+            (DB_REGLES[appState.mode] || []).forEach(r => rows.push({ r, rid: ridForMode(r), sec: 'Mode' }));
+            if (appState.mode === 'avance' && appState.explosionEnabled) {
+                (DB_REGLES.explosion || []).forEach(r => rows.push({ r, rid: r.id, sec: 'Explosion' }));
             }
             return rows;
         }
+
         function voirCatalogueComplet(highlightRid) {
             const rows = getCatalogRulesFlat();
             const modal = document.getElementById('previewModal');
             const mc = modal.querySelector('.modal-content');
             mc.classList.add('modal-wide');
-            document.getElementById('preview-title').innerText = 'Catalogue — ' + (modeLabelCatalog());
+            document.getElementById('preview-title').innerText = 'Catalogue — ' + modeLabelCatalog();
             let html = '<div class="catalog-list">';
             rows.forEach(({ r, rid, sec }) => {
                 const mats = cardMatos(r);
@@ -556,6 +599,7 @@
             modal.style.display = 'block';
             if (highlightRid) setTimeout(() => { const el = document.querySelector('.catalog-card.hl'); if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 120);
         }
+
         function modeLabelCatalog() {
             if (appState.mode.startsWith('d_')) {
                 const d = appState.customDecks.find(x => x.id === appState.mode);
@@ -565,50 +609,87 @@
             if (appState.mode === 'avance' && appState.explosionEnabled) s += ' + explosion';
             return s;
         }
+
         function fermerPreviewModal() {
             const modal = document.getElementById('previewModal');
             modal.style.display = 'none';
             const mc = modal.querySelector('.modal-content');
             if (mc) mc.classList.remove('modal-wide');
         }
+
         function sessionPackApplies(p, peerId, teamId) {
             if (!p || p.scope === 'all') return true;
             if (p.scope === 'team') return p.teamId && p.teamId === teamId;
             if (p.scope === 'player') return p.peerId && p.peerId === peerId;
             return false;
         }
+
         function appendSessionPackPool(src, pool) {
             if (appState.isOrga || !peer) return;
-            const packs = clientSessionMeta.sessionPacks || [];
-            packs.forEach(p => {
+            (clientSessionMeta.sessionPacks || []).forEach(p => {
                 if (p.src !== src) return;
                 if (!sessionPackApplies(p, peer.id, appState.playerTeamId)) return;
                 (p.cards || []).forEach(r => {
-                    const mats = cardMatos(r);
-                    if (mats.every(m => appState.materiel[m])) pool.push(r);
+                    if (cardMatos(r).every(hasMateriel)) pool.push(r);
                 });
             });
         }
 
+        /* --- SAUVEGARDE LOCALE (protection des données du joueur en multijoueur) --- */
+        // Le SYNC_CONFIG de l'hôte écrase mode/decks/quantités du client : on met de côté
+        // la config locale à l'entrée en partie et on la restaure à la sortie (ou au rechargement
+        // si la session a été interrompue).
+        function backupLocalConfig() {
+            if (localStorage.getItem(BACKUP_KEY)) return;
+            const b = {
+                mode: appState.mode,
+                explosionEnabled: appState.explosionEnabled,
+                deathRisk: appState.deathRisk,
+                materiel: appState.materiel,
+                quantites: appState.quantites,
+                customDecks: appState.customDecks,
+                customTeams: appState.customTeams,
+                playerTeamId: appState.playerTeamId
+            };
+            try { localStorage.setItem(BACKUP_KEY, JSON.stringify(b)); } catch(e) { console.warn(e); }
+        }
+        function restoreLocalConfig() {
+            const raw = localStorage.getItem(BACKUP_KEY);
+            if (!raw) return;
+            try {
+                const b = JSON.parse(raw);
+                if (b && typeof b === 'object') Object.assign(appState, b);
+            } catch(e) { console.warn(e); }
+            localStorage.removeItem(BACKUP_KEY);
+        }
+
         /* --- INIT --- */
         window.onload = function() {
-            const raw = localStorage.getItem('medic_v32_smart');
+            const raw = localStorage.getItem(STORAGE_KEY);
             if (raw) {
                 try {
                     const parsed = JSON.parse(raw);
                     if (parsed && typeof parsed === 'object') appState = Object.assign({}, appState, parsed);
                 } catch (e) { console.warn('medic_v32_smart invalide, état par défaut.', e); }
             }
+            // Si une session multijoueur a été interrompue par un rechargement, on récupère la config locale
+            restoreLocalConfig();
+
             if (!appState.quantites || typeof appState.quantites !== 'object') appState.quantites = {};
             if (!appState.materiel || typeof appState.materiel !== 'object') appState.materiel = {};
             if (!Array.isArray(appState.customDecks)) appState.customDecks = [];
             if (!Array.isArray(appState.customMaterials)) appState.customMaterials = [];
-            if (typeof appState.isCoHost !== 'boolean') appState.isCoHost = false;
             if (!Array.isArray(appState.customTeams) || appState.customTeams.length < 2) {
-                appState.customTeams = [{id:'blue',name:'Bleu',color:'#1976d2'},{id:'red',name:'Rouge',color:'#d32f2f'}];
+                appState.customTeams = DEFAULT_TEAMS.map(t => ({...t}));
+            }
+            // Les rôles de session ne survivent jamais à un rechargement de page
+            appState.isOrga = false;
+            appState.isCoHost = false;
+            if (!appState.customTeams.some(t => t.id === appState.playerTeamId)) {
+                appState.playerTeamId = appState.customTeams[0].id;
             }
             initDefaults();
-            
+
             // Auto Join via URL ?join=
             const jp = new URLSearchParams(location.search).get('join');
             if (jp) {
@@ -621,9 +702,9 @@
         function initDefaults() {
             const allItems = [...DB_MATERIEL_BASE, ...(appState.customMaterials || [])];
             allItems.forEach(m => { if(appState.materiel[m]===undefined) appState.materiel[m]=true; });
-            ["classique","avance","explosion"].forEach(m => { 
-                if(DB_REGLES[m]) DB_REGLES[m].forEach(r => {
-                    let rid = r.id || (m+"_"+r.titre);
+            ["classique","avance","explosion"].forEach(m => {
+                (DB_REGLES[m] || []).forEach(r => {
+                    const rid = r.id || (m+"_"+r.titre);
                     if(appState.quantites[rid] === undefined) appState.quantites[rid]=2;
                 });
             });
@@ -637,13 +718,13 @@
 
         /* --- NAVIGATION --- */
         function showScreen(id) { document.querySelectorAll('.screen, .flex-center').forEach(e => e.classList.remove('active')); document.getElementById(id).classList.add('active'); }
-        function retourAccueil() { 
+        function retourAccueil() {
             stopAllAudio(); clearInterval(timerLogic); isTimerActive=false;
             document.getElementById('death-overlay').style.display='none';
             document.getElementById('danger-zone-container').style.display='none';
-            showScreen('screen-game'); 
+            showScreen('screen-game');
         }
-        
+
         /* --- GAME LOGIC --- */
         function lancerSequenceTirage(src) {
             lastDrawSrc = src;
@@ -652,87 +733,77 @@
             if(!card) return;
             showScreen('screen-march');
             const march = document.querySelector('.march-list');
-            march.innerHTML = march.innerHTML;
-            setTimeout(() => { afficherResultat(card); }, 4000);
+            march.innerHTML = march.innerHTML; // recrée les <li> pour relancer l'animation CSS
+            setTimeout(() => {
+                // Si l'utilisateur a navigué ailleurs pendant l'animation, on n'affiche pas le résultat
+                if (document.getElementById('screen-march').classList.contains('active')) afficherResultat(card);
+            }, 4000);
         }
 
         function preparerTirage(src) {
             let rules = [];
             let drawSrcForQty = src;
+            const isSessionPack = String(src).startsWith('sp_');
 
-            if (String(src).startsWith('sp_')) {
+            if (isSessionPack) {
                 const sp = (clientSessionMeta.sessionPacks || []).find(p => p.id === src);
-                if (sp) {
-                    rules = sp.cards || [];
-                    drawSrcForQty = sp.src; 
-                }
-            } else if(src==='explosion') {
-                rules = DB_REGLES.explosion || [];
-            } else if(src==='bille') {
-                if (appState.mode.startsWith('d_')) {
-                    const deck = appState.customDecks.find(d=>d.id===appState.mode);
-                    rules = (deck && deck.cards) ? deck.cards : [];
-                } else rules = DB_REGLES[appState.mode] || [];
+                if (!sp) { alert("Ce paquet n'est plus disponible."); return null; }
+                rules = sp.cards || [];
+                drawSrcForQty = sp.src;
             } else {
-                const deck = appState.customDecks.find(d=>d.id===src);
-                rules = (deck && deck.cards) ? deck.cards : [];
+                rules = getRulesArrayForDrawSource(src);
+                if (!rules.length) {
+                    alert("Aucun paquet de cartes pour ce mode. Vérifiez les réglages ou le paquet personnalisé.");
+                    return null;
+                }
             }
 
-            if (!rules.length && !String(src).startsWith('sp_')) {
-                alert("Aucun paquet de cartes pour ce mode. Vérifiez les réglages ou le paquet personnalisé.");
-                return null;
-            }
-
-            let pool = [];
-            rules.forEach(r => { 
-                let rid = getCardQtyKey(drawSrcForQty, r);
-                let q = appState.quantites[rid];
-                if (q === undefined) q = 2; 
-                const mats = cardMatos(r);
-                if(q>0 && mats.every(m=>appState.materiel[m] !== false)) { 
-                    for(let i=0;i<q;i++) pool.push(r); 
-                } 
+            const pool = [];
+            rules.forEach(r => {
+                const q = qtyFor(getCardQtyKey(drawSrcForQty, r));
+                if (q > 0 && cardMatos(r).every(hasMateriel)) {
+                    for (let i = 0; i < q; i++) pool.push(r);
+                }
             });
-            
-            if (!String(src).startsWith('sp_')) {
-                appendSessionPackPool(src, pool);
-            }
-            
-            if(pool.length===0) { 
-                alert("Aucune carte disponible. Vérifiez que vous avez le matériel requis (Réglages)."); 
-                return null; 
+
+            if (!isSessionPack) appendSessionPackPool(src, pool);
+
+            if (!pool.length) {
+                alert("Aucune carte disponible. Vérifiez que vous avez le matériel requis (Réglages).");
+                return null;
             }
             return pool[Math.floor(Math.random()*pool.length)];
         }
 
         function afficherResultat(card) {
-            document.getElementById('badge-gravite').innerText=card.gravite;
             const col = getColor(card.gravite);
+            document.getElementById('badge-gravite').innerText = card.gravite;
             document.getElementById('badge-gravite').style.backgroundColor = col;
             document.getElementById('ui-card').style.borderColor = col;
             document.getElementById('ui-card').style.boxShadow = `0 0 50px ${col}60`;
             document.getElementById('btn-card').style.backgroundColor = col;
-            document.getElementById('txt-titre').innerText=card.titre;
-            
+            document.getElementById('btn-card').innerText = "Nouveau Diagnostic";
+            document.getElementById('txt-titre').innerText = card.titre;
+
             let z = card.zone; if(card.typeZone==='membre') z = MEMBRES[Math.floor(Math.random()*4)];
-            document.getElementById('txt-zone').innerText=z;
-            
-            let effetAffiche = card.effet;
-            if (effetAffiche && effetAffiche.includes('[MEMBRE_ALEATOIRE]')) {
-                effetAffiche = effetAffiche.replace('[MEMBRE_ALEATOIRE]', MEMBRES[Math.floor(Math.random()*4)]);
+            document.getElementById('txt-zone').innerText = z;
+
+            let effetAffiche = card.effet || '';
+            if (effetAffiche.includes('[MEMBRE_ALEATOIRE]')) {
+                effetAffiche = effetAffiche.split('[MEMBRE_ALEATOIRE]').join(MEMBRES[Math.floor(Math.random()*4)]);
             }
             document.getElementById('txt-soins').innerText = effetAffiche;
-            
+
             showScreen('screen-result');
-            
-            if (myConn && myConn.open && !appState.isOrga) {
+
+            if (estEnPartieClient()) {
                 try {
                     myConn.send({ type: 'DRAW_LOG', titre: card.titre, gravite: card.gravite, src: String(lastDrawSrc) });
                 } catch (e) { console.warn(e); }
             }
 
-            if(appState.deathRisk && card.gravite === "Critique") {
-                if(Math.random() < 0.40) activerTimerMort();
+            if (appState.deathRisk && card.gravite === "Critique" && Math.random() < 0.40) {
+                activerTimerMort();
             }
         }
 
@@ -751,10 +822,10 @@
             isTimerActive = false; stopAllAudio(); playFlatline();
             document.getElementById('death-overlay').style.display = "flex";
         }
-        
+
         function actionPrincipale() {
-            if(isTimerActive) { clearInterval(timerLogic); stopAllAudio(); isTimerActive = false; alert("PATIENT STABILISÉ !"); retourAccueil(); }
-            else { retourAccueil(); }
+            if(isTimerActive) { clearInterval(timerLogic); stopAllAudio(); isTimerActive = false; alert("PATIENT STABILISÉ !"); }
+            retourAccueil();
         }
 
         function getColor(g) {
@@ -770,20 +841,42 @@
             if(val.trim()) {
                 appState.playerName = val.trim();
                 saveState();
-                updateUI_Game();
             }
         }
 
-        function ouvrirReglages() { 
+        function takeSettingsSnapshot() {
+            return JSON.stringify({
+                mode: appState.mode,
+                explosionEnabled: appState.explosionEnabled,
+                deathRisk: appState.deathRisk,
+                materiel: appState.materiel,
+                quantites: appState.quantites
+            });
+        }
+
+        function quitterEcranReglages() {
+            if (appState.isOrga) {
+                showScreen('screen-host-dashboard');
+                hostSetTab('builder'); // Retourne à l'éditeur dans le QG Hôte
+            } else {
+                retourAccueil();
+            }
+        }
+
+        function ouvrirReglages(keepSnapshot = false) {
+            // Instantané pour pouvoir réellement ANNULER (les contrôles modifient appState en direct)
+            if (!keepSnapshot || settingsSnapshot === null) settingsSnapshot = takeSettingsSnapshot();
+
             document.getElementById('settings-pseudo').value = appState.playerName || '';
 
-            const s=document.getElementById('select-mode'); s.innerHTML=`<option value="classique">CLASSIQUE</option><option value="avance">AVANCÉ</option>`;
-            appState.customDecks.forEach(d=>s.innerHTML+=`<option value="${d.id}">${d.name} (Custom)</option>`);
+            const s = document.getElementById('select-mode');
+            s.innerHTML = `<option value="classique">CLASSIQUE</option><option value="avance">AVANCÉ</option>`;
+            appState.customDecks.forEach(d => s.innerHTML += `<option value="${escapeHtml(d.id)}">${escapeHtml(d.name)} (Custom)</option>`);
             if (![...s.options].some(o => o.value === appState.mode)) appState.mode = 'classique';
-            s.value=appState.mode; 
+            s.value = appState.mode;
             document.getElementById('chk-death').checked = appState.deathRisk;
 
-            const isLocked = (myConn && myConn.open && !appState.isOrga);
+            const isLocked = estEnPartieClient();
             s.disabled = isLocked;
             document.getElementById('chk-death').disabled = isLocked;
             document.getElementById('chk-explosion').disabled = isLocked;
@@ -793,262 +886,232 @@
             if(!lockMsg) {
                 lockMsg = document.createElement('div');
                 lockMsg.id = 'settings-lock-msg';
-                lockMsg.style.backgroundColor = 'rgba(211, 47, 47, 0.2)';
-                lockMsg.style.color = '#d32f2f';
-                lockMsg.style.padding = '10px';
-                lockMsg.style.borderRadius = '8px';
-                lockMsg.style.marginTop = '15px';
-                lockMsg.style.marginBottom = '-10px';
-                lockMsg.style.textAlign = 'center';
-                lockMsg.style.fontWeight = 'bold';
-                lockMsg.style.border = '1px solid #d32f2f';
+                lockMsg.style.cssText = 'background-color:rgba(211,47,47,0.2);color:#d32f2f;padding:10px;border-radius:8px;margin-top:15px;margin-bottom:-10px;text-align:center;font-weight:bold;border:1px solid #d32f2f;';
                 lockMsg.innerHTML = '🔒 Paramètres verrouillés par l\'hôte';
-                const screenSettings = document.getElementById('screen-settings');
-                const h2 = screenSettings.querySelector('h2');
-                h2.insertAdjacentElement('afterend', lockMsg);
+                document.getElementById('screen-settings').querySelector('h2').insertAdjacentElement('afterend', lockMsg);
             }
             lockMsg.style.display = isLocked ? 'block' : 'none';
 
-            renderSettingsList(); showScreen('screen-settings'); 
+            renderSettingsList();
+            showScreen('screen-settings');
         }
 
         function renderSettingsList() {
-            let activeRules = [];
-            if(appState.mode.startsWith('d_')) {
-                const d = appState.customDecks.find(d=>d.id===appState.mode);
-                if(d) activeRules = d.cards;
-            } else {
-                activeRules = DB_REGLES[appState.mode] || [];
-            }
-            if(appState.mode==='avance' && appState.explosionEnabled) {
-                activeRules = [...activeRules, ...DB_REGLES.explosion];
-            }
+            const activeRules = getActiveRulesForMode();
+            const isLocked = estEnPartieClient();
 
-            let requiredMatos = new Set();
+            // Matériel requis par les cartes actives (quantité > 0)
+            const requiredMatos = new Set();
             activeRules.forEach(r => {
-                let rid = r.id || (appState.mode + "_" + r.titre);
-                if(r.id && r.id.startsWith('e')) rid = r.id; 
-                let q = appState.quantites[rid];
-                if (q === undefined) q = 2; 
-                
-                if (q > 0) {
-                    cardMatos(r).forEach(m => requiredMatos.add(m));
-                }
+                if (qtyFor(ridForMode(r)) > 0) cardMatos(r).forEach(m => requiredMatos.add(m));
             });
 
-            const lm = document.getElementById('liste-materiel'); 
-            lm.innerHTML = "";
             const allPossibleMaterials = [...new Set([...DB_MATERIEL_BASE, ...(appState.customMaterials || [])])];
-            
-            const isLocked = (myConn && myConn.open && !appState.isOrga);
-            let matosShownCount = 0;
-
-            allPossibleMaterials.forEach(m => { 
-                if(requiredMatos.has(m)) {
-                    if(appState.materiel[m]===undefined) appState.materiel[m]=true;
-                    lm.innerHTML += `<div class="check-item"><span style="${isLocked ? 'opacity:0.5' : ''}">${m}</span><input type="checkbox" onchange='setMaterielFlag(${JSON.stringify(m)}, this.checked)' ${appState.materiel[m]?'checked':''} ${isLocked ? 'disabled' : ''}></div>`; 
-                    matosShownCount++;
-                }
+            let matosHtml = "";
+            allPossibleMaterials.forEach(m => {
+                if (!requiredMatos.has(m)) return;
+                if (appState.materiel[m] === undefined) appState.materiel[m] = true;
+                matosHtml += `<div class="check-item"><span style="${isLocked ? 'opacity:0.5' : ''}">${escapeHtml(m)}</span><input type="checkbox" onchange="setMaterielFlag(${jsAttr(m)}, this.checked)" ${appState.materiel[m]?'checked':''} ${isLocked ? 'disabled' : ''}></div>`;
             });
-            if(matosShownCount === 0) {
-                lm.innerHTML = "<div style='color:#666; font-style:italic; padding:10px;'>Aucun matériel requis pour ce mode ou cette sélection.</div>";
-            }
-            
-            document.getElementById('box-explosion-opt').style.display=(appState.mode==='avance')?'block':'none';
-            document.getElementById('chk-explosion').checked=appState.explosionEnabled;
+            document.getElementById('liste-materiel').innerHTML = matosHtml ||
+                "<div style='color:#666; font-style:italic; padding:10px;'>Aucun matériel requis pour ce mode ou cette sélection.</div>";
 
-            const lr=document.getElementById('liste-regles'); lr.innerHTML="";
-            
-            let baseRules = [];
-            if (appState.mode.startsWith('d_')) {
-                const cd = appState.customDecks.find(d=>d.id===appState.mode);
-                baseRules = (cd && cd.cards) ? cd.cards : [];
-            } else baseRules = DB_REGLES[appState.mode] || [];
-            
-            let total = 0;
+            document.getElementById('box-explosion-opt').style.display = (appState.mode==='avance') ? 'block' : 'none';
+            document.getElementById('chk-explosion').checked = appState.explosionEnabled;
+
             const renderRow = (r) => {
-                let rid = r.id || (appState.mode + "_" + r.titre);
-                if(r.id && r.id.startsWith('e')) rid = r.id; 
+                const rid = ridForMode(r);
                 if (appState.quantites[rid] === undefined) appState.quantites[rid] = 2;
-                let q = appState.quantites[rid];
-                let matosOk = cardMatos(r).every(m => appState.materiel[m]);
-                if (matosOk) total += q;
-
-                lr.innerHTML += `
+                const q = appState.quantites[rid];
+                const matosOk = cardMatos(r).every(hasMateriel);
+                return `
                     <div class="check-item" style="opacity:${matosOk ? 1 : 0.5}; transition: opacity 0.3s;">
-                        <div style="flex-grow:1"><strong style="color:${getColor(r.gravite)}">${r.titre}</strong></div>
+                        <div style="flex-grow:1"><strong style="color:${getColor(r.gravite)}">${escapeHtml(r.titre)}</strong></div>
                         <div style="display:flex; align-items:center; gap:5px;">
-                            <button type="button" class="btn-mini" style="background:#1976d2" onclick='voirCatalogueComplet(${JSON.stringify(rid)})'>👁️</button>
-                            <button type="button" class="btn-mini" style="${isLocked ? 'opacity:0.3; cursor:not-allowed;' : ''}" onclick='changeQty(${JSON.stringify(rid)},-1)' ${isLocked ? 'disabled' : ''}>-</button>
+                            <button type="button" class="btn-mini" style="background:#1976d2" onclick="voirCatalogueComplet(${jsAttr(rid)})">👁️</button>
+                            <button type="button" class="btn-mini" style="${isLocked ? 'opacity:0.3; cursor:not-allowed;' : ''}" onclick="changeQty(${jsAttr(rid)},-1)" ${isLocked ? 'disabled' : ''}>-</button>
                             <span style="width:20px;text-align:center; ${isLocked ? 'opacity:0.5' : ''}">${q}</span>
-                            <button type="button" class="btn-mini" style="${isLocked ? 'opacity:0.3; cursor:not-allowed;' : ''}" onclick='changeQty(${JSON.stringify(rid)},1)' ${isLocked ? 'disabled' : ''}>+</button>
+                            <button type="button" class="btn-mini" style="${isLocked ? 'opacity:0.3; cursor:not-allowed;' : ''}" onclick="changeQty(${jsAttr(rid)},1)" ${isLocked ? 'disabled' : ''}>+</button>
                         </div>
                     </div>`;
             };
 
-            baseRules.forEach(r => renderRow(r));
-            if (appState.mode === 'avance' && appState.explosionEnabled) {
-                lr.innerHTML += `<div class="separator">💥 PACK EXPLOSION</div>`;
-                DB_REGLES.explosion.forEach(r => renderRow(r));
+            let baseRules;
+            if (appState.mode.startsWith('d_')) {
+                const cd = appState.customDecks.find(d => d.id === appState.mode);
+                baseRules = (cd && cd.cards) ? cd.cards : [];
+            } else {
+                baseRules = DB_REGLES[appState.mode] || [];
             }
-            
-            const infoText = total + " cartes actives";
-            document.getElementById('info-deck').innerText = infoText;
+
+            let rulesHtml = baseRules.map(renderRow).join('');
+            if (appState.mode === 'avance' && appState.explosionEnabled) {
+                rulesHtml += `<div class="separator">💥 PACK EXPLOSION</div>`;
+                rulesHtml += DB_REGLES.explosion.map(renderRow).join('');
+            }
+            document.getElementById('liste-regles').innerHTML = rulesHtml;
+
+            document.getElementById('info-deck').innerText = computeActiveCardCount() + " cartes actives";
         }
-        
-        function setMaterielFlag(name, v) { 
+
+        function setMaterielFlag(name, v) {
             appState.materiel[name] = v;
             renderSettingsList();
-            updateUI_Game(); 
+            updateUI_Game();
         }
 
         function changeQty(id, d) {
-            let cur = appState.quantites[id];
-            if (cur === undefined || cur === null) cur = 2;
-            appState.quantites[id] = Math.max(0, cur + d);
+            appState.quantites[id] = Math.max(0, qtyFor(id) + d);
             renderSettingsList();
             updateUI_Game();
         }
         function changerModeMenu(v) { appState.mode=v; renderSettingsList(); updateUI_Game(); }
         function toggleDeathRisk() { appState.deathRisk = document.getElementById('chk-death').checked; }
         function toggleExplosion() { appState.explosionEnabled=document.getElementById('chk-explosion').checked; renderSettingsList(); updateUI_Game(); }
-        
-        function sauvegarderEtQuitter() { 
-            saveState(); 
-            if(appState.isOrga) {
-                broadcastFullState(); 
-                showScreen('screen-host-dashboard');
-                hostSetTab('builder'); // Retourne à l'éditeur dans le QG Hôte
-            } else {
-                retourAccueil(); 
-            }
+
+        function sauvegarderEtQuitter() {
+            settingsSnapshot = null;
+            saveState();
+            if (appState.isOrga) broadcastFullState();
+            quitterEcranReglages();
         }
-        
-        function annulerReglages() { 
-            if(appState.isOrga) {
-                showScreen('screen-host-dashboard');
-                hostSetTab('builder'); // Retourne à l'éditeur dans le QG Hôte
-            } else {
-                retourAccueil(); 
+
+        function annulerReglages() {
+            // On restaure l'état capturé à l'ouverture (sauf client verrouillé : ses données viennent de l'hôte)
+            if (settingsSnapshot && !estEnPartieClient()) {
+                try { Object.assign(appState, JSON.parse(settingsSnapshot)); } catch(e) { console.warn(e); }
             }
+            settingsSnapshot = null;
+            updateUI_Game();
+            quitterEcranReglages();
         }
 
         /* --- BUILDER (SOLO & HOST) --- */
         let currentDeckId = null; let currentCardIndex = -1; let tempMatos = [];
-        
+
         function ouvrirBuilder() { showScreen('screen-builder'); renderDecksList(); }
-        
-        function creerNouveauPaquet() { 
-            let id="d_"+Date.now(); 
-            appState.customDecks.push({id:id, name:"Nouveau", showOnHome:true, cards:[]}); 
-            editDeck(id); 
+
+        function retourApresEditionDeck() {
+            if (appState.isOrga) { showScreen('screen-host-dashboard'); hostSetTab('builder'); }
+            else ouvrirBuilder();
         }
 
-        function renderDecksList() { 
-            const l=document.getElementById('custom-decks-list'); l.innerHTML=""; 
-            appState.customDecks.forEach(d=>{ l.innerHTML+=`<div class="builder-item"><span>${d.name}</span><button class="header-btn" onclick="editDeck('${d.id}')">✏️</button></div>`; }); 
+        function creerNouveauPaquet() {
+            const id = "d_"+Date.now();
+            appState.customDecks.push({id:id, name:"Nouveau", showOnHome:true, cards:[]});
+            editDeck(id);
+        }
+
+        function renderDecksList() {
+            const l = document.getElementById('custom-decks-list');
+            l.innerHTML = appState.customDecks.map(d =>
+                `<div class="builder-item"><span>${escapeHtml(d.name)}</span><button class="header-btn" onclick="editDeck(${jsAttr(d.id)})">✏️</button></div>`
+            ).join('');
         }
 
         function hostRenderDecksList() {
             const l = document.getElementById('host-decks-list');
             if(!l) return;
-            l.innerHTML = "";
-            
-            const baseDecks = [
-                { id: 'classique', name: 'Mode : Classique' },
-                { id: 'avance', name: 'Mode : Avancé' }
+            const rows = [
+                { id: 'classique', label: 'Mode : Classique' },
+                { id: 'avance', label: 'Mode : Avancé' },
+                ...appState.customDecks.map(d => ({ id: d.id, label: 'Perso : ' + d.name, perso: true }))
             ];
-            
-            baseDecks.forEach(d => {
-                l.innerHTML += `<div class="player-row" style="border-left:4px solid var(--accent-blue); flex-direction:row; justify-content:space-between; align-items:center;">
-                    <strong>${escapeHtml(d.name)}</strong>
-                    <button type="button" class="btn-dash" style="background:var(--accent-blue);" onclick="hostEditSettings('${d.id}')">Réglages</button>
-                </div>`;
-            });
-
-            appState.customDecks.forEach(d => {
-                l.innerHTML += `<div class="player-row" style="border-left:4px solid var(--accent-orange); flex-direction:row; justify-content:space-between; align-items:center;">
-                    <strong>Perso : ${escapeHtml(d.name)}</strong>
-                    <button type="button" class="btn-dash" style="background:var(--accent-blue);" onclick="hostEditSettings('${d.id}')">Réglages</button>
-                </div>`;
-            });
+            l.innerHTML = rows.map(r => `<div class="player-row" style="border-left:4px solid ${r.perso ? 'var(--accent-orange)' : 'var(--accent-blue)'}; flex-direction:row; justify-content:space-between; align-items:center;">
+                    <strong>${escapeHtml(r.label)}</strong>
+                    <button type="button" class="btn-dash" style="background:var(--accent-blue);" onclick="hostEditSettings(${jsAttr(r.id)})">Réglages</button>
+                </div>`).join('');
         }
-        
+
         function hostEditSettings(id) {
+            // Instantané AVANT le changement de mode : ANNULER rétablira aussi le mode précédent
+            settingsSnapshot = takeSettingsSnapshot();
             appState.mode = id;
-            saveState();
-            ouvrirReglages();
+            ouvrirReglages(true);
         }
 
         function editDeck(id) {
-            currentDeckId=id;
-            const d=appState.customDecks.find(x=>x.id===id);
-            if (!d) { if (appState.isOrga) { showScreen('screen-host-dashboard'); hostSetTab('builder'); } else { ouvrirBuilder(); } return; }
-            document.getElementById('deck-name').value=d.name;
-            document.getElementById('deck-show-home').checked=!!d.showOnHome;
+            currentDeckId = id;
+            const d = appState.customDecks.find(x => x.id === id);
+            if (!d) { retourApresEditionDeck(); return; }
+            document.getElementById('deck-name').value = d.name;
+            document.getElementById('deck-show-home').checked = !!d.showOnHome;
             renderCardsList(d);
             showScreen('screen-deck-edit');
         }
 
-        function renderCardsList(d) { const l=document.getElementById('deck-cards-list'); l.innerHTML=""; d.cards.forEach((c,i)=>{ l.innerHTML+=`<div class="builder-item"><span>${c.titre}</span><button class="btn-mini" onclick="editCard(${i})">✏️</button></div>`; }); }
-        
-        function sauvegarderPaquetCourant() {
-            const d=appState.customDecks.find(x=>x.id===currentDeckId);
-            if (!d) { 
-                if (appState.isOrga) { showScreen('screen-host-dashboard'); hostSetTab('builder'); } else { ouvrirBuilder(); }
-                return; 
-            }
-            d.name=document.getElementById('deck-name').value;
-            d.showOnHome=document.getElementById('deck-show-home').checked;
-            saveState();
-            
-            if (appState.isOrga) {
-                if (liveSession.sessionPacks) {
-                    liveSession.sessionPacks.forEach(sp => {
-                        if (sp.src === d.id) {
-                            sp.cards = cloneCards(d.cards);
-                            sp.label = d.name;
-                        }
-                    });
-                }
-                broadcastFullState();
-                hostRefreshHostPanels();
-                showScreen('screen-host-dashboard');
-                hostSetTab('builder');
-            } else {
-                ouvrirBuilder();
-            }
-        }
-        
-        function supprimerPaquetCourant() { 
-            appState.customDecks = appState.customDecks.filter(x=>x.id!==currentDeckId); 
-            saveState(); 
-            if (appState.isOrga) {
-                if (liveSession.sessionPacks) {
-                    liveSession.sessionPacks = liveSession.sessionPacks.filter(sp => sp.src !== currentDeckId);
-                }
-                broadcastFullState();
-                hostRefreshHostPanels();
-                showScreen('screen-host-dashboard');
-                hostSetTab('builder');
-            } else {
-                ouvrirBuilder();
-            }
+        function renderCardsList(d) {
+            const l = document.getElementById('deck-cards-list');
+            l.innerHTML = d.cards.map((c,i) =>
+                `<div class="builder-item"><span>${escapeHtml(c.titre)}</span><button class="btn-mini" onclick="editCard(${i})">✏️</button></div>`
+            ).join('');
         }
 
-        function ajouterCarteCustom() { currentCardIndex=-1; document.getElementById('card-title').value=""; tempMatos=[]; showScreen('screen-card-edit'); renderMatosCheck(); }
-        function editCard(i) { currentCardIndex=i; const c=appState.customDecks.find(x=>x.id===currentDeckId).cards[i]; document.getElementById('card-title').value=c.titre; document.getElementById('card-gravity').value=c.gravite; document.getElementById('card-zone').value=c.zone; document.getElementById('card-effect').value=c.effet; tempMatos=[...cardMatos(c)]; renderMatosCheck(); showScreen('screen-card-edit'); }
-        
-        function renderMatosCheck() { 
-            const l = document.getElementById('card-matos-list'); 
-            l.innerHTML = "";
-            const allMatos = [...new Set([...DB_MATERIEL_BASE, ...(appState.customMaterials || [])])];
-            allMatos.forEach(m => { 
-                l.innerHTML += `<div class="check-item"><input type="checkbox" onchange="toggleMatos(${JSON.stringify(m)})" ${tempMatos.includes(m)?'checked':''}> ${m}</div>`; 
-            }); 
+        function sauvegarderPaquetCourant() {
+            const d = appState.customDecks.find(x => x.id === currentDeckId);
+            if (!d) { retourApresEditionDeck(); return; }
+            d.name = document.getElementById('deck-name').value;
+            d.showOnHome = document.getElementById('deck-show-home').checked;
+            saveState();
+
+            if (appState.isOrga) {
+                // Répercute la modification sur les paquets déjà distribués en session
+                (liveSession.sessionPacks || []).forEach(sp => {
+                    if (sp.src === d.id) {
+                        sp.cards = cloneCards(d.cards);
+                        sp.label = d.name;
+                    }
+                });
+                broadcastFullState();
+                hostRefreshHostPanels();
+            }
+            retourApresEditionDeck();
         }
-        function toggleMatos(m) { if(tempMatos.includes(m)) tempMatos=tempMatos.filter(x=>x!==m); else tempMatos.push(m); }
-        
+
+        function supprimerPaquetCourant() {
+            appState.customDecks = appState.customDecks.filter(x => x.id !== currentDeckId);
+            saveState();
+            if (appState.isOrga) {
+                liveSession.sessionPacks = (liveSession.sessionPacks || []).filter(sp => sp.src !== currentDeckId);
+                broadcastFullState();
+                hostRefreshHostPanels();
+            }
+            retourApresEditionDeck();
+        }
+
+        function ajouterCarteCustom() {
+            currentCardIndex = -1;
+            document.getElementById('card-title').value = "";
+            document.getElementById('card-zone').value = "";
+            document.getElementById('card-effect').value = "";
+            tempMatos = [];
+            renderMatosCheck();
+            showScreen('screen-card-edit');
+        }
+
+        function editCard(i) {
+            const d = appState.customDecks.find(x => x.id === currentDeckId);
+            if (!d || !d.cards[i]) { retourApresEditionDeck(); return; }
+            currentCardIndex = i;
+            const c = d.cards[i];
+            document.getElementById('card-title').value = c.titre;
+            document.getElementById('card-gravity').value = c.gravite;
+            document.getElementById('card-zone').value = c.zone;
+            document.getElementById('card-effect').value = c.effet;
+            tempMatos = [...cardMatos(c)];
+            renderMatosCheck();
+            showScreen('screen-card-edit');
+        }
+
+        function renderMatosCheck() {
+            const l = document.getElementById('card-matos-list');
+            const allMatos = [...new Set([...DB_MATERIEL_BASE, ...(appState.customMaterials || [])])];
+            l.innerHTML = allMatos.map(m =>
+                `<div class="check-item"><input type="checkbox" onchange="toggleMatos(${jsAttr(m)})" ${tempMatos.includes(m)?'checked':''}> ${escapeHtml(m)}</div>`
+            ).join('');
+        }
+        function toggleMatos(m) { if(tempMatos.includes(m)) tempMatos = tempMatos.filter(x => x !== m); else tempMatos.push(m); }
+
         function ajouterNouveauMatos() {
             const val = document.getElementById('new-matos-name').value.trim();
             if(!val) return;
@@ -1062,9 +1125,18 @@
             document.getElementById('new-matos-name').value = "";
         }
 
-        function validerCarte() { 
-            const nc={ titre:document.getElementById('card-title').value, gravite:document.getElementById('card-gravity').value, zone:document.getElementById('card-zone').value, effet:document.getElementById('card-effect').value, matos:tempMatos, typeZone:'custom' };
-            const d=appState.customDecks.find(x=>x.id===currentDeckId); if(currentCardIndex===-1) d.cards.push(nc); else d.cards[currentCardIndex]=nc;
+        function validerCarte() {
+            const d = appState.customDecks.find(x => x.id === currentDeckId);
+            if (!d) { retourApresEditionDeck(); return; }
+            const nc = {
+                titre: document.getElementById('card-title').value,
+                gravite: document.getElementById('card-gravity').value,
+                zone: document.getElementById('card-zone').value,
+                effet: document.getElementById('card-effect').value,
+                matos: tempMatos,
+                typeZone: 'custom'
+            };
+            if (currentCardIndex === -1) d.cards.push(nc); else d.cards[currentCardIndex] = nc;
             editDeck(currentDeckId);
         }
         function annulerEditionCarte() { editDeck(currentDeckId); }
@@ -1097,24 +1169,23 @@
         function hostPopulatePackUI() {
             const sel = document.getElementById('host-pack-source');
             if (!sel) return;
-            sel.innerHTML = '<option value="bille">Balistique (mode actuel)</option><option value="explosion">Pack explosion</option>';
-            appState.customDecks.forEach(d => {
-                sel.innerHTML += `<option value=${JSON.stringify(d.id)}>Perso : ${escapeHtml(d.name)}</option>`;
-            });
+            sel.innerHTML = '<option value="bille">Balistique (mode actuel)</option><option value="explosion">Pack explosion</option>' +
+                appState.customDecks.map(d => `<option value="${escapeHtml(d.id)}">Perso : ${escapeHtml(d.name)}</option>`).join('');
         }
         function hostPopulatePackTeamPlayerSelects() {
             const ts = document.getElementById('host-pack-team');
             const ps = document.getElementById('host-pack-player');
-            if (ts) ts.innerHTML = (appState.customTeams || []).map(t => `<option value=${JSON.stringify(t.id)}>${escapeHtml(t.name)}</option>`).join('');
-            if (ps) ps.innerHTML = Object.values(playersData).map(p => `<option value=${JSON.stringify(p.id)}>${escapeHtml(p.name)}</option>`).join('');
+            if (ts) ts.innerHTML = (appState.customTeams || []).map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
+            if (ps) ps.innerHTML = Object.values(playersData).map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('');
         }
         function hostRenderTeamsEditor() {
             const el = document.getElementById('host-teams-editor');
             if (!el) return;
-            el.innerHTML = (appState.customTeams || []).map(t => `
+            const teams = appState.customTeams || [];
+            el.innerHTML = teams.map(t => `
                 <div class="player-row" style="border-left:4px solid ${t.color}">
                     <strong>${escapeHtml(t.name)}</strong>
-                    ${(appState.customTeams || []).length > 2 ? `<button type="button" class="btn-dash" style="background:#555;margin-left:8px;" onclick="hostSupprimerEquipe(${JSON.stringify(t.id)})">Supprimer</button>` : '<span style="font-size:0.75em;color:#666;">(min. 2 équipes)</span>'}
+                    ${teams.length > 2 ? `<button type="button" class="btn-dash" style="background:#555;margin-left:8px;" onclick="hostSupprimerEquipe(${jsAttr(t.id)})">Supprimer</button>` : '<span style="font-size:0.75em;color:#666;">(min. 2 équipes)</span>'}
                 </div>`).join('');
         }
         function hostRefreshHostPanels() {
@@ -1124,7 +1195,7 @@
             renderHostSessionPacksList();
             hostPopulatePackTeamPlayerSelects();
             renderHostLogs();
-            if (typeof hostRenderDecksList === 'function') hostRenderDecksList();
+            hostRenderDecksList();
         }
         function hostAjouterEquipe() {
             const nm = document.getElementById('host-new-team-name').value.trim();
@@ -1145,7 +1216,14 @@
             if (!appState.customTeams || appState.customTeams.length <= 2) { alert('Il faut au moins deux équipes.'); return; }
             const keep = appState.customTeams.filter(t => t.id !== tid);
             const fb = keep[0].id;
-            Object.values(playersData).forEach(p => { if (p.teamId === tid) p.teamId = fb; });
+            // Réassigne ET notifie les joueurs concernés (sinon ils gardent une équipe qui n'existe plus)
+            Object.values(playersData).forEach(p => {
+                if (p.teamId === tid) {
+                    p.teamId = fb;
+                    const c = hostConns[p.id];
+                    if (c) { try { c.send({ type: 'CMD_TEAM', teamId: fb }); } catch (e) {} }
+                }
+            });
             appState.customTeams = keep;
             broadcastFullState();
             hostPushLog('Équipe supprimée, joueurs réassignés.');
@@ -1186,19 +1264,21 @@
                 let dest = 'Tous';
                 if (p.scope === 'team') dest = 'Équipe : ' + ((appState.customTeams.find(t => t.id === p.teamId) || {}).name || '?');
                 if (p.scope === 'player') dest = 'Joueur : ' + ((playersData[p.peerId] || {}).name || p.peerId);
-                return `<div class="check-item"><div><strong>${escapeHtml(p.label)}</strong><br><span style="font-size:0.75em;color:#888;">${escapeHtml(p.src)} · ${escapeHtml(dest)}</span></div><button type="button" class="btn-mini" style="background:#b71c1c" onclick="hostRetirerPaquetSession(${JSON.stringify(p.id)})">×</button></div>`;
+                return `<div class="check-item"><div><strong>${escapeHtml(p.label)}</strong><br><span style="font-size:0.75em;color:#888;">${escapeHtml(p.src)} · ${escapeHtml(dest)}</span></div><button type="button" class="btn-mini" style="background:#b71c1c" onclick="hostRetirerPaquetSession(${jsAttr(p.id)})">×</button></div>`;
             }).join('');
         }
         function copierLienInvitation() {
             const el = document.getElementById('host-join-link');
             const t = el && el.value;
             if (!t) return;
+            const fallbackCopy = () => { el.select(); document.execCommand('copy'); alert('Lien copié.'); };
             if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(t).then(() => alert('Lien copié.')).catch(() => { el.select(); document.execCommand('copy'); alert('Lien copié.'); });
-            } else { el.select(); document.execCommand('copy'); alert('Lien copié.'); }
+                navigator.clipboard.writeText(t).then(() => alert('Lien copié.')).catch(fallbackCopy);
+            } else fallbackCopy();
         }
-        function broadcastFullState() {
-            const payload = {
+
+        function buildSyncPayload() {
+            return {
                 type: 'SYNC_CONFIG',
                 mode: appState.mode,
                 decks: appState.customDecks,
@@ -1210,6 +1290,9 @@
                 gameName: liveSession.gameName,
                 sessionPacks: liveSession.sessionPacks || []
             };
+        }
+        function broadcastFullState() {
+            const payload = buildSyncPayload();
             Object.values(hostConns).forEach(c => { try { c.send(payload); } catch (e) {} });
         }
 
@@ -1228,6 +1311,10 @@
 
         // Fonction Scan QR Code (Auto-Join)
         function startQRScanner() {
+            if (typeof Html5QrcodeScanner === 'undefined') {
+                alert("Scanner QR indisponible (librairie non chargée — vérifiez la connexion Internet).");
+                return;
+            }
             document.getElementById('qr-reader').style.display = 'block';
             if (!html5QrcodeScanner) {
                 html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
@@ -1235,63 +1322,76 @@
                     let code = decodedText;
                     if(code.includes('?join=')) code = code.split('?join=')[1].split('&')[0];
                     code = decodeURIComponent(code);
-                    
+
                     document.getElementById('join-code').value = code;
-                    
+
                     try { html5QrcodeScanner.clear(); } catch(e){}
                     html5QrcodeScanner = null;
                     document.getElementById('qr-reader').style.display = 'none';
-                    
+
                     rejoindrePartieEnLigne(code);
-                }, (err) => {});
+                }, () => {});
             }
         }
 
-        function fermerMultiModal() { 
-            document.getElementById('multiplayerModal').style.display = 'none'; 
-            if(html5QrcodeScanner) { 
-                try { html5QrcodeScanner.clear(); } catch(e){} 
+        function fermerMultiModal() {
+            document.getElementById('multiplayerModal').style.display = 'none';
+            if(html5QrcodeScanner) {
+                try { html5QrcodeScanner.clear(); } catch(e){}
                 html5QrcodeScanner = null;
             }
             document.getElementById('qr-reader').style.display = 'none';
         }
 
+        function genererQR(link) {
+            const wrap = document.getElementById('host-qr-wrap');
+            if (!wrap) return;
+            const fallbackApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(link)}`;
+            const setImg = (url) => { wrap.innerHTML = `<img src="${url}" alt="QR Code" style="display:block; margin:0 auto; border-radius:4px;">`; };
+            if (typeof window.QRCode !== 'undefined') {
+                try {
+                    window.QRCode.toDataURL(link, { width: 180, margin: 2 }, (err, url) => setImg(err ? fallbackApiUrl : url));
+                } catch(e) { setImg(fallbackApiUrl); }
+            } else {
+                setImg(fallbackApiUrl);
+            }
+        }
+
         function creerPartieEnLigne() {
+            if (typeof Peer === 'undefined') {
+                alert("Multijoueur indisponible (librairie PeerJS non chargée — vérifiez la connexion Internet).");
+                return;
+            }
             liveSession.gameName = (document.getElementById('multi-game-name').value || '').trim() || 'Partie';
             appState.lastGameName = liveSession.gameName;
             if (!liveSession.sessionPacks) liveSession.sessionPacks = [];
-            
-            let hostPseudo = document.getElementById('multi-pseudo').value.trim();
+
+            const hostPseudo = document.getElementById('multi-pseudo').value.trim();
             if(hostPseudo) appState.playerName = hostPseudo;
-            
+
             document.getElementById('multi-status').style.display = 'block';
             document.getElementById('multi-status').innerText = 'Création de la partie...';
             if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
-            
-            let baseName = liveSession.gameName.toUpperCase().replace(/[^A-Z0-9]/g, '');
-            let peerId = baseName ? ('TM32-' + baseName) : ('TM32-' + Math.floor(1000 + Math.random() * 9000));
 
-            // STUN Google officiels
-            peer = new Peer(peerId, {
-                config: {
-                    'iceServers': [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' },
-                        { urls: 'stun:stun2.l.google.com:19302' }
-                    ]
-                }
-            });
-            
+            const baseName = liveSession.gameName.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const peerId = baseName ? ('TM32-' + baseName) : ('TM32-' + Math.floor(1000 + Math.random() * 9000));
+
+            peer = new Peer(peerId, PEER_CONFIG);
+
             peer.on('error', (err) => {
                 document.getElementById('multi-status').style.display = 'block';
                 document.getElementById('multi-status').innerText = (err && err.message) ? err.message : 'Erreur PeerJS';
                 console.error(err);
             });
+            // Si la liaison avec le serveur de signalisation tombe, on retente (les connexions déjà établies survivent)
+            peer.on('disconnected', () => {
+                if (peer && !peer.destroyed) { try { peer.reconnect(); } catch (e) {} }
+            });
+
             peer.on('open', (id) => {
-                
                 appState.isOrga = true;
                 appState.playerTeamId = 'orga';
-                
+
                 document.getElementById('host-connection-id').innerText = id;
                 document.getElementById('host-game-title').innerText = liveSession.gameName;
                 const baseUrl = (location.href || '').split('?')[0].split('#')[0];
@@ -1304,57 +1404,22 @@
                 fermerMultiModal();
                 showScreen('screen-host-dashboard');
                 hostSetTab('join');
-                
-                function genererQR(link) {
-                    const wrap = document.getElementById('host-qr-wrap');
-                    if (!wrap) return;
-                    
-                    const fallbackApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(link)}`;
-                    
-                    if (typeof window.QRCode !== 'undefined') {
-                        try {
-                            window.QRCode.toDataURL(link, { width: 180, margin: 2 }, (err, url) => {
-                                if (err) {
-                                    wrap.innerHTML = `<img src="${fallbackApiUrl}" alt="QR Code" style="display:block; margin:0 auto; border-radius:4px;">`;
-                                } else {
-                                    wrap.innerHTML = `<img src="${url}" alt="QR Code" style="display:block; margin:0 auto; border-radius:4px;">`;
-                                }
-                            });
-                        } catch(e) {
-                            wrap.innerHTML = `<img src="${fallbackApiUrl}" alt="QR Code" style="display:block; margin:0 auto; border-radius:4px;">`;
-                        }
-                    } else {
-                        wrap.innerHTML = `<img src="${fallbackApiUrl}" alt="QR Code" style="display:block; margin:0 auto; border-radius:4px;">`;
-                    }
-                }
                 genererQR(joinLink);
-                
+
                 hostPushLog('Session hôte démarrée : ' + id);
                 hostRefreshHostPanels();
                 updateDashboard();
                 saveState();
             });
-            
+
             peer.on('connection', (conn) => {
                 conn.on('open', () => {
-                    try {
-                        conn.send({
-                            type: 'SYNC_CONFIG',
-                            mode: appState.mode,
-                            decks: appState.customDecks,
-                            teams: appState.customTeams,
-                            explosionEnabled: appState.explosionEnabled,
-                            deathRisk: appState.deathRisk,
-                            materiel: appState.materiel,
-                            quantites: appState.quantites,
-                            gameName: liveSession.gameName,
-                            sessionPacks: liveSession.sessionPacks || []
-                        });
-                    } catch(e) {}
+                    try { conn.send(buildSyncPayload()); } catch(e) {}
                 });
-
                 conn.on('data', (d) => handleHostData(conn, d));
                 conn.on('close', () => {
+                    // Ignore la fermeture d'une connexion déjà remplacée ou retirée (kick)
+                    if (hostConns[conn.peer] !== conn) return;
                     const n = (playersData[conn.peer] && playersData[conn.peer].name) || conn.peer;
                     hostPushLog(`${n} a quitté / déconnecté`);
                     delete hostConns[conn.peer];
@@ -1365,121 +1430,124 @@
                 hostConns[conn.peer] = conn;
             });
         }
-        
+
         function rejoindrePartieEnLigne(autoCode = null) {
             if (appState.isOrga) {
                 alert("Vous hébergez déjà une partie sur cet appareil. Quittez l'ancienne partie via l'interface Hôte pour pouvoir en rejoindre une autre en tant que joueur.");
                 return;
             }
+            if (typeof Peer === 'undefined') {
+                alert("Multijoueur indisponible (librairie PeerJS non chargée — vérifiez la connexion Internet).");
+                return;
+            }
 
-            let rawInput = autoCode || document.getElementById('join-code').value.trim();
+            const rawInput = autoCode || document.getElementById('join-code').value.trim();
             if (!rawInput) { alert('Indiquez le nom de la partie ou scannez le QR code.'); return; }
-            
+
             let code = rawInput;
             if(code.includes('?join=')) {
-                code = code.split('?join=')[1].split('&')[0];
-                code = decodeURIComponent(code);
-            } 
-            
-            let clean = code.toUpperCase();
-            if (clean.startsWith('TM32-')) {
-                clean = clean.substring(5);
+                code = decodeURIComponent(code.split('?join=')[1].split('&')[0]);
             }
-            clean = clean.replace(/[^A-Z0-9]/g, ''); 
-            code = 'TM32-' + clean; 
-            
+            let clean = code.toUpperCase();
+            if (clean.startsWith('TM32-')) clean = clean.substring(5);
+            clean = clean.replace(/[^A-Z0-9]/g, '');
+            code = 'TM32-' + clean;
+
             appState.isOrga = false;
             appState.isCoHost = false;
-            isWaitingForTeamSelection = true; 
-            
+            isWaitingForTeamSelection = true;
+
             document.getElementById('multi-status').style.display = 'block';
             document.getElementById('multi-status').innerText = 'Recherche de la partie...';
             if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
-            
-            // STUN Google officiels
-            peer = new Peer({
-                config: {
-                    'iceServers': [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' },
-                        { urls: 'stun:stun2.l.google.com:19302' }
-                    ]
-                }
-            });
-            
+
+            peer = new Peer(PEER_CONFIG);
+
             let connectionTimeout;
 
             peer.on('error', (err) => {
                 clearTimeout(connectionTimeout);
-                document.getElementById('multi-status').style.display = 'block';
-                document.getElementById('multi-status').innerText = (err && err.message) ? err.message : 'Erreur PeerJS';
-                
+                const st = document.getElementById('multi-status');
+                st.style.display = 'block';
+                st.innerText = (err && err.message) ? err.message : 'Erreur PeerJS';
                 if (err && err.type === 'peer-unavailable') {
                     alert("La partie est introuvable. Vérifiez que l'Hôte n'a pas fermé sa page web ou annulé la partie.");
-                    document.getElementById('multi-status').style.display = 'none';
+                    st.style.display = 'none';
                 }
                 console.error(err);
             });
-            
+            peer.on('disconnected', () => {
+                if (peer && !peer.destroyed) { try { peer.reconnect(); } catch (e) {} }
+            });
+
             peer.on('open', () => {
                 document.getElementById('multi-status').innerText = 'Connexion réseau en cours...';
-                
+
                 myConn = peer.connect(code, { reliable: true });
-                
+
                 connectionTimeout = setTimeout(() => {
                     if (!myConn || !myConn.open) {
                         alert("Délai dépassé. L'Hôte est introuvable (vérifiez que la page du créateur est bien ouverte !) ou un pare-feu bloque la communication réseau.");
                         document.getElementById('multi-status').style.display = 'none';
-                        try { peer.destroy(); } catch(e){}
+                        isWaitingForTeamSelection = false;
+                        const conn = myConn; myConn = null;
+                        try { if (conn) conn.close(); } catch(e){}
+                        try { if (peer) peer.destroy(); } catch(e){}
                         peer = null;
                     }
                 }, 20000);
 
-                myConn.on('error', (err) => {
+                myConn.on('error', () => {
                     clearTimeout(connectionTimeout);
-                    alert('Connexion impossible : hôte introuvable ou réseau instable.');
                     document.getElementById('multi-status').style.display = 'none';
+                    if (!myConn) return; // déjà nettoyé
+                    alert('Connexion impossible : hôte introuvable ou réseau instable.');
+                    executerQuitterPartie();
                 });
-                
+
                 myConn.on('open', () => {
                     clearTimeout(connectionTimeout);
                     document.getElementById('multi-status').innerText = 'Récupération des données...';
-                    
-                    setTimeout(() => {
-                        if (isWaitingForTeamSelection) {
-                            afficherModalChoixEquipe();
-                        }
+                    // Filet de sécurité : si le SYNC_CONFIG n'arrive pas, on propose quand même les équipes locales
+                    teamSelectFallback = setTimeout(() => {
+                        if (isWaitingForTeamSelection) afficherModalChoixEquipe();
                     }, 3000);
                 });
-                
+
                 myConn.on('close', () => {
-                    document.getElementById('btn-multi-icon').classList.remove('online');
-                    document.getElementById('btn-quitter-partie').style.display = 'none';
+                    if (!myConn) return; // départ volontaire ou kick : déjà nettoyé
+                    alert("Connexion à l'hôte perdue.");
+                    executerQuitterPartie();
                 });
-                
+
                 myConn.on('data', (d) => handleClientData(d));
             });
         }
-        
+
         function afficherModalChoixEquipe() {
-            fermerMultiModal(); 
+            clearTimeout(teamSelectFallback);
+            fermerMultiModal();
             document.getElementById('multi-status').style.display = 'none';
-            
+
             const select = document.getElementById('modal-join-team');
-            select.innerHTML = (appState.customTeams || [{id:'blue',name:'Bleu'}]).map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
-            
+            select.innerHTML = (appState.customTeams || DEFAULT_TEAMS).map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
+
             document.getElementById('teamSelectionModal').style.display = 'block';
         }
 
         function validerEquipeRejoindre() {
+            if (!myConn || !myConn.open) {
+                document.getElementById('teamSelectionModal').style.display = 'none';
+                isWaitingForTeamSelection = false;
+                alert('Connexion perdue. Réessayez de rejoindre la partie.');
+                return;
+            }
             const teamId = document.getElementById('modal-join-team').value;
             appState.playerTeamId = teamId;
             isWaitingForTeamSelection = false;
-            
-            try {
-                myConn.send({ type: 'JOIN', name: appState.playerName, teamId: teamId });
-            } catch(e){}
-            
+
+            try { myConn.send({ type: 'JOIN', name: appState.playerName, teamId: teamId }); } catch(e){}
+
             document.getElementById('teamSelectionModal').style.display = 'none';
             document.getElementById('btn-multi-icon').classList.add('online');
             updateUI_Game();
@@ -1510,10 +1578,11 @@
                 hostPushLog(`${data.name || 'Joueur'} quitte la partie`);
             }
         }
-        
+
         function handleClientData(data) {
             if (!data) return;
             if (data.type === 'SYNC_CONFIG') {
+                backupLocalConfig(); // avant le premier écrasement par la config de l'hôte
                 appState.mode = data.mode;
                 appState.customDecks = data.decks || [];
                 if (data.teams && data.teams.length) appState.customTeams = data.teams;
@@ -1525,9 +1594,7 @@
                 clientSessionMeta.gameName = data.gameName || '';
                 updateUI_Game();
 
-                if (isWaitingForTeamSelection) {
-                    afficherModalChoixEquipe();
-                }
+                if (isWaitingForTeamSelection) afficherModalChoixEquipe();
                 return;
             }
             if (data.type === 'CMD_TEAM') {
@@ -1548,31 +1615,27 @@
             }
         }
 
-        // --- VISUEL RECOMPOSÉ POUR LE CHANGEMENT D'ÉQUIPE ---
         function updateDashboard() {
             const l = document.getElementById('host-player-list');
             if (!l) return;
-            l.innerHTML = '';
             document.getElementById('connected-count').innerText = Object.keys(playersData).length;
-            Object.values(playersData).forEach(p => {
+            l.innerHTML = Object.values(playersData).map(p => {
                 const team = appState.customTeams.find(t => t.id === p.teamId) || appState.customTeams[0];
-                if (!team) return;
-                
-                // Génération des boutons d'équipes solides et colorés (Pleinement visibles)
-                let btns = '';
-                appState.customTeams.forEach(t => {
-                    btns += `<button type="button" class="btn-dash" style="background:${t.color}; color:white; font-weight:bold; margin-right:5px; border:1px solid rgba(255,255,255,0.4);" onclick="cmdTeam(${JSON.stringify(p.id)},${JSON.stringify(t.id)})">${escapeHtml(t.name)}</button>`;
-                });
-                
+                if (!team) return '';
+
+                const btns = appState.customTeams.map(t =>
+                    `<button type="button" class="btn-dash" style="background:${t.color}; color:white; font-weight:bold; margin-right:5px; border:1px solid rgba(255,255,255,0.4);" onclick="cmdTeam(${jsAttr(p.id)},${jsAttr(t.id)})">${escapeHtml(t.name)}</button>`
+                ).join('');
+
                 const badge = p.isCoHost ? '<span class="badge-role admin">Co-admin</span>' : '';
-                l.innerHTML += `<div class="player-row" style="border-left:4px solid ${team.color}">
+                return `<div class="player-row" style="border-left:4px solid ${team.color}">
                     <div class="player-row-header"><strong>${escapeHtml(p.name)}</strong>${badge} <span style="color:${team.color}">(${escapeHtml(team.name)})</span></div>
                     <div class="player-actions" style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;">${btns}
-                        <button type="button" class="btn-dash" style="background:#f57c00" onclick="cmdToggleCohost(${JSON.stringify(p.id)})">Admin</button>
-                        <button type="button" class="btn-dash" style="background:#d32f2f" onclick="cmdKick(${JSON.stringify(p.id)})">Kick</button>
+                        <button type="button" class="btn-dash" style="background:#f57c00" onclick="cmdToggleCohost(${jsAttr(p.id)})">Admin</button>
+                        <button type="button" class="btn-dash" style="background:#d32f2f" onclick="cmdKick(${jsAttr(p.id)})">Kick</button>
                     </div>
                 </div>`;
-            });
+            }).join('');
         }
 
         function cmdToggleCohost(pid) {
@@ -1593,8 +1656,11 @@
         }
         function cmdKick(pid) {
             const c = hostConns[pid];
-            if (c) try { c.send({ type: 'CLOSE_SESSION', reason: 'Vous avez été exclu de la partie.' }); } catch (e) {}
-            if (c) try { c.close(); } catch (e) {}
+            if (c) {
+                try { c.send({ type: 'CLOSE_SESSION', reason: 'Vous avez été exclu de la partie.' }); } catch (e) {}
+                // Laisse le temps au message de partir avant de couper la connexion
+                setTimeout(() => { try { c.close(); } catch (e) {} }, 500);
+            }
             delete hostConns[pid];
             delete playersData[pid];
             hostPushLog(`Kick : ${pid}`);
@@ -1603,26 +1669,31 @@
         }
         function cloturerPartie() {
             if (!confirm('Clôturer la partie ? Tous les joueurs seront avertis et déconnectés.')) return;
-            Object.values(hostConns).forEach(c => {
+            const conns = Object.values(hostConns);
+            conns.forEach(c => {
                 try { c.send({ type: 'CLOSE_SESSION', reason: 'L\'organisateur a clôturé la partie.' }); } catch (e) {}
-                try { c.close(); } catch (e) {}
             });
+            // Laisse le temps aux messages de partir avant de tout couper
+            const oldPeer = peer;
+            setTimeout(() => {
+                conns.forEach(c => { try { c.close(); } catch (e) {} });
+                try { if (oldPeer) oldPeer.destroy(); } catch (e) {}
+            }, 500);
+            peer = null;
             hostConns = {};
             playersData = {};
             liveSession.sessionPacks = [];
-            liveSession.gameName = ''; 
-            appState.lastGameName = ''; 
-            
-            if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
+            liveSession.gameName = '';
+            appState.lastGameName = '';
             appState.isOrga = false;
             appState.isCoHost = false;
             document.getElementById('btn-multi-icon').classList.remove('online');
-            
+
             hostPushLog('Partie clôturée.');
             renderHostSessionPacksList();
             updateDashboard();
             retourAccueilDepuisHost();
-            saveState(); 
+            saveState();
         }
         function retourAccueilDepuisHost() {
             stopAllAudio();
@@ -1636,81 +1707,71 @@
             document.getElementById('confirmLeaveModal').style.display = 'block';
         }
         function executerQuitterPartie() {
-            try { if (myConn && myConn.open) myConn.send({ type: 'LEAVE', name: appState.playerName }); } catch (e) {}
-            try { if (myConn) myConn.close(); } catch (e) {}
-            try { if (peer) peer.destroy(); } catch (e) {}
+            clearTimeout(teamSelectFallback);
+            isWaitingForTeamSelection = false;
+            // On neutralise myConn AVANT de fermer, pour que l'événement 'close' ne redéclenche pas ce nettoyage
+            const conn = myConn;
             myConn = null;
+            try { if (conn && conn.open) conn.send({ type: 'LEAVE', name: appState.playerName }); } catch (e) {}
+            try { if (conn) conn.close(); } catch (e) {}
+            try { if (peer) peer.destroy(); } catch (e) {}
             peer = null;
             appState.isOrga = false;
             appState.isCoHost = false;
+            restoreLocalConfig(); // rétablit la config locale mise de côté à l'entrée en partie
+            if (!appState.customTeams.some(t => t.id === appState.playerTeamId)) {
+                appState.playerTeamId = appState.customTeams[0].id;
+            }
             document.getElementById('btn-multi-icon').classList.remove('online');
             document.getElementById('btn-quitter-partie').style.display = 'none';
             document.getElementById('confirmLeaveModal').style.display = 'none';
+            document.getElementById('teamSelectionModal').style.display = 'none';
             clientSessionMeta = { gameName: '', sessionPacks: [] };
             showScreen('screen-game');
-            saveState(); 
+            saveState();
         }
 
         /* --- UI & GAME --- */
         function updateUI_Game() {
-            const team = appState.customTeams.find(t=>t.id===appState.playerTeamId);
+            const team = appState.customTeams.find(t => t.id === appState.playerTeamId);
             const borderCol = team ? team.color : '#888';
             const teamLabel = team ? team.name : (appState.playerTeamId === 'orga' ? 'Organisateur' : '—');
             document.getElementById('main-header').style.borderBottomColor = borderCol;
-            const inPartie = !!(myConn && myConn.open && !appState.isOrga);
+
+            const inPartie = estEnPartieClient();
             const qbtn = document.getElementById('btn-quitter-partie');
             if (qbtn) qbtn.style.display = inPartie ? 'inline-flex' : 'none';
-            const gn = (!appState.isOrga && clientSessionMeta.gameName) ? (' · ' + clientSessionMeta.gameName) : '';
+            const gn = (inPartie && clientSessionMeta.gameName) ? (' · ' + clientSessionMeta.gameName) : '';
             const co = appState.isCoHost ? ' · Co-admin' : '';
             document.getElementById('top-indicator').innerText = `${appState.playerName} | ${teamLabel}${gn}${co}`;
-            
-            let activeRules = [];
-            if (appState.mode.startsWith('d_')) {
-                const cd = appState.customDecks.find(d=>d.id===appState.mode);
-                activeRules = (cd && cd.cards) ? cd.cards : [];
-            } else activeRules = DB_REGLES[appState.mode] || [];
-            if (appState.mode==='avance' && appState.explosionEnabled) {
-                activeRules = [...activeRules, ...(DB_REGLES.explosion||[])];
-            }
-            let totalCartes = 0;
-            activeRules.forEach(r => {
-                let rid = r.id || (appState.mode + "_" + r.titre);
-                if(r.id && r.id.startsWith('e')) rid = r.id;
-                let q = appState.quantites[rid];
-                if (q === undefined) q = 2;
-                let matosOk = cardMatos(r).every(m => appState.materiel[m]);
-                if (matosOk) totalCartes += q;
-            });
-            const infoDeck = document.getElementById('info-deck');
-            if(infoDeck) infoDeck.innerText = totalCartes + " cartes actives";
 
-            const c = document.getElementById('dynamic-buttons-container'); c.innerHTML="";
-            
-            // Toujours afficher Balistique et Explosion
-            c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring"></div><button class="btn-core-shared main-btn" onclick="lancerSequenceTirage('bille')"><img src="picto-blesse.png" class="icon-wounded"></button><div class="btn-label">BALISTIQUE</div></div>`;
-            if(appState.mode==='avance' && appState.explosionEnabled) c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring-blast"></div><button class="btn-core-shared blast-btn" onclick="lancerSequenceTirage('explosion')"><img src="btn-explosion.png" class="icon-blast"></button><div class="btn-label">EXPLOSION</div></div>`;
-            
-            // Rendu conditionnel des paquets personnalisés
+            const infoDeck = document.getElementById('info-deck');
+            if (infoDeck) infoDeck.innerText = computeActiveCardCount() + " cartes actives";
+
+            const drawBtn = (src, label, ringClass, img, iconClass) =>
+                `<div class="btn-container-shared"><div class="${ringClass}"></div><button class="btn-core-shared" onclick="lancerSequenceTirage(${jsAttr(src)})"><img src="${img}" class="${iconClass}" onerror="this.onerror=null;this.src='picto-blesse.png'"></button><div class="btn-label">${escapeHtml(label)}</div></div>`;
+
+            let html = drawBtn('bille', 'BALISTIQUE', 'pulse-ring', 'picto-blesse.png', 'icon-wounded');
+            if (appState.mode === 'avance' && appState.explosionEnabled) {
+                html += drawBtn('explosion', 'EXPLOSION', 'pulse-ring-blast', 'btn-explosion.png', 'icon-blast');
+            }
+
             if (inPartie) {
-                // Connecté comme joueur : On montre les paquets distribués par l'Hôte et on cache les paquets locaux
+                // Connecté comme joueur : paquets distribués par l'Hôte (uniquement les paquets perso "d_")
                 (clientSessionMeta.sessionPacks || []).forEach(p => {
-                    if (sessionPackApplies(p, peer ? peer.id : null, appState.playerTeamId)) {
-                        // On n'affiche un bouton que si le paquet envoyé est un paquet personnalisé (commençant par d_)
-                        if (p.src.startsWith('d_')) {
-                            c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring-custom"></div><button class="btn-core-shared custom-btn-style" onclick='lancerSequenceTirage(${JSON.stringify(p.id)})'><img src="btn-custom.png" class="icon-custom" onerror="this.src='picto-blesse.png'"></button><div class="btn-label">${escapeHtml(p.label)}</div></div>`;
-                        }
+                    if (p.src && p.src.startsWith('d_') && sessionPackApplies(p, peer ? peer.id : null, appState.playerTeamId)) {
+                        html += drawBtn(p.id, p.label, 'pulse-ring-custom', 'btn-custom.png', 'icon-custom');
                     }
                 });
             } else {
-                // Solo ou Hôte : On affiche ses propres paquets locaux
-                appState.customDecks.forEach(d => { 
-                    if(d.showOnHome) {
-                        c.innerHTML += `<div class="btn-container-shared"><div class="pulse-ring-custom"></div><button class="btn-core-shared custom-btn-style" onclick='lancerSequenceTirage(${JSON.stringify(d.id)})'><img src="btn-custom.png" class="icon-custom" onerror="this.src='picto-blesse.png'"></button><div class="btn-label">${escapeHtml(d.name)}</div></div>`; 
-                    }
+                // Solo ou Hôte : ses propres paquets locaux
+                appState.customDecks.forEach(d => {
+                    if (d.showOnHome) html += drawBtn(d.id, d.name, 'pulse-ring-custom', 'btn-custom.png', 'icon-custom');
                 });
             }
+            document.getElementById('dynamic-buttons-container').innerHTML = html;
         }
-        function saveState() { localStorage.setItem('medic_v32_smart', JSON.stringify(appState)); updateUI_Game(); }
+        function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(appState)); updateUI_Game(); }
 
     </script>
 </body>
