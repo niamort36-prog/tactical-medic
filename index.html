@@ -474,13 +474,24 @@
         /* --- STATE --- */
         const STORAGE_KEY = 'medic_v32_smart';
         const BACKUP_KEY = 'medic_v32_smart_backup';
+        const HOST_SESSION_KEY = 'medic_v32_host_session';
+        const CLIENT_SESSION_KEY = 'medic_v32_client_session';
         const DEFAULT_TEAMS = [{id:'blue',name:'Bleu',color:'#1976d2'},{id:'red',name:'Rouge',color:'#d32f2f'}];
+        // STUN = découverte d'adresse ; TURN = relais obligatoire quand le pair-à-pair direct est
+        // bloqué (téléphone en 4G/CGNAT, box avec isolation WiFi, pare-feu). Sans TURN, la liaison
+        // PC ↔ téléphone échoue très souvent avec "Délai dépassé". Serveurs publics gratuits
+        // Open Relay (metered.ca) ; s'ils ne répondent plus un jour, créez des identifiants gratuits
+        // sur https://www.metered.ca/tools/openrelay/ et remplacez username/credential ci-dessous
+        // (c'est le SEUL endroit à modifier).
         const PEER_CONFIG = {
             config: {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' }
+                    { urls: 'stun:openrelay.metered.ca:80' },
+                    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+                    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+                    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
                 ]
             }
         };
@@ -503,6 +514,12 @@
         let isWaitingForTeamSelection = false;
         let teamSelectFallback = null;
         let settingsSnapshot = null;
+        let lastHostCode = '';
+        let connectToken = 0; // invalide les callbacks des anciennes tentatives de connexion
+        let clientReconnect = { active: false, timer: null, attempts: 0, maxAttempts: 0, silentFail: false };
+        let hostResumeRetries = 0;
+        let hostResumeAlertShown = false;
+        let pongTimer = null;
 
         /* --- HELPERS --- */
         function escapeHtml(s) {
@@ -663,6 +680,25 @@
             localStorage.removeItem(BACKUP_KEY);
         }
 
+        /* --- PERSISTANCE DE SESSION (reprise après coupure, extinction ou rechargement) --- */
+        function getHostSession() {
+            try { return JSON.parse(localStorage.getItem(HOST_SESSION_KEY) || 'null'); } catch(e) { return null; }
+        }
+        function sauvegarderSessionHote() {
+            if (!appState.isOrga || !liveSession.gameName) return;
+            const players = Object.values(playersData).map(p => ({ name: p.name, teamId: p.teamId, isCoHost: !!p.isCoHost }));
+            try {
+                localStorage.setItem(HOST_SESSION_KEY, JSON.stringify({ gameName: liveSession.gameName, sessionPacks: liveSession.sessionPacks || [], players }));
+            } catch(e) { console.warn(e); }
+        }
+        function getClientSession() {
+            try { return JSON.parse(localStorage.getItem(CLIENT_SESSION_KEY) || 'null'); } catch(e) { return null; }
+        }
+        function setClientSession(s) {
+            try { localStorage.setItem(CLIENT_SESSION_KEY, JSON.stringify(s)); } catch(e) { console.warn(e); }
+        }
+        function clearClientSession() { localStorage.removeItem(CLIENT_SESSION_KEY); }
+
         /* --- INIT --- */
         window.onload = function() {
             const raw = localStorage.getItem(STORAGE_KEY);
@@ -690,14 +726,49 @@
             }
             initDefaults();
 
-            // Auto Join via URL ?join=
+            // Reprise / auto-join : le lien ?join= est prioritaire, sinon on reprend une session
+            // hôte ou joueur interrompue (appareil éteint, réseau perdu, page rechargée...)
             const jp = new URLSearchParams(location.search).get('join');
+            const hostSession = getHostSession();
             if (jp) {
                 document.getElementById('join-code').value = jp.trim();
                 rejoindrePartieEnLigne(jp.trim()); // Skip modal, auto join!
+            } else if (hostSession && hostSession.gameName) {
+                demarrerHost(hostSession.gameName, { resume: true, players: hostSession.players || [], sessionPacks: hostSession.sessionPacks || [] });
+            } else if (getClientSession()) {
+                demarrerReconnexionClient({ maxAttempts: 20, silentFail: true });
             }
             updateUI_Game();
         };
+
+        // Au réveil de l'appareil (téléphone déverrouillé, retour sur l'onglet), on vérifie que la
+        // liaison est toujours vivante et on relance la reprise/reconnexion si besoin.
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState !== 'visible') return;
+            const hs = getHostSession();
+            if (appState.isOrga || hs) {
+                if (peer && !peer.destroyed) {
+                    if (peer.disconnected) { try { peer.reconnect(); } catch (e) {} }
+                } else if (hs && hs.gameName) {
+                    demarrerHost(hs.gameName, { resume: true, players: hs.players || [], sessionPacks: hs.sessionPacks || [] });
+                }
+                return;
+            }
+            if (clientReconnect.active) return;
+            if (myConn && myConn.open) {
+                // Sonde la liaison : si le PONG ne revient pas, la connexion est morte
+                try { myConn.send({ type: 'PING' }); } catch (e) { relancerConnexionClient(); return; }
+                clearTimeout(pongTimer);
+                pongTimer = setTimeout(relancerConnexionClient, 5000);
+            } else if (getClientSession()) {
+                demarrerReconnexionClient();
+            }
+        });
+        function relancerConnexionClient() {
+            const c = myConn; myConn = null;
+            try { if (c) c.close(); } catch (e) {}
+            demarrerReconnexionClient();
+        }
 
         function initDefaults() {
             const allItems = [...DB_MATERIEL_BASE, ...(appState.customMaterials || [])];
@@ -1176,7 +1247,7 @@
             const ts = document.getElementById('host-pack-team');
             const ps = document.getElementById('host-pack-player');
             if (ts) ts.innerHTML = (appState.customTeams || []).map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
-            if (ps) ps.innerHTML = Object.values(playersData).map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('');
+            if (ps) ps.innerHTML = Object.values(playersData).filter(p => !p.offline).map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('');
         }
         function hostRenderTeamsEditor() {
             const el = document.getElementById('host-teams-editor');
@@ -1294,6 +1365,7 @@
         function broadcastFullState() {
             const payload = buildSyncPayload();
             Object.values(hostConns).forEach(c => { try { c.send(payload); } catch (e) {} });
+            sauvegarderSessionHote();
         }
 
         function ouvrirMenuMultijoueur() {
@@ -1362,33 +1434,73 @@
                 alert("Multijoueur indisponible (librairie PeerJS non chargée — vérifiez la connexion Internet).");
                 return;
             }
-            liveSession.gameName = (document.getElementById('multi-game-name').value || '').trim() || 'Partie';
-            appState.lastGameName = liveSession.gameName;
-            if (!liveSession.sessionPacks) liveSession.sessionPacks = [];
-
+            const gameName = (document.getElementById('multi-game-name').value || '').trim() || 'Partie';
             const hostPseudo = document.getElementById('multi-pseudo').value.trim();
-            if(hostPseudo) appState.playerName = hostPseudo;
+            if (hostPseudo) appState.playerName = hostPseudo;
 
-            document.getElementById('multi-status').style.display = 'block';
-            document.getElementById('multi-status').innerText = 'Création de la partie...';
+            // Si une session sauvegardée porte le même nom, on la reprend (joueurs et paquets conservés)
+            const saved = getHostSession();
+            const resume = !!(saved && saved.gameName === gameName);
+            demarrerHost(gameName, {
+                fromModal: true,
+                resume: resume,
+                players: resume ? (saved.players || []) : [],
+                sessionPacks: resume ? (saved.sessionPacks || []) : (liveSession.sessionPacks || [])
+            });
+        }
+
+        function demarrerHost(gameName, opts) {
+            opts = opts || {};
+            if (typeof Peer === 'undefined') return;
+            liveSession.gameName = gameName;
+            appState.lastGameName = gameName;
+            liveSession.sessionPacks = Array.isArray(opts.sessionPacks) ? opts.sessionPacks : (liveSession.sessionPacks || []);
+
+            hostConns = {};
+            playersData = {};
+            if (opts.resume) {
+                // Les joueurs connus sont restaurés "hors ligne" en attendant leur reconnexion automatique
+                (opts.players || []).forEach((p, i) => {
+                    if (p && p.name) playersData['off_' + i] = { id: null, name: p.name, teamId: p.teamId, isCoHost: !!p.isCoHost, offline: true };
+                });
+            }
+
+            if (opts.fromModal) {
+                document.getElementById('multi-status').style.display = 'block';
+                document.getElementById('multi-status').innerText = opts.resume ? 'Reprise de la partie...' : 'Création de la partie...';
+            }
             if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
 
-            const baseName = liveSession.gameName.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const baseName = gameName.toUpperCase().replace(/[^A-Z0-9]/g, '');
             const peerId = baseName ? ('TM32-' + baseName) : ('TM32-' + Math.floor(1000 + Math.random() * 9000));
 
             peer = new Peer(peerId, PEER_CONFIG);
+            attacherAutoReconnexionSignal(peer);
 
             peer.on('error', (err) => {
-                document.getElementById('multi-status').style.display = 'block';
-                document.getElementById('multi-status').innerText = (err && err.message) ? err.message : 'Erreur PeerJS';
+                // À la reprise, l'ancien enregistrement de l'ID peut ne pas avoir encore expiré
+                // sur le serveur PeerJS : on réessaie pendant ~1 minute.
+                if (opts.resume && err && err.type === 'unavailable-id' && hostResumeRetries < 12) {
+                    hostResumeRetries++;
+                    try { peer.destroy(); } catch (e) {}
+                    peer = null;
+                    setTimeout(() => demarrerHost(gameName, opts), 5000);
+                    return;
+                }
+                let msg = (err && err.message) ? err.message : 'Erreur PeerJS';
+                if (err && err.type === 'unavailable-id') msg = "Ce nom de partie est déjà utilisé (ou l'ancienne session n'a pas encore expiré). Attendez une minute ou changez de nom.";
+                if (opts.fromModal) {
+                    document.getElementById('multi-status').style.display = 'block';
+                    document.getElementById('multi-status').innerText = msg;
+                } else if (opts.resume && !hostResumeAlertShown) {
+                    hostResumeAlertShown = true;
+                    alert('Reprise de la partie « ' + gameName + ' » impossible pour le moment (' + msg + '). Nouvel essai au prochain retour sur la page, ou recréez la partie avec le même nom pour retrouver vos joueurs.');
+                }
                 console.error(err);
-            });
-            // Si la liaison avec le serveur de signalisation tombe, on retente (les connexions déjà établies survivent)
-            peer.on('disconnected', () => {
-                if (peer && !peer.destroyed) { try { peer.reconnect(); } catch (e) {} }
             });
 
             peer.on('open', (id) => {
+                hostResumeRetries = 0;
                 appState.isOrga = true;
                 appState.playerTeamId = 'orga';
 
@@ -1406,9 +1518,10 @@
                 hostSetTab('join');
                 genererQR(joinLink);
 
-                hostPushLog('Session hôte démarrée : ' + id);
+                hostPushLog((opts.resume ? 'Session reprise : ' : 'Session hôte démarrée : ') + id);
                 hostRefreshHostPanels();
                 updateDashboard();
+                sauvegarderSessionHote();
                 saveState();
             });
 
@@ -1418,12 +1531,15 @@
                 });
                 conn.on('data', (d) => handleHostData(conn, d));
                 conn.on('close', () => {
-                    // Ignore la fermeture d'une connexion déjà remplacée ou retirée (kick)
+                    // Ignore la fermeture d'une connexion déjà remplacée ou retirée (kick, reconnexion)
                     if (hostConns[conn.peer] !== conn) return;
-                    const n = (playersData[conn.peer] && playersData[conn.peer].name) || conn.peer;
-                    hostPushLog(`${n} a quitté / déconnecté`);
                     delete hostConns[conn.peer];
-                    delete playersData[conn.peer];
+                    const p = playersData[conn.peer];
+                    if (p) {
+                        // On garde le joueur dans la partie : il repassera "en ligne" à sa reconnexion
+                        p.offline = true;
+                        hostPushLog(`${p.name} déconnecté (en attente de reconnexion)`);
+                    }
                     updateDashboard();
                     hostPopulatePackTeamPlayerSelects();
                 });
@@ -1444,29 +1560,44 @@
             const rawInput = autoCode || document.getElementById('join-code').value.trim();
             if (!rawInput) { alert('Indiquez le nom de la partie ou scannez le QR code.'); return; }
 
-            let code = rawInput;
-            if(code.includes('?join=')) {
+            appState.isOrga = false;
+            appState.isCoHost = false;
+            isWaitingForTeamSelection = true;
+            clientReconnect.active = false;
+            clearTimeout(clientReconnect.timer);
+
+            document.getElementById('multi-status').style.display = 'block';
+            document.getElementById('multi-status').innerText = 'Recherche de la partie...';
+            ouvrirConnexionClient(normaliserCodePartie(rawInput), true);
+        }
+
+        function normaliserCodePartie(raw) {
+            let code = raw;
+            if (code.includes('?join=')) {
                 code = decodeURIComponent(code.split('?join=')[1].split('&')[0]);
             }
             let clean = code.toUpperCase();
             if (clean.startsWith('TM32-')) clean = clean.substring(5);
-            clean = clean.replace(/[^A-Z0-9]/g, '');
-            code = 'TM32-' + clean;
+            return 'TM32-' + clean.replace(/[^A-Z0-9]/g, '');
+        }
 
-            appState.isOrga = false;
-            appState.isCoHost = false;
-            isWaitingForTeamSelection = true;
-
-            document.getElementById('multi-status').style.display = 'block';
-            document.getElementById('multi-status').innerText = 'Recherche de la partie...';
+        // Ouvre (ou ré-ouvre) la connexion vers l'hôte. manuel=true : première connexion via le
+        // menu (messages d'erreur visibles, choix d'équipe). manuel=false : reconnexion automatique
+        // silencieuse, qui renvoie JOIN avec l'identité mémorisée.
+        function ouvrirConnexionClient(code, manuel) {
+            const token = ++connectToken;
+            lastHostCode = code;
             if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
 
             peer = new Peer(PEER_CONFIG);
+            const p = peer;
+            attacherAutoReconnexionSignal(p);
+            let connectionTimeout = null;
 
-            let connectionTimeout;
-
-            peer.on('error', (err) => {
+            p.on('error', (err) => {
+                if (token !== connectToken) return;
                 clearTimeout(connectionTimeout);
+                if (!manuel) { programmerProchaineTentative(); return; }
                 const st = document.getElementById('multi-status');
                 st.style.display = 'block';
                 st.innerText = (err && err.message) ? err.message : 'Erreur PeerJS';
@@ -1476,29 +1607,30 @@
                 }
                 console.error(err);
             });
-            peer.on('disconnected', () => {
-                if (peer && !peer.destroyed) { try { peer.reconnect(); } catch (e) {} }
-            });
 
-            peer.on('open', () => {
-                document.getElementById('multi-status').innerText = 'Connexion réseau en cours...';
+            p.on('open', () => {
+                if (token !== connectToken) return;
+                if (manuel) document.getElementById('multi-status').innerText = 'Connexion réseau en cours...';
 
-                myConn = peer.connect(code, { reliable: true });
+                myConn = p.connect(code, { reliable: true });
 
                 connectionTimeout = setTimeout(() => {
-                    if (!myConn || !myConn.open) {
-                        alert("Délai dépassé. L'Hôte est introuvable (vérifiez que la page du créateur est bien ouverte !) ou un pare-feu bloque la communication réseau.");
-                        document.getElementById('multi-status').style.display = 'none';
-                        isWaitingForTeamSelection = false;
-                        const conn = myConn; myConn = null;
-                        try { if (conn) conn.close(); } catch(e){}
-                        try { if (peer) peer.destroy(); } catch(e){}
-                        peer = null;
-                    }
+                    if (token !== connectToken) return;
+                    if (myConn && myConn.open) return;
+                    if (!manuel) { programmerProchaineTentative(); return; }
+                    alert("Délai dépassé. L'Hôte est introuvable (vérifiez que la page du créateur est bien ouverte !) ou le réseau bloque la communication. Vérifiez que les deux appareils ont accès à Internet, puis réessayez.");
+                    document.getElementById('multi-status').style.display = 'none';
+                    isWaitingForTeamSelection = false;
+                    const conn = myConn; myConn = null;
+                    try { if (conn) conn.close(); } catch(e){}
+                    try { p.destroy(); } catch(e){}
+                    if (peer === p) peer = null;
                 }, 20000);
 
                 myConn.on('error', () => {
+                    if (token !== connectToken) return;
                     clearTimeout(connectionTimeout);
+                    if (!manuel) { programmerProchaineTentative(); return; }
                     document.getElementById('multi-status').style.display = 'none';
                     if (!myConn) return; // déjà nettoyé
                     alert('Connexion impossible : hôte introuvable ou réseau instable.');
@@ -1506,21 +1638,91 @@
                 });
 
                 myConn.on('open', () => {
+                    if (token !== connectToken) return;
                     clearTimeout(connectionTimeout);
-                    document.getElementById('multi-status').innerText = 'Récupération des données...';
-                    // Filet de sécurité : si le SYNC_CONFIG n'arrive pas, on propose quand même les équipes locales
-                    teamSelectFallback = setTimeout(() => {
-                        if (isWaitingForTeamSelection) afficherModalChoixEquipe();
-                    }, 3000);
+                    if (manuel) {
+                        document.getElementById('multi-status').innerText = 'Récupération des données...';
+                        // Filet de sécurité : si le SYNC_CONFIG n'arrive pas, on propose quand même les équipes locales
+                        teamSelectFallback = setTimeout(() => {
+                            if (isWaitingForTeamSelection) afficherModalChoixEquipe();
+                        }, 3000);
+                    } else {
+                        finaliserReconnexion();
+                    }
                 });
 
                 myConn.on('close', () => {
+                    if (token !== connectToken) return;
                     if (!myConn) return; // départ volontaire ou kick : déjà nettoyé
-                    alert("Connexion à l'hôte perdue.");
-                    executerQuitterPartie();
+                    myConn = null;
+                    if (clientReconnect.active) { programmerProchaineTentative(); return; }
+                    demarrerReconnexionClient(); // coupure inattendue : on tente de revenir dans la partie
                 });
 
-                myConn.on('data', (d) => handleClientData(d));
+                myConn.on('data', (d) => { if (token === connectToken) handleClientData(d); });
+            });
+        }
+
+        /* --- RECONNEXION AUTOMATIQUE CLIENT --- */
+        function demarrerReconnexionClient(opts) {
+            const saved = getClientSession();
+            if (!saved || !saved.code) {
+                // Pas d'identité mémorisée (jamais entré en partie) : comportement simple
+                alert("Connexion à l'hôte perdue.");
+                executerQuitterPartie();
+                return;
+            }
+            if (clientReconnect.active) return;
+            clearTimeout(pongTimer);
+            clientReconnect.active = true;
+            clientReconnect.attempts = 0;
+            clientReconnect.maxAttempts = (opts && opts.maxAttempts) || 9999;
+            clientReconnect.silentFail = !!(opts && opts.silentFail);
+            document.getElementById('btn-multi-icon').classList.remove('online');
+            updateUI_Game();
+            tenterReconnexion();
+        }
+        function tenterReconnexion() {
+            if (!clientReconnect.active) return;
+            clientReconnect.attempts++;
+            if (clientReconnect.attempts > clientReconnect.maxAttempts) {
+                const silencieux = clientReconnect.silentFail;
+                clientReconnect.active = false;
+                if (!silencieux) alert("Reconnexion impossible : la partie semble terminée ou l'hôte injoignable.");
+                executerQuitterPartie();
+                return;
+            }
+            const saved = getClientSession();
+            if (!saved || !saved.code) { clientReconnect.active = false; executerQuitterPartie(); return; }
+            ouvrirConnexionClient(saved.code, false);
+        }
+        function programmerProchaineTentative() {
+            if (!clientReconnect.active) return;
+            clearTimeout(clientReconnect.timer);
+            clientReconnect.timer = setTimeout(tenterReconnexion, 5000);
+        }
+        function finaliserReconnexion() {
+            const saved = getClientSession() || {};
+            clientReconnect.active = false;
+            clearTimeout(clientReconnect.timer);
+            isWaitingForTeamSelection = false;
+            if (saved.name) appState.playerName = saved.name;
+            if (saved.teamId) appState.playerTeamId = saved.teamId;
+            try { myConn.send({ type: 'JOIN', name: appState.playerName, teamId: appState.playerTeamId }); } catch(e){}
+            document.getElementById('btn-multi-icon').classList.add('online');
+            updateUI_Game();
+        }
+        // Si la liaison avec le serveur de signalisation tombe, on retente en boucle
+        // (les connexions déjà établies survivent à une coupure de signalisation)
+        function attacherAutoReconnexionSignal(p) {
+            p.on('disconnected', () => {
+                const retry = () => {
+                    if (p.destroyed || peer !== p) return;
+                    if (!p.disconnected) return; // liaison rétablie
+                    try { p.reconnect(); } catch (e) {}
+                    setTimeout(retry, 5000);
+                };
+                setTimeout(retry, 1000);
             });
         }
 
@@ -1547,6 +1749,8 @@
             isWaitingForTeamSelection = false;
 
             try { myConn.send({ type: 'JOIN', name: appState.playerName, teamId: teamId }); } catch(e){}
+            // Mémorise l'identité de session pour la reconnexion automatique
+            setClientSession({ code: lastHostCode, name: appState.playerName, teamId: teamId });
 
             document.getElementById('teamSelectionModal').style.display = 'none';
             document.getElementById('btn-multi-icon').classList.add('online');
@@ -1557,15 +1761,33 @@
         function handleHostData(conn, data) {
             if (!data || !data.type) return;
             if (data.type === 'JOIN') {
-                let teamToAssign = data.teamId;
+                const nom = data.name || 'Joueur';
+                // Reconnexion : si un joueur du même nom existe déjà (hors ligne ou ancienne
+                // connexion), on récupère son profil (équipe, grade) et ses paquets ciblés
+                let ancien = null;
+                Object.keys(playersData).forEach(k => {
+                    if (k !== conn.peer && playersData[k].name === nom) {
+                        ancien = playersData[k];
+                        const oldConn = hostConns[k];
+                        if (oldConn) { try { oldConn.close(); } catch (e) {} delete hostConns[k]; }
+                        (liveSession.sessionPacks || []).forEach(sp => { if (sp.peerId && sp.peerId === ancien.id) sp.peerId = conn.peer; });
+                        delete playersData[k];
+                    }
+                });
+                let teamToAssign = data.teamId || (ancien && ancien.teamId);
                 if (!appState.customTeams.find(t => t.id === teamToAssign)) {
                     teamToAssign = (appState.customTeams[0] && appState.customTeams[0].id) || 'blue';
                 }
-                playersData[conn.peer] = { id: conn.peer, name: data.name || 'Joueur', teamId: teamToAssign, isCoHost: false };
-                hostPushLog(`${playersData[conn.peer].name} a rejoint`);
+                playersData[conn.peer] = { id: conn.peer, name: nom, teamId: teamToAssign, isCoHost: !!(ancien && ancien.isCoHost) };
+                hostPushLog(ancien ? `${nom} s'est reconnecté` : `${nom} a rejoint`);
+                if (ancien && ancien.isCoHost) { try { conn.send({ type: 'CMD_ROLE', isCoHost: true }); } catch (e) {} }
                 broadcastFullState();
                 updateDashboard();
                 hostPopulatePackTeamPlayerSelects();
+                return;
+            }
+            if (data.type === 'PING') {
+                try { conn.send({ type: 'PONG' }); } catch (e) {}
                 return;
             }
             if (data.type === 'DRAW_LOG') {
@@ -1575,7 +1797,12 @@
                 return;
             }
             if (data.type === 'LEAVE') {
+                // Départ volontaire : on retire le joueur (pas d'attente de reconnexion)
                 hostPushLog(`${data.name || 'Joueur'} quitte la partie`);
+                delete hostConns[conn.peer];
+                delete playersData[conn.peer];
+                updateDashboard();
+                hostPopulatePackTeamPlayerSelects();
             }
         }
 
@@ -1597,16 +1824,21 @@
                 if (isWaitingForTeamSelection) afficherModalChoixEquipe();
                 return;
             }
+            if (data.type === 'PONG') { clearTimeout(pongTimer); return; }
             if (data.type === 'CMD_TEAM') {
                 appState.playerTeamId = data.teamId;
+                const cs = getClientSession();
+                if (cs) { cs.teamId = data.teamId; setClientSession(cs); }
                 updateUI_Game();
                 alert('Changement d\'équipe');
                 return;
             }
             if (data.type === 'CMD_ROLE') {
-                appState.isCoHost = !!data.isCoHost;
+                const v = !!data.isCoHost;
+                if (appState.isCoHost === v) return; // resynchronisation silencieuse après reconnexion
+                appState.isCoHost = v;
                 updateUI_Game();
-                alert(data.isCoHost ? 'Vous êtes co-organisateur (grade admin).' : 'Grade admin retiré.');
+                alert(v ? 'Vous êtes co-organisateur (grade admin).' : 'Grade admin retiré.');
                 return;
             }
             if (data.type === 'CLOSE_SESSION') {
@@ -1618,24 +1850,36 @@
         function updateDashboard() {
             const l = document.getElementById('host-player-list');
             if (!l) return;
-            document.getElementById('connected-count').innerText = Object.keys(playersData).length;
-            l.innerHTML = Object.values(playersData).map(p => {
+            const entries = Object.entries(playersData);
+            document.getElementById('connected-count').innerText = entries.filter(([, p]) => !p.offline).length;
+            l.innerHTML = entries.map(([key, p]) => {
                 const team = appState.customTeams.find(t => t.id === p.teamId) || appState.customTeams[0];
                 if (!team) return '';
 
+                if (p.offline) {
+                    return `<div class="player-row" style="border-left:4px solid ${team.color}; opacity:0.55;">
+                        <div class="player-row-header"><strong>${escapeHtml(p.name)}</strong><span class="badge-role">hors ligne</span> <span style="color:${team.color}">(${escapeHtml(team.name)})</span></div>
+                        <div class="player-actions" style="margin-top:6px; display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:0.75em;color:#888;">Reviendra automatiquement…</span>
+                            <button type="button" class="btn-dash" style="background:#d32f2f" onclick="cmdKick(${jsAttr(key)})">Retirer</button>
+                        </div>
+                    </div>`;
+                }
+
                 const btns = appState.customTeams.map(t =>
-                    `<button type="button" class="btn-dash" style="background:${t.color}; color:white; font-weight:bold; margin-right:5px; border:1px solid rgba(255,255,255,0.4);" onclick="cmdTeam(${jsAttr(p.id)},${jsAttr(t.id)})">${escapeHtml(t.name)}</button>`
+                    `<button type="button" class="btn-dash" style="background:${t.color}; color:white; font-weight:bold; margin-right:5px; border:1px solid rgba(255,255,255,0.4);" onclick="cmdTeam(${jsAttr(key)},${jsAttr(t.id)})">${escapeHtml(t.name)}</button>`
                 ).join('');
 
                 const badge = p.isCoHost ? '<span class="badge-role admin">Co-admin</span>' : '';
                 return `<div class="player-row" style="border-left:4px solid ${team.color}">
                     <div class="player-row-header"><strong>${escapeHtml(p.name)}</strong>${badge} <span style="color:${team.color}">(${escapeHtml(team.name)})</span></div>
                     <div class="player-actions" style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;">${btns}
-                        <button type="button" class="btn-dash" style="background:#f57c00" onclick="cmdToggleCohost(${jsAttr(p.id)})">Admin</button>
-                        <button type="button" class="btn-dash" style="background:#d32f2f" onclick="cmdKick(${jsAttr(p.id)})">Kick</button>
+                        <button type="button" class="btn-dash" style="background:#f57c00" onclick="cmdToggleCohost(${jsAttr(key)})">Admin</button>
+                        <button type="button" class="btn-dash" style="background:#d32f2f" onclick="cmdKick(${jsAttr(key)})">Kick</button>
                     </div>
                 </div>`;
             }).join('');
+            sauvegarderSessionHote();
         }
 
         function cmdToggleCohost(pid) {
@@ -1656,6 +1900,7 @@
         }
         function cmdKick(pid) {
             const c = hostConns[pid];
+            const nom = (playersData[pid] && playersData[pid].name) || pid;
             if (c) {
                 try { c.send({ type: 'CLOSE_SESSION', reason: 'Vous avez été exclu de la partie.' }); } catch (e) {}
                 // Laisse le temps au message de partir avant de couper la connexion
@@ -1663,7 +1908,7 @@
             }
             delete hostConns[pid];
             delete playersData[pid];
-            hostPushLog(`Kick : ${pid}`);
+            hostPushLog(`Retiré de la partie : ${nom}`);
             updateDashboard();
             hostPopulatePackTeamPlayerSelects();
         }
@@ -1687,6 +1932,9 @@
             appState.lastGameName = '';
             appState.isOrga = false;
             appState.isCoHost = false;
+            hostResumeRetries = 0;
+            hostResumeAlertShown = false;
+            localStorage.removeItem(HOST_SESSION_KEY); // la session ne sera plus reprise au prochain lancement
             document.getElementById('btn-multi-icon').classList.remove('online');
 
             hostPushLog('Partie clôturée.');
@@ -1708,6 +1956,11 @@
         }
         function executerQuitterPartie() {
             clearTimeout(teamSelectFallback);
+            clearTimeout(clientReconnect.timer);
+            clearTimeout(pongTimer);
+            clientReconnect.active = false;
+            connectToken++; // neutralise les callbacks des tentatives de connexion en cours
+            clearClientSession(); // départ définitif : pas de reconnexion automatique
             isWaitingForTeamSelection = false;
             // On neutralise myConn AVANT de fermer, pour que l'événement 'close' ne redéclenche pas ce nettoyage
             const conn = myConn;
@@ -1740,10 +1993,14 @@
 
             const inPartie = estEnPartieClient();
             const qbtn = document.getElementById('btn-quitter-partie');
-            if (qbtn) qbtn.style.display = inPartie ? 'inline-flex' : 'none';
-            const gn = (inPartie && clientSessionMeta.gameName) ? (' · ' + clientSessionMeta.gameName) : '';
-            const co = appState.isCoHost ? ' · Co-admin' : '';
-            document.getElementById('top-indicator').innerText = `${appState.playerName} | ${teamLabel}${gn}${co}`;
+            if (qbtn) qbtn.style.display = (inPartie || clientReconnect.active) ? 'inline-flex' : 'none';
+            if (clientReconnect.active) {
+                document.getElementById('top-indicator').innerText = `${appState.playerName} | ⟳ Reconnexion à la partie...`;
+            } else {
+                const gn = (inPartie && clientSessionMeta.gameName) ? (' · ' + clientSessionMeta.gameName) : '';
+                const co = appState.isCoHost ? ' · Co-admin' : '';
+                document.getElementById('top-indicator').innerText = `${appState.playerName} | ${teamLabel}${gn}${co}`;
+            }
 
             const infoDeck = document.getElementById('info-deck');
             if (infoDeck) infoDeck.innerText = computeActiveCardCount() + " cartes actives";
