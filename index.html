@@ -435,7 +435,6 @@
                 { id: "c4", titre: "Saignement", typeZone: "membre", gravite: "Grave", effet: "Bandage + Poche", matos: ["Bandage", "Poche de transfusion"] },
                 { id: "c5", titre: "Fracture", typeZone: "membre", gravite: "Grave", effet: "Attelle", matos: ["Bandage", "Attelle"] },
                 { id: "c6", titre: "Éraflure", typeZone: "membre", gravite: "Légère", effet: "Bandage", matos: ["Bandage"] },
-                { id: "c7", titre: "Blessure très grave", zone: "Torse", gravite: "Critique", effet: "Victime dans le coma. Médecin de Niveau 2 requis.", matos: [] },
                 { id: "c8", titre: "Choc Casque", zone: "Tête", gravite: "Spécial", effet: "Si Protégé : Sonné (Médic aide à relever). Sinon : Bandage ([MEMBRE_ALEATOIRE])", matos: ["Bandage"] },
                 { id: "c9", titre: "Choc Gilet", zone: "Torse", gravite: "Spécial", effet: "Si Protégé : Sonné (Médic aide à relever). Sinon : Bandage ([MEMBRE_ALEATOIRE])", matos: ["Bandage"] }
             ],
@@ -535,6 +534,13 @@
         function qtyFor(rid) { const q = appState.quantites[rid]; return (q === undefined || q === null) ? 2 : q; }
         function ridForMode(r) { return r.id || (appState.mode + "_" + r.titre); }
         function estEnPartieClient() { return !!(myConn && myConn.open && !appState.isOrga); }
+        // Version d'affichage d'un effet : la balise technique [MEMBRE_ALEATOIRE] est retirée
+        // (au tirage réel, elle est remplacée par un membre tiré au sort)
+        function effetPourAffichage(effet) {
+            return String(effet || '')
+                .replace(/\s*\(\[MEMBRE_ALEATOIRE\]\)/g, '')
+                .replace(/\[MEMBRE_ALEATOIRE\]/g, 'membre aléatoire');
+        }
 
         function getCardQtyKey(drawSrc, card) {
             if (card && card.id) return card.id;
@@ -606,7 +612,7 @@
                 html += `<span style="font-size:0.65em;color:#888;">${escapeHtml(sec)}</span>`;
                 html += `<h4 style="color:${getColor(r.gravite)};margin:4px 0 0 0;">${escapeHtml(r.gravite)}</h4>`;
                 html += `<p><strong>${escapeHtml(r.titre)}</strong></p>`;
-                html += `<p style="font-size:0.85em;">${escapeHtml(r.effet || '')}</p>`;
+                html += `<p style="font-size:0.85em;">${escapeHtml(effetPourAffichage(r.effet))}</p>`;
                 html += `<p style="font-size:0.75em;color:#888;">Matos: ${mats.length ? escapeHtml(mats.join(', ')) : '—'}</p>`;
                 html += '</div></div>';
             });
@@ -990,11 +996,19 @@
             document.getElementById('box-explosion-opt').style.display = (appState.mode==='avance') ? 'block' : 'none';
             document.getElementById('chk-explosion').checked = appState.explosionEnabled;
 
-            const renderRow = (r) => {
+            // Total du paquet auquel appartient chaque carte, pour calculer sa probabilité de
+            // sortie (les tirages Balistique et Explosion sont deux paquets séparés)
+            const poolTotal = (rules) => rules.reduce((sum, r) => {
+                const q = qtyFor(ridForMode(r));
+                return sum + (cardMatos(r).every(hasMateriel) ? q : 0);
+            }, 0);
+
+            const renderRow = (r, total) => {
                 const rid = ridForMode(r);
                 if (appState.quantites[rid] === undefined) appState.quantites[rid] = 2;
                 const q = appState.quantites[rid];
                 const matosOk = cardMatos(r).every(hasMateriel);
+                const pct = (matosOk && q > 0 && total > 0) ? (Math.round(q / total * 1000) / 10) + '%' : '0%';
                 return `
                     <div class="check-item" style="opacity:${matosOk ? 1 : 0.5}; transition: opacity 0.3s;">
                         <div style="flex-grow:1"><strong style="color:${getColor(r.gravite)}">${escapeHtml(r.titre)}</strong></div>
@@ -1003,6 +1017,7 @@
                             <button type="button" class="btn-mini" style="${isLocked ? 'opacity:0.3; cursor:not-allowed;' : ''}" onclick="changeQty(${jsAttr(rid)},-1)" ${isLocked ? 'disabled' : ''}>-</button>
                             <span style="width:20px;text-align:center; ${isLocked ? 'opacity:0.5' : ''}">${q}</span>
                             <button type="button" class="btn-mini" style="${isLocked ? 'opacity:0.3; cursor:not-allowed;' : ''}" onclick="changeQty(${jsAttr(rid)},1)" ${isLocked ? 'disabled' : ''}>+</button>
+                            <span style="font-size:0.7em; color:#888; min-width:42px; text-align:right;">${pct}</span>
                         </div>
                     </div>`;
             };
@@ -1015,10 +1030,12 @@
                 baseRules = DB_REGLES[appState.mode] || [];
             }
 
-            let rulesHtml = baseRules.map(renderRow).join('');
+            const totalBase = poolTotal(baseRules);
+            let rulesHtml = baseRules.map(r => renderRow(r, totalBase)).join('');
             if (appState.mode === 'avance' && appState.explosionEnabled) {
+                const totalExplosion = poolTotal(DB_REGLES.explosion);
                 rulesHtml += `<div class="separator">💥 PACK EXPLOSION</div>`;
-                rulesHtml += DB_REGLES.explosion.map(renderRow).join('');
+                rulesHtml += DB_REGLES.explosion.map(r => renderRow(r, totalExplosion)).join('');
             }
             document.getElementById('liste-regles').innerHTML = rulesHtml;
 
