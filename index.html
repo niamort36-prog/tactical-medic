@@ -135,6 +135,28 @@
         .catalog-card { margin-bottom: 10px; }
         .catalog-card.hl { outline: 2px solid var(--accent-blue); outline-offset: 2px; }
 
+        /* --- BUILDER / CRÉATION DE PAQUETS --- */
+        .deck-card { background: #1d1d1d; border: 1px solid #3a3a3a; border-left: 5px solid var(--accent-green); border-radius: 10px; padding: 14px; margin-bottom: 12px; cursor: pointer; transition: transform 0.1s; }
+        .deck-card:active { transform: scale(0.98); }
+        .deck-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+        .deck-card-title { font-weight: 800; font-size: 1.05em; }
+        .deck-card-meta { font-size: 0.75em; color: #888; margin-top: 6px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .deck-badge { font-size: 0.7em; padding: 3px 8px; border-radius: 10px; background: #333; color: #bbb; }
+        .deck-badge.home { background: rgba(56,142,60,0.25); color: #81c784; border: 1px solid var(--accent-green); }
+        .grav-pills { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+        .grav-pill { font-size: 0.68em; font-weight: bold; padding: 2px 7px; border-radius: 8px; color: white; border: 1px solid rgba(255,255,255,0.15); }
+        .builder-empty { text-align: center; color: #777; padding: 30px 10px; border: 2px dashed #333; border-radius: 10px; font-size: 0.9em; line-height: 1.6; }
+        .card-row { background: #191919; border: 1px solid #333; border-left: 4px solid #555; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .card-row-main { flex: 1; min-width: 0; cursor: pointer; }
+        .card-row-title { font-weight: 700; }
+        .card-row-sub { font-size: 0.72em; color: #888; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chip-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+        .chip { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 16px; border: 1px solid #444; background: #1a1a1a; color: #aaa; font-size: 0.8em; cursor: pointer; user-select: none; }
+        .chip.on { border-color: var(--accent-green); background: rgba(56,142,60,0.22); color: #a5d6a7; font-weight: bold; }
+        .chip .chip-x { color: #e57373; font-weight: bold; padding: 0 2px; }
+        .form-label { display: block; font-size: 0.72em; color: #888; text-transform: uppercase; letter-spacing: 1px; margin: 12px 0 4px 2px; font-weight: bold; }
+        .form-label:first-child { margin-top: 0; }
+
         /* --- MODALS --- */
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); backdrop-filter: blur(5px); }
         .modal-content { background-color: #222; color: #eee; margin: 15% auto; padding: 20px; border-radius: 8px; width: 85%; max-width: 400px; border: 1px solid #444; max-height: 80vh; overflow-y: auto;}
@@ -309,30 +331,33 @@
     </div>
 
     <div id="screen-builder" class="screen">
-        <h2 style="margin-top:40px;">MES PAQUETS</h2>
-        <button class="btn-action btn-create" onclick="creerNouveauPaquet()">+ CRÉER PAQUET</button>
+        <h2 style="margin-top:40px; margin-bottom:4px;">MES PAQUETS</h2>
+        <p style="font-size:0.8em; color:#888; margin-top:0;">Créez vos propres paquets de cartes et affichez-les sur l'accueil.</p>
+        <button class="btn-action btn-create" onclick="creerNouveauPaquet()">+ CRÉER UN PAQUET</button>
         <div id="custom-decks-list" style="margin-top:20px;"></div>
         <button class="btn-action" style="background:#333;" onclick="retourAccueil()">RETOUR</button>
     </div>
 
     <div id="screen-deck-edit" class="screen">
-        <h2 style="margin-top:40px;">ÉDITION</h2>
+        <h2 style="margin-top:40px;">ÉDITION DU PAQUET</h2>
         <div class="box">
-            <input type="text" id="deck-name" class="form-input" placeholder="Nom du paquet">
-            <div class="check-item"><span>Afficher sur l'accueil</span><input type="checkbox" id="deck-show-home"></div>
+            <label class="form-label">Nom du paquet</label>
+            <input type="text" id="deck-name" class="form-input" placeholder="Ex : Blessures chimiques">
+            <div class="check-item" style="border-bottom:none; padding-bottom:0;"><span>Afficher sur l'accueil</span><input type="checkbox" id="deck-show-home" style="transform:scale(1.3);"></div>
         </div>
         <div class="box">
-            <h3>CARTES</h3>
-            <button class="btn-mini" onclick="ajouterCarteCustom()" style="width:100%; background:var(--accent-blue); margin-bottom:10px;">+ AJOUTER</button>
+            <h3>CARTES (<span id="deck-cards-count">0</span>)</h3>
+            <button class="btn-action" onclick="ajouterCarteCustom()" style="background:var(--accent-blue); margin:0 0 12px 0;">+ AJOUTER UNE CARTE</button>
             <div id="deck-cards-list"></div>
         </div>
         <button class="btn-action btn-create" onclick="sauvegarderPaquetCourant()">ENREGISTRER</button>
-        <button class="btn-action" style="background:#d32f2f;" onclick="supprimerPaquetCourant()">SUPPRIMER</button>
+        <button class="btn-action" style="background:#d32f2f;" onclick="supprimerPaquetCourant()">SUPPRIMER LE PAQUET</button>
     </div>
 
     <div id="screen-card-edit" class="screen">
         <h2 style="margin-top:40px;">CARTE</h2>
         <div class="box">
+            <label class="form-label">Gravité</label>
             <select id="card-gravity" class="form-input">
                 <option value="DÉCÈS">⚫ DÉCÈS</option>
                 <option value="Critique">🔴 CRITIQUE</option>
@@ -340,17 +365,23 @@
                 <option value="Légère">🟢 LÉGÈRE</option>
                 <option value="Spécial">🟣 SPÉCIAL</option>
             </select>
-            <input type="text" id="card-title" class="form-input" placeholder="Titre (ex: Fracture)">
-            <input type="text" id="card-zone" class="form-input" placeholder="Zone (ex: Bras)">
-            <textarea id="card-effect" class="form-input" rows="3" placeholder="Effet (ex: Attelle)"></textarea>
-            <h3>Matériel Requis</h3>
-            <div id="card-matos-list"></div>
-            <div style="display:flex; gap:5px; margin-top:10px; border-top:1px solid #333; padding-top:10px;">
-                <input type="text" id="new-matos-name" class="form-input" placeholder="Nouveau (ex: Défibrillateur)" style="margin:0;">
+            <label class="form-label">Titre</label>
+            <input type="text" id="card-title" class="form-input" placeholder="Ex : Fracture">
+            <label class="form-label">Zone touchée</label>
+            <input type="text" id="card-zone" class="form-input" placeholder="Ex : Bras">
+            <label class="form-label">Protocole / effet</label>
+            <textarea id="card-effect" class="form-input" rows="3" placeholder="Ex : Attelle + Morphine"></textarea>
+        </div>
+        <div class="box">
+            <h3>Matériel requis</h3>
+            <p style="font-size:0.75em; color:#888; margin:0 0 10px 0;">Touchez une puce pour la sélectionner. Le matériel ajouté ici n'est proposé que dans ce paquet (✕ pour le retirer).</p>
+            <div id="card-matos-list" class="chip-wrap"></div>
+            <div style="display:flex; gap:5px; margin-top:12px; border-top:1px solid #333; padding-top:12px;">
+                <input type="text" id="new-matos-name" class="form-input" placeholder="Nouveau matériel (ex : Anti-rad)" style="margin:0;">
                 <button class="header-btn" onclick="ajouterNouveauMatos()" style="width:40px; background:var(--accent-green);">+</button>
             </div>
         </div>
-        <button class="btn-action btn-create" onclick="validerCarte()">VALIDER</button>
+        <button class="btn-action btn-create" onclick="validerCarte()">VALIDER LA CARTE</button>
         <button class="btn-action" style="background:#333;" onclick="annulerEditionCarte()">ANNULER</button>
     </div>
 
@@ -497,7 +528,7 @@
 
         let appState = {
             mode: "classique", explosionEnabled: false, deathRisk: false,
-            materiel: {}, quantites: {}, customDecks: [], customMaterials: [],
+            materiel: {}, quantites: {}, customDecks: [],
             playerName: "Joueur", playerTeamId: "blue", isOrga: false, isCoHost: false,
             lastGameName: "",
             customTeams: DEFAULT_TEAMS.map(t => ({...t}))
@@ -608,9 +639,9 @@
             rows.forEach(({ r, rid, sec }) => {
                 const mats = cardMatos(r);
                 const hl = (highlightRid && rid === highlightRid) ? ' catalog-card hl' : ' catalog-card';
-                html += `<div class="${hl}"><div class="preview-card-mini" style="border-left-color:${getColor(r.gravite)}">`;
+                html += `<div class="${hl}"><div class="preview-card-mini" style="border-left-color:${getColorTexte(r.gravite)}">`;
                 html += `<span style="font-size:0.65em;color:#888;">${escapeHtml(sec)}</span>`;
-                html += `<h4 style="color:${getColor(r.gravite)};margin:4px 0 0 0;">${escapeHtml(r.gravite)}</h4>`;
+                html += `<h4 style="color:${getColorTexte(r.gravite)};margin:4px 0 0 0;">${escapeHtml(r.gravite)}</h4>`;
                 html += `<p><strong>${escapeHtml(r.titre)}</strong></p>`;
                 html += `<p style="font-size:0.85em;">${escapeHtml(effetPourAffichage(r.effet))}</p>`;
                 html += `<p style="font-size:0.75em;color:#888;">Matos: ${mats.length ? escapeHtml(mats.join(', ')) : '—'}</p>`;
@@ -720,7 +751,15 @@
             if (!appState.quantites || typeof appState.quantites !== 'object') appState.quantites = {};
             if (!appState.materiel || typeof appState.materiel !== 'object') appState.materiel = {};
             if (!Array.isArray(appState.customDecks)) appState.customDecks = [];
-            if (!Array.isArray(appState.customMaterials)) appState.customMaterials = [];
+            // Migration : le matériel personnalisé était global, il devient propre à chaque
+            // paquet (chaque paquet conserve le matériel réellement utilisé par ses cartes)
+            appState.customDecks.forEach(d => {
+                if (!Array.isArray(d.materials)) {
+                    const set = new Set();
+                    (d.cards || []).forEach(c => cardMatos(c).forEach(m => { if (!DB_MATERIEL_BASE.includes(m)) set.add(m); }));
+                    d.materials = [...set];
+                }
+            });
             if (!Array.isArray(appState.customTeams) || appState.customTeams.length < 2) {
                 appState.customTeams = DEFAULT_TEAMS.map(t => ({...t}));
             }
@@ -777,7 +816,8 @@
         }
 
         function initDefaults() {
-            const allItems = [...DB_MATERIEL_BASE, ...(appState.customMaterials || [])];
+            const allItems = [...DB_MATERIEL_BASE];
+            (appState.customDecks || []).forEach(d => (d.materials || []).forEach(m => allItems.push(m)));
             allItems.forEach(m => { if(appState.materiel[m]===undefined) appState.materiel[m]=true; });
             ["classique","avance","explosion"].forEach(m => {
                 (DB_REGLES[m] || []).forEach(r => {
@@ -912,6 +952,11 @@
             if(g==="Légère") return "#388e3c";
             return "#7b1fa2";
         }
+        // Couleur lisible sur fond sombre (le noir de DÉCÈS devient gris clair pour le texte)
+        function getColorTexte(g) {
+            const c = getColor(g);
+            return c === '#000' ? '#9e9e9e' : c;
+        }
 
         /* --- SETTINGS (SMART DISPLAY) --- */
         function changerPseudoSettings(val) {
@@ -983,7 +1028,9 @@
                 if (qtyFor(ridForMode(r)) > 0) cardMatos(r).forEach(m => requiredMatos.add(m));
             });
 
-            const allPossibleMaterials = [...new Set([...DB_MATERIEL_BASE, ...(appState.customMaterials || [])])];
+            // Base + tout matériel requis par les cartes actives (dont celui propre aux paquets perso)
+            const allPossibleMaterials = [...DB_MATERIEL_BASE];
+            requiredMatos.forEach(m => { if (!allPossibleMaterials.includes(m)) allPossibleMaterials.push(m); });
             let matosHtml = "";
             allPossibleMaterials.forEach(m => {
                 if (!requiredMatos.has(m)) return;
@@ -1011,7 +1058,7 @@
                 const pct = (matosOk && q > 0 && total > 0) ? (Math.round(q / total * 1000) / 10) + '%' : '0%';
                 return `
                     <div class="check-item" style="opacity:${matosOk ? 1 : 0.5}; transition: opacity 0.3s;">
-                        <div style="flex-grow:1"><strong style="color:${getColor(r.gravite)}">${escapeHtml(r.titre)}</strong></div>
+                        <div style="flex-grow:1"><strong style="color:${getColorTexte(r.gravite)}">${escapeHtml(r.titre)}</strong></div>
                         <div style="display:flex; align-items:center; gap:5px;">
                             <button type="button" class="btn-mini" style="background:#1976d2" onclick="voirCatalogueComplet(${jsAttr(rid)})">👁️</button>
                             <button type="button" class="btn-mini" style="${isLocked ? 'opacity:0.3; cursor:not-allowed;' : ''}" onclick="changeQty(${jsAttr(rid)},-1)" ${isLocked ? 'disabled' : ''}>-</button>
@@ -1086,15 +1133,32 @@
 
         function creerNouveauPaquet() {
             const id = "d_"+Date.now();
-            appState.customDecks.push({id:id, name:"Nouveau", showOnHome:true, cards:[]});
+            appState.customDecks.push({id:id, name:"Nouveau paquet", showOnHome:true, cards:[], materials:[]});
             editDeck(id);
         }
 
         function renderDecksList() {
             const l = document.getElementById('custom-decks-list');
-            l.innerHTML = appState.customDecks.map(d =>
-                `<div class="builder-item"><span>${escapeHtml(d.name)}</span><button class="header-btn" onclick="editDeck(${jsAttr(d.id)})">✏️</button></div>`
-            ).join('');
+            if (!appState.customDecks.length) {
+                l.innerHTML = '<div class="builder-empty">Aucun paquet personnalisé pour le moment.<br>Appuyez sur « + CRÉER UN PAQUET » pour commencer.</div>';
+                return;
+            }
+            l.innerHTML = appState.customDecks.map(d => {
+                const cards = d.cards || [];
+                const counts = {};
+                cards.forEach(c => { const g = c.gravite || 'Spécial'; counts[g] = (counts[g] || 0) + 1; });
+                const pills = Object.entries(counts).map(([g, n]) =>
+                    `<span class="grav-pill" style="background:${getColor(g)}">${n} ${escapeHtml(g)}</span>`).join('');
+                const homeBadge = d.showOnHome ? '<span class="deck-badge home">Sur l\'accueil</span>' : '<span class="deck-badge">Masqué</span>';
+                return `<div class="deck-card" onclick="editDeck(${jsAttr(d.id)})">
+                    <div class="deck-card-head">
+                        <span class="deck-card-title">${escapeHtml(d.name)}</span>
+                        <button type="button" class="header-btn" onclick="event.stopPropagation(); editDeck(${jsAttr(d.id)})">✏️</button>
+                    </div>
+                    <div class="deck-card-meta"><span>${cards.length} carte${cards.length > 1 ? 's' : ''}</span>${homeBadge}</div>
+                    ${pills ? `<div class="grav-pills">${pills}</div>` : ''}
+                </div>`;
+            }).join('');
         }
 
         function hostRenderDecksList() {
@@ -1130,15 +1194,39 @@
 
         function renderCardsList(d) {
             const l = document.getElementById('deck-cards-list');
-            l.innerHTML = d.cards.map((c,i) =>
-                `<div class="builder-item"><span>${escapeHtml(c.titre)}</span><button class="btn-mini" onclick="editCard(${i})">✏️</button></div>`
-            ).join('');
+            const count = document.getElementById('deck-cards-count');
+            const cards = d.cards || [];
+            if (count) count.innerText = cards.length;
+            if (!cards.length) {
+                l.innerHTML = '<div class="builder-empty">Aucune carte dans ce paquet.<br>Appuyez sur « + AJOUTER UNE CARTE ».</div>';
+                return;
+            }
+            l.innerHTML = cards.map((c, i) => {
+                const mats = cardMatos(c);
+                const sub = [c.zone, effetPourAffichage(c.effet)].filter(Boolean).join(' · ');
+                return `<div class="card-row" style="border-left-color:${getColorTexte(c.gravite)}">
+                    <div class="card-row-main" onclick="editCard(${i})">
+                        <div class="card-row-title" style="color:${getColorTexte(c.gravite)}">${escapeHtml(c.titre || 'Sans titre')}</div>
+                        <div class="card-row-sub">${escapeHtml(sub || '—')}${mats.length ? ' · 🧰 ' + mats.length : ''}</div>
+                    </div>
+                    <button type="button" class="btn-mini" onclick="editCard(${i})">✏️</button>
+                    <button type="button" class="btn-mini" style="background:#b71c1c" onclick="supprimerCarte(${i})">🗑</button>
+                </div>`;
+            }).join('');
+        }
+
+        function supprimerCarte(i) {
+            const d = appState.customDecks.find(x => x.id === currentDeckId);
+            if (!d || !d.cards[i]) return;
+            if (!confirm(`Supprimer la carte « ${d.cards[i].titre || 'Sans titre'} » ?`)) return;
+            d.cards.splice(i, 1);
+            renderCardsList(d);
         }
 
         function sauvegarderPaquetCourant() {
             const d = appState.customDecks.find(x => x.id === currentDeckId);
             if (!d) { retourApresEditionDeck(); return; }
-            d.name = document.getElementById('deck-name').value;
+            d.name = document.getElementById('deck-name').value.trim() || 'Paquet sans nom';
             d.showOnHome = document.getElementById('deck-show-home').checked;
             saveState();
 
@@ -1157,6 +1245,8 @@
         }
 
         function supprimerPaquetCourant() {
+            const d = appState.customDecks.find(x => x.id === currentDeckId);
+            if (d && !confirm(`Supprimer le paquet « ${d.name} » et toutes ses cartes ?`)) return;
             appState.customDecks = appState.customDecks.filter(x => x.id !== currentDeckId);
             saveState();
             if (appState.isOrga) {
@@ -1191,33 +1281,63 @@
             showScreen('screen-card-edit');
         }
 
+        function getDeckCourant() { return appState.customDecks.find(x => x.id === currentDeckId); }
+
+        // Matériel proposé pour une carte : la base commune + le matériel PROPRE à ce paquet
+        // (créé dans ce paquet ou déjà utilisé par ses cartes) — jamais celui des autres paquets
+        function materiauxDuPaquet(d) {
+            const connus = new Set(DB_MATERIEL_BASE);
+            const extras = [];
+            const add = (m) => { if (m && !connus.has(m)) { connus.add(m); extras.push(m); } };
+            ((d && d.materials) || []).forEach(add);
+            ((d && d.cards) || []).forEach(c => cardMatos(c).forEach(add));
+            tempMatos.forEach(add);
+            return { base: DB_MATERIEL_BASE.slice(), extras };
+        }
+
         function renderMatosCheck() {
             const l = document.getElementById('card-matos-list');
-            const allMatos = [...new Set([...DB_MATERIEL_BASE, ...(appState.customMaterials || [])])];
-            l.innerHTML = allMatos.map(m =>
-                `<div class="check-item"><input type="checkbox" onchange="toggleMatos(${jsAttr(m)})" ${tempMatos.includes(m)?'checked':''}> ${escapeHtml(m)}</div>`
-            ).join('');
+            const { base, extras } = materiauxDuPaquet(getDeckCourant());
+            const chip = (m, custom) => {
+                const on = tempMatos.includes(m);
+                const x = custom ? `<span class="chip-x" onclick="event.stopPropagation(); retirerMatosDuPaquet(${jsAttr(m)})">✕</span>` : '';
+                return `<span class="chip${on ? ' on' : ''}" onclick="toggleMatos(${jsAttr(m)}); renderMatosCheck();">${escapeHtml(m)}${x}</span>`;
+            };
+            l.innerHTML = base.map(m => chip(m, false)).join('') + extras.map(m => chip(m, true)).join('');
         }
         function toggleMatos(m) { if(tempMatos.includes(m)) tempMatos = tempMatos.filter(x => x !== m); else tempMatos.push(m); }
 
         function ajouterNouveauMatos() {
             const val = document.getElementById('new-matos-name').value.trim();
-            if(!val) return;
-            if(!appState.customMaterials) appState.customMaterials = [];
-            if(!appState.customMaterials.includes(val) && !DB_MATERIEL_BASE.includes(val)) {
-                appState.customMaterials.push(val);
-                if(!tempMatos.includes(val)) tempMatos.push(val);
-                saveState();
-                renderMatosCheck();
-            }
+            if (!val) return;
+            const d = getDeckCourant();
+            if (!d) return;
+            if (!Array.isArray(d.materials)) d.materials = [];
+            if (!DB_MATERIEL_BASE.includes(val) && !d.materials.includes(val)) d.materials.push(val);
+            if (!tempMatos.includes(val)) tempMatos.push(val);
+            if (appState.materiel[val] === undefined) appState.materiel[val] = true; // disponible par défaut
+            saveState();
+            renderMatosCheck();
             document.getElementById('new-matos-name').value = "";
+        }
+
+        function retirerMatosDuPaquet(m) {
+            const d = getDeckCourant();
+            if (!d) return;
+            if (!confirm(`Retirer « ${m} » de ce paquet ? Il sera aussi retiré des cartes qui l'utilisent.`)) return;
+            d.materials = (d.materials || []).filter(x => x !== m);
+            (d.cards || []).forEach(c => { if (Array.isArray(c.matos)) c.matos = c.matos.filter(x => x !== m); });
+            tempMatos = tempMatos.filter(x => x !== m);
+            saveState();
+            renderMatosCheck();
         }
 
         function validerCarte() {
             const d = appState.customDecks.find(x => x.id === currentDeckId);
             if (!d) { retourApresEditionDeck(); return; }
+            if (!document.getElementById('card-title').value.trim()) { alert('Donnez un titre à la carte.'); return; }
             const nc = {
-                titre: document.getElementById('card-title').value,
+                titre: document.getElementById('card-title').value.trim(),
                 gravite: document.getElementById('card-gravity').value,
                 zone: document.getElementById('card-zone').value,
                 effet: document.getElementById('card-effect').value,
