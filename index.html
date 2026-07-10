@@ -271,7 +271,7 @@
         </div>
         <div id="host-panel-packs" class="host-panel box">
             <h3>PAQUETS SUPPLÉMENTAIRES</h3>
-            <p style="font-size:0.8em; color:#888; margin-top:0;">Distribuez des paquets aux joueurs connectés : un paquet <b>perso</b> apparaît comme un <b>nouveau bouton de tirage</b> sur l'accueil des destinataires ; « Balistique » et « Explosion » ajoutent leurs cartes aux tirages existants.</p>
+            <p style="font-size:0.8em; color:#888; margin-top:0;">Attribuez des paquets aux joueurs connectés : chaque paquet apparaît comme un <b>bouton de tirage à son nom</b> (Classique, Avancé ou paquet perso) sur l'accueil des destinataires, avec les quantités réglées dans l'Éditeur. Les cartes <b>Explosion</b> s'activent via l'Éditeur (mode Avancé + explosion).</p>
             <div class="host-inline-form" style="flex-direction:column; align-items:stretch;">
                 <select id="host-pack-source" class="form-input" style="margin:0;"></select>
                 <select id="host-pack-scope" class="form-input" style="margin:0;" onchange="hostPackScopeUI()">
@@ -584,6 +584,8 @@
         let modeRetourEditeur = null;   // mode à rétablir après un réglage ouvert depuis l'Éditeur hôte
         let modeChangeManuel = false;   // l'hôte a changé le mode lui-même dans les réglages
         let deckShareMode = 'export';
+        let adminHostId = '';           // infos du QG reçues par un co-admin (miroir de l'hôte)
+        let adminJoinLink = '';
 
         /* --- HELPERS --- */
         function escapeHtml(s) {
@@ -616,7 +618,7 @@
         }
 
         function getRulesArrayForDrawSource(src) {
-            if (src === 'explosion') return (DB_REGLES.explosion || []).slice();
+            if (DB_REGLES[src]) return DB_REGLES[src].slice(); // classique, avance, explosion
             if (src === 'bille') {
                 if (appState.mode.startsWith('d_')) {
                     const deck = appState.customDecks.find(d => d.id === appState.mode);
@@ -1093,9 +1095,10 @@
         }
 
         function quitterEcranReglages() {
-            if (appState.isOrga) {
+            if (appState.isOrga || (estEnPartieClient() && appState.isCoHost)) {
                 showScreen('screen-host-dashboard');
-                hostSetTab('builder'); // Retourne à l'éditeur dans le QG Hôte
+                if (!appState.isOrga) remplirEcranQG();
+                hostSetTab('builder'); // Retourne à l'éditeur dans le QG
             } else {
                 retourAccueil();
             }
@@ -1232,7 +1235,10 @@
                 broadcastFullState();
                 hostRefreshHostPanels();
             } else if (estEnPartieClient() && appState.isCoHost) {
-                // Co-admin : la configuration est envoyée à l'hôte, qui la redistribue à tous
+                // Co-admin : même logique que l'hôte (régler un paquet ne change pas le mode joué),
+                // puis la configuration est envoyée à l'hôte qui la redistribue à tous
+                if (modeRetourEditeur !== null && !modeChangeManuel) appState.mode = modeRetourEditeur;
+                modeRetourEditeur = null;
                 saveState();
                 try {
                     myConn.send({ type: 'CFG_PUSH', mode: appState.mode, explosionEnabled: appState.explosionEnabled, deathRisk: appState.deathRisk, materiel: appState.materiel, quantites: appState.quantites });
@@ -1563,6 +1569,7 @@
             hostLogs.unshift({ time: new Date().toLocaleTimeString('fr-FR'), text: String(text), color: color || null });
             if (hostLogs.length > 400) hostLogs.length = 400;
             renderHostLogs();
+            broadcastAdminState(); // tient les QG des co-admins à jour
         }
         function renderHostLogs() {
             const box = document.getElementById('host-log-box');
@@ -1595,10 +1602,20 @@
             if (pe) pe.style.display = v === 'player' ? 'block' : 'none';
         }
         function hostPopulatePackUI() {
+            // Les paquets portent les mêmes noms qu'en jeu ; l'Explosion, elle, s'active via
+            // l'Éditeur (mode Avancé + cartes explosion), pas par attribution.
             const sel = document.getElementById('host-pack-source');
             if (!sel) return;
-            sel.innerHTML = '<option value="bille">Balistique (mode actuel)</option><option value="explosion">Pack explosion</option>' +
-                appState.customDecks.map(d => `<option value="${escapeHtml(d.id)}">Perso : ${escapeHtml(d.name)}</option>`).join('');
+            sel.innerHTML = '<option value="classique">Classique</option><option value="avance">Avancé</option>' +
+                appState.customDecks.map(d => `<option value="${escapeHtml(d.id)}">${escapeHtml(d.name)}</option>`).join('');
+        }
+        function libellePaquetSource(src) {
+            if (src === 'classique') return 'Classique';
+            if (src === 'avance') return 'Avancé';
+            if (src === 'explosion') return 'Explosion';
+            if (src === 'bille') return 'Balistique';
+            const d = appState.customDecks.find(x => x.id === src);
+            return d ? d.name : src;
         }
         function hostPopulatePackTeamPlayerSelects() {
             const ts = document.getElementById('host-pack-team');
@@ -1631,16 +1648,20 @@
             if (!nm) { alert('Indiquez un nom d\'équipe.'); return; }
             if (!col) col = '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
             if (!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(col)) col = '#888888';
-            const id = 't_' + Date.now();
-            appState.customTeams.push({ id, name: nm, color: col });
             document.getElementById('host-new-team-name').value = '';
             document.getElementById('host-new-team-color').value = '';
+            if (!appState.isOrga) { envoyerAdminCmd({ action: 'addTeam', name: nm, color: col }); return; }
+            ajouterEquipeDirect(nm, col);
+        }
+        function ajouterEquipeDirect(nm, col) {
+            appState.customTeams.push({ id: 't_' + Date.now(), name: nm, color: col });
             hostPushLog(`Équipe ajoutée : ${nm}`);
             broadcastFullState();
             hostRefreshHostPanels();
             updateDashboard();
         }
         function hostSupprimerEquipe(tid) {
+            if (!appState.isOrga) { envoyerAdminCmd({ action: 'delTeam', teamId: tid }); return; }
             if (!appState.customTeams || appState.customTeams.length <= 2) { alert('Il faut au moins deux équipes.'); return; }
             const keep = appState.customTeams.filter(t => t.id !== tid);
             const fb = keep[0].id;
@@ -1660,25 +1681,26 @@
         }
         function hostAjouterPaquetSession() {
             const src = document.getElementById('host-pack-source').value;
+            const scope = document.getElementById('host-pack-scope').value;
+            const teamId = scope === 'team' ? document.getElementById('host-pack-team').value : null;
+            const peerId = scope === 'player' ? document.getElementById('host-pack-player').value : null;
+            if (scope === 'team' && !teamId) { alert('Choisissez une équipe.'); return; }
+            if (scope === 'player' && !peerId) { alert('Choisissez un joueur (connecté).'); return; }
+            if (!appState.isOrga) { envoyerAdminCmd({ action: 'addPack', src, scope, teamId, peerId }); return; }
+            ajouterPaquetSessionDirect(src, scope, teamId, peerId);
+        }
+        function ajouterPaquetSessionDirect(src, scope, teamId, peerId) {
             const cards = cloneCards(getRulesArrayForDrawSource(src));
             if (!cards.length) { alert('Ce paquet est vide pour la configuration actuelle.'); return; }
-            const scope = document.getElementById('host-pack-scope').value;
-            const label = document.getElementById('host-pack-source').selectedOptions[0].textContent || src;
-            const pack = { id: 'sp_' + Date.now(), src, scope, cards, teamId: null, peerId: null, label };
-            if (scope === 'team') {
-                pack.teamId = document.getElementById('host-pack-team').value;
-                if (!pack.teamId) { alert('Choisissez une équipe.'); return; }
-            }
-            if (scope === 'player') {
-                pack.peerId = document.getElementById('host-pack-player').value;
-                if (!pack.peerId) { alert('Choisissez un joueur (connecté).'); return; }
-            }
+            const label = libellePaquetSource(src);
+            const pack = { id: 'sp_' + Date.now(), src, scope, cards, teamId: teamId || null, peerId: peerId || null, label };
             liveSession.sessionPacks.push(pack);
-            hostPushLog(`Paquet session : ${label} → ${scope}`);
+            hostPushLog(`Paquet distribué : ${label} → ${scope}`);
             broadcastFullState();
             renderHostSessionPacksList();
         }
         function hostRetirerPaquetSession(pid) {
+            if (!appState.isOrga) { envoyerAdminCmd({ action: 'delPack', packId: pid }); return; }
             liveSession.sessionPacks = (liveSession.sessionPacks || []).filter(x => x.id !== pid);
             broadcastFullState();
             renderHostSessionPacksList();
@@ -1705,6 +1727,39 @@
             } else fallbackCopy();
         }
 
+        /* --- QG À DISTANCE (co-admins) --- */
+        // Un co-admin voit le même QG que l'hôte : l'hôte lui envoie un miroir de son état
+        // (joueurs, logs, lien d'invitation) et exécute les commandes qu'il renvoie.
+        function envoyerAdminCmd(cmd) {
+            if (!estEnPartieClient() || !appState.isCoHost) return;
+            try { myConn.send(Object.assign({ type: 'ADMIN_CMD' }, cmd)); } catch (e) {}
+        }
+        function broadcastAdminState() {
+            if (!appState.isOrga) return;
+            const admins = Object.values(playersData).filter(p => p.isCoHost && !p.offline && p.id);
+            if (!admins.length) return;
+            const inp = document.getElementById('host-join-link');
+            const payload = {
+                type: 'ADMIN_STATE',
+                players: Object.entries(playersData).map(([key, p]) => ({ key, id: p.id, name: p.name, teamId: p.teamId, isCoHost: !!p.isCoHost, offline: !!p.offline })),
+                logs: hostLogs.slice(0, 120),
+                hostId: peer ? peer.id : '',
+                joinLink: (inp && inp.value) || ''
+            };
+            admins.forEach(p => { const c = hostConns[p.id]; if (c) { try { c.send(payload); } catch (e) {} } });
+        }
+        function remplirEcranQG() {
+            document.getElementById('host-game-title').innerText = liveSession.gameName || clientSessionMeta.gameName || 'Partie';
+            if (!appState.isOrga) {
+                document.getElementById('host-connection-id').innerText = adminHostId || '...';
+                const inp = document.getElementById('host-join-link');
+                if (inp) inp.value = adminJoinLink || '';
+                if (adminJoinLink) genererQR(adminJoinLink);
+            }
+            hostRefreshHostPanels();
+            updateDashboard();
+        }
+
         function buildSyncPayload() {
             return {
                 type: 'SYNC_CONFIG',
@@ -1726,11 +1781,10 @@
         }
 
         function ouvrirMenuMultijoueur() {
-            if (appState.isOrga && peer) {
+            if ((appState.isOrga && peer) || (estEnPartieClient() && appState.isCoHost)) {
+                // Hôte OU co-admin : accès au QG complet
                 showScreen('screen-host-dashboard');
-                document.getElementById('host-game-title').innerText = liveSession.gameName || 'Partie';
-                hostRefreshHostPanels();
-                updateDashboard();
+                remplirEcranQG();
             } else {
                 document.getElementById('multiplayerModal').style.display = 'block';
                 document.getElementById('multi-pseudo').value = appState.playerName;
@@ -2172,6 +2226,22 @@
                 hostRefreshHostPanels();
                 return;
             }
+            if (data.type === 'ADMIN_CMD') {
+                // Commande du QG envoyée par un co-admin. Le créateur n'apparaissant pas dans la
+                // liste des joueurs, il est impossible de le kicker ou de lui retirer ses droits.
+                const admin = playersData[conn.peer];
+                if (!admin || !admin.isCoHost) return; // sécurité : réservé aux co-admins
+                const a = data.action;
+                if (a === 'team' && data.pid) cmdTeam(data.pid, data.teamId);
+                else if (a === 'cohost' && data.pid) cmdToggleCohost(data.pid);
+                else if (a === 'kick' && data.pid) cmdKick(data.pid);
+                else if (a === 'addTeam' && data.name) ajouterEquipeDirect(String(data.name).slice(0, 40), data.color);
+                else if (a === 'delTeam' && data.teamId) hostSupprimerEquipe(data.teamId);
+                else if (a === 'addPack' && data.src) ajouterPaquetSessionDirect(data.src, data.scope, data.teamId, data.peerId);
+                else if (a === 'delPack' && data.packId) hostRetirerPaquetSession(data.packId);
+                else if (a === 'close') executerCloture(admin.name);
+                return;
+            }
             if (data.type === 'DRAW_LOG') {
                 const p = playersData[conn.peer];
                 const n = p ? p.name : conn.peer;
@@ -2201,9 +2271,26 @@
                 if (data.quantites) appState.quantites = data.quantites;
                 clientSessionMeta.sessionPacks = data.sessionPacks || [];
                 clientSessionMeta.gameName = data.gameName || '';
+                if (appState.isCoHost) {
+                    // Miroir pour le QG du co-admin
+                    liveSession.sessionPacks = clientSessionMeta.sessionPacks;
+                    liveSession.gameName = clientSessionMeta.gameName;
+                    if (document.getElementById('screen-host-dashboard').classList.contains('active')) hostRefreshHostPanels();
+                }
                 updateUI_Game();
 
                 if (isWaitingForTeamSelection) afficherModalChoixEquipe();
+                return;
+            }
+            if (data.type === 'ADMIN_STATE') {
+                // Miroir du QG envoyé par l'hôte (réservé aux co-admins)
+                if (!appState.isCoHost) return;
+                playersData = {};
+                (data.players || []).forEach(p => { playersData[p.key] = p; });
+                hostLogs = Array.isArray(data.logs) ? data.logs : [];
+                adminHostId = data.hostId || '';
+                adminJoinLink = data.joinLink || '';
+                if (document.getElementById('screen-host-dashboard').classList.contains('active')) remplirEcranQG();
                 return;
             }
             if (data.type === 'PONG') { clearTimeout(pongTimer); return; }
@@ -2219,8 +2306,16 @@
                 const v = !!data.isCoHost;
                 if (appState.isCoHost === v) return; // resynchronisation silencieuse après reconnexion
                 appState.isCoHost = v;
+                if (!v) {
+                    // Rétrogradé : on efface le miroir du QG et on quitte l'écran s'il était ouvert
+                    playersData = {};
+                    hostLogs = [];
+                    adminHostId = '';
+                    adminJoinLink = '';
+                    if (document.getElementById('screen-host-dashboard').classList.contains('active')) showScreen('screen-game');
+                }
                 updateUI_Game();
-                alert(v ? 'Vous êtes co-organisateur (grade admin).' : 'Grade admin retiré.');
+                alert(v ? 'Vous êtes co-organisateur : le QG de la partie est accessible via le bouton 👥 en haut à gauche.' : 'Grade admin retiré.');
                 return;
             }
             if (data.type === 'CLOSE_SESSION') {
@@ -2262,9 +2357,11 @@
                 </div>`;
             }).join('');
             sauvegarderSessionHote();
+            broadcastAdminState();
         }
 
         function cmdToggleCohost(pid) {
+            if (!appState.isOrga) { envoyerAdminCmd({ action: 'cohost', pid }); return; }
             const p = playersData[pid];
             const c = hostConns[pid];
             if (!p || !c) return;
@@ -2274,6 +2371,7 @@
             updateDashboard();
         }
         function cmdTeam(pid, tid) {
+            if (!appState.isOrga) { envoyerAdminCmd({ action: 'team', pid, teamId: tid }); return; }
             const p = playersData[pid]; const c = hostConns[pid];
             if (!p || !c) return;
             p.teamId = tid;
@@ -2281,6 +2379,7 @@
             updateDashboard();
         }
         function cmdKick(pid) {
+            if (!appState.isOrga) { envoyerAdminCmd({ action: 'kick', pid }); return; }
             const c = hostConns[pid];
             const nom = (playersData[pid] && playersData[pid].name) || pid;
             const coul = couleurJoueur(playersData[pid]);
@@ -2296,7 +2395,16 @@
             hostPopulatePackTeamPlayerSelects();
         }
         function cloturerPartie() {
+            if (!appState.isOrga) {
+                if (!estEnPartieClient() || !appState.isCoHost) return;
+                if (!confirm('Clôturer la partie pour tout le monde ?')) return;
+                envoyerAdminCmd({ action: 'close' });
+                return;
+            }
             if (!confirm('Clôturer la partie ? Tous les joueurs seront avertis et déconnectés.')) return;
+            executerCloture();
+        }
+        function executerCloture(parQui) {
             const conns = Object.values(hostConns);
             conns.forEach(c => {
                 try { c.send({ type: 'CLOSE_SESSION', reason: 'L\'organisateur a clôturé la partie.' }); } catch (e) {}
@@ -2323,7 +2431,7 @@
             localStorage.removeItem(HOST_SESSION_KEY); // la session ne sera plus reprise au prochain lancement
             document.getElementById('btn-multi-icon').classList.remove('online');
 
-            hostPushLog('Partie clôturée.');
+            hostPushLog('Partie clôturée' + (parQui ? ' par ' + parQui + ' (co-admin)' : '') + '.');
             renderHostSessionPacksList();
             updateDashboard();
             retourAccueilDepuisHost();
@@ -2357,6 +2465,10 @@
             peer = null;
             appState.isOrga = false;
             appState.isCoHost = false;
+            playersData = {};   // efface le miroir QG d'un éventuel co-admin
+            hostLogs = [];
+            adminHostId = '';
+            adminJoinLink = '';
             restoreLocalConfig(); // rétablit la config locale mise de côté à l'entrée en partie
             if (!appState.customTeams.some(t => t.id === appState.playerTeamId)) {
                 appState.playerTeamId = appState.customTeams[0].id;
@@ -2400,9 +2512,12 @@
             }
 
             if (inPartie) {
-                // Connecté comme joueur : paquets distribués par l'Hôte (uniquement les paquets perso "d_")
+                // Connecté comme joueur : chaque paquet attribué par le QG devient un bouton de
+                // tirage portant son nom (Classique, Avancé, ou le nom du paquet perso).
+                // Les anciens paquets « bille »/« explosion » fusionnent dans les tirages existants.
                 (clientSessionMeta.sessionPacks || []).forEach(p => {
-                    if (p.src && p.src.startsWith('d_') && sessionPackApplies(p, peer ? peer.id : null, appState.playerTeamId)) {
+                    if (p.src === 'bille' || p.src === 'explosion') return;
+                    if (sessionPackApplies(p, peer ? peer.id : null, appState.playerTeamId)) {
                         html += drawBtn(p.id, p.label, 'pulse-ring-custom', 'btn-custom.png', 'icon-custom');
                     }
                 });
