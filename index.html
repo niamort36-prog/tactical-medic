@@ -812,13 +812,14 @@
             });
             // 2. STUN / TURN
             const types = await new Promise(res => {
-                const found = { srflx: false, relay: false };
+                const found = { host: false, srflx: false, relay: false };
                 let pc;
                 try { pc = new RTCPeerConnection(getPeerConfig().config); } catch(e) { res(found); return; }
                 pc.createDataChannel('t');
                 pc.onicecandidate = (e) => {
                     if (!e.candidate) return;
                     const t = e.candidate.type || (e.candidate.candidate.split(' typ ')[1] || '').split(' ')[0];
+                    if (t === 'host') found.host = true;
                     if (t === 'srflx') found.srflx = true;
                     if (t === 'relay') found.relay = true;
                 };
@@ -831,10 +832,20 @@
                 (types.relay ? '✅' : '❌') + ' TURN — relais si le direct est bloqué' + (appState.turnConfig && appState.turnConfig.urls ? '' : ' (aucun relais configuré)')
             ];
             let verdict;
-            if (sig && types.relay) verdict = '✅ Tout est opérationnel : la connexion devrait marcher, même entre réseaux différents (4G ↔ box).';
-            else if (sig && types.srflx) verdict = '⚠️ Pas de relais TURN : la connexion peut échouer entre réseaux différents ou si la box isole ses appareils. Configurez un relais ci-dessous (🛠), il sera transmis aux joueurs par le QR code.';
-            else if (sig) verdict = '❌ WebRTC semble bloqué par ce réseau (pare-feu). Essayez un autre réseau ou configurez un relais TURN.';
-            else verdict = '❌ Serveur de mise en relation injoignable : vérifiez l\'accès Internet.';
+            if (sig && types.relay) {
+                verdict = '✅ Tout est opérationnel : la connexion devrait marcher, même entre réseaux différents (4G ↔ box).';
+            } else if (sig && types.srflx) {
+                verdict = '⚠️ Pas de relais TURN : la connexion peut échouer entre réseaux différents ou si la box isole ses appareils. Configurez un relais ci-dessous (🛠), il sera transmis aux joueurs par le QR code.';
+            } else if (sig && types.host) {
+                verdict = '❌ STUN bloqué alors qu\'Internet fonctionne : c\'est presque toujours le NAVIGATEUR qui bloque l\'UDP de WebRTC.<br>' +
+                    '• <b>Opera / Opera GX</b> : désactivez le VPN intégré, puis dans les réglages cherchez « WebRTC » et choisissez « Utiliser l\'UDP sans proxy ».<br>' +
+                    '• Sinon : VPN, antivirus ou pare-feu. Testez dans Chrome ou Edge pour confirmer.<br>' +
+                    '• Un relais TURN configuré (🛠) passe aussi par TCP 443 et contourne souvent ce blocage.';
+            } else if (sig) {
+                verdict = '❌ WebRTC est entièrement désactivé dans ce navigateur (aucun candidat réseau). Vérifiez les réglages de confidentialité du navigateur ou essayez-en un autre.';
+            } else {
+                verdict = '❌ Serveur de mise en relation injoignable : vérifiez l\'accès Internet.';
+            }
             el.innerHTML = lignes.map(l => `<div>${l}</div>`).join('') + `<div style="margin-top:8px;color:#ccc;">${verdict}</div>`;
         }
 
