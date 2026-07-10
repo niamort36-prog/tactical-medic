@@ -271,7 +271,7 @@
         </div>
         <div id="host-panel-packs" class="host-panel box">
             <h3>PAQUETS SUPPLÉMENTAIRES</h3>
-            <p style="font-size:0.8em; color:#888; margin-top:0;">Cartes ajoutées au tirage pour les destinataires choisis (en plus du mode de jeu).</p>
+            <p style="font-size:0.8em; color:#888; margin-top:0;">Distribuez des paquets aux joueurs connectés : un paquet <b>perso</b> apparaît comme un <b>nouveau bouton de tirage</b> sur l'accueil des destinataires ; « Balistique » et « Explosion » ajoutent leurs cartes aux tirages existants.</p>
             <div class="host-inline-form" style="flex-direction:column; align-items:stretch;">
                 <select id="host-pack-source" class="form-input" style="margin:0;"></select>
                 <select id="host-pack-scope" class="form-input" style="margin:0;" onchange="hostPackScopeUI()">
@@ -287,8 +287,10 @@
         </div>
         <div id="host-panel-logs" class="host-panel box">
             <h3>JOURNAL TEMPS RÉEL</h3>
+            <p style="font-size:0.75em; color:#888; margin-top:0;">Les événements d'un joueur s'affichent dans la couleur de son équipe.</p>
             <div id="host-log-box" class="log-box"></div>
-            <button type="button" class="btn-action" style="background:#333;margin-top:10px;" onclick="hostLogs=[]; renderHostLogs();">Effacer l’affichage</button>
+            <button type="button" class="btn-action" style="background:var(--accent-blue);margin-top:10px;" onclick="telechargerLogs()">⬇️ TÉLÉCHARGER LES LOGS (.txt)</button>
+            <button type="button" class="btn-action" style="background:#333;margin-top:8px;" onclick="hostLogs=[]; renderHostLogs();">Effacer l’affichage</button>
         </div>
         <button type="button" class="btn-action" style="background:#b71c1c; margin-top:12px;" onclick="cloturerPartie()">CLÔTURER LA PARTIE (éjecter les joueurs)</button>
         <button type="button" class="btn-action" style="background:#333; margin-top:8px;" onclick="retourAccueilDepuisHost()">RETOUR ACCUEIL (garder session)</button>
@@ -334,6 +336,7 @@
         <h2 style="margin-top:40px; margin-bottom:4px;">MES PAQUETS</h2>
         <p style="font-size:0.8em; color:#888; margin-top:0;">Créez vos propres paquets de cartes et affichez-les sur l'accueil.</p>
         <button class="btn-action btn-create" onclick="creerNouveauPaquet()">+ CRÉER UN PAQUET</button>
+        <button class="btn-action btn-join" onclick="importerPaquetUI()">📥 IMPORTER UN PAQUET</button>
         <div id="custom-decks-list" style="margin-top:20px;"></div>
         <button class="btn-action" style="background:#333;" onclick="retourAccueil()">RETOUR</button>
     </div>
@@ -419,6 +422,19 @@
                 <button type="button" class="btn-action btn-join" onclick="rejoindrePartieEnLigne()">CONNEXION</button>
             </div>
 
+            <div style="margin-top:14px; border-top:1px solid #444; padding-top:10px;">
+                <button type="button" class="btn-action" style="background:#333;" onclick="testerReseau()">🔧 TESTER LE RÉSEAU</button>
+                <div id="net-test-result" style="display:none; font-size:0.8em; text-align:left; background:#111; border:1px solid #333; border-radius:6px; padding:10px; margin-top:8px; line-height:1.6;"></div>
+                <button type="button" class="btn-action" style="background:#2a2a2a; font-size:0.8em;" onclick="document.getElementById('turn-config-area').style.display = document.getElementById('turn-config-area').style.display === 'none' ? 'block' : 'none'">🛠 RELAIS RÉSEAU (TURN) — OPTIONNEL</button>
+                <div id="turn-config-area" style="display:none; margin-top:8px; text-align:left;">
+                    <p style="font-size:0.75em; color:#888; margin-top:0;">Nécessaire si le test indique ❌ TURN et que vos joueurs sont sur d'autres réseaux (4G, autre WiFi). Créez un compte gratuit sur <b>metered.ca</b> (50 Go/mois), ajoutez un « TURN server » et collez ses identifiants ici. Ils seront transmis automatiquement aux joueurs via le lien / QR code d'invitation.</p>
+                    <input type="text" id="turn-url" class="form-input" placeholder="URL (ex : turn:standard.relay.metered.ca:443)">
+                    <input type="text" id="turn-user" class="form-input" placeholder="Username">
+                    <input type="text" id="turn-pass" class="form-input" placeholder="Password / credential">
+                    <button type="button" class="btn-action btn-create" style="margin-top:0;" onclick="sauverTurnConfig()">ENREGISTRER LE RELAIS</button>
+                </div>
+            </div>
+
             <button type="button" onclick="fermerMultiModal()" class="btn-action" style="background:#333; margin-top:20px;">ANNULER</button>
             <div id="multi-status" style="display:none; text-align:center; padding:10px; color:#aaa;">Connexion...</div>
         </div>
@@ -433,6 +449,16 @@
                 <select id="modal-join-team" class="form-input"></select>
             </div>
             <button type="button" class="btn-action btn-join" style="margin-top:20px;" onclick="validerEquipeRejoindre()">REJOINDRE LA PARTIE</button>
+        </div>
+    </div>
+
+    <div id="deckShareModal" class="modal" style="z-index: 210;" onclick="if(event.target===this)this.style.display='none'">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 id="deck-share-title" style="color:var(--accent-green); margin-top:0;">Partager le paquet</h3>
+            <p id="deck-share-hint" style="font-size:0.8em; color:#aaa;"></p>
+            <textarea id="deck-share-code" class="form-input" rows="6" style="font-family:monospace; font-size:0.68em; word-break:break-all;"></textarea>
+            <button type="button" id="deck-share-action" class="btn-action btn-create" onclick="deckShareAction()">COPIER</button>
+            <button type="button" class="btn-action" style="background:#333;" onclick="document.getElementById('deckShareModal').style.display='none'">FERMER</button>
         </div>
     </div>
 
@@ -508,29 +534,34 @@
         const CLIENT_SESSION_KEY = 'medic_v32_client_session';
         const DEFAULT_TEAMS = [{id:'blue',name:'Bleu',color:'#1976d2'},{id:'red',name:'Rouge',color:'#d32f2f'}];
         // STUN = découverte d'adresse ; TURN = relais obligatoire quand le pair-à-pair direct est
-        // bloqué (téléphone en 4G/CGNAT, box avec isolation WiFi, pare-feu). Sans TURN, la liaison
-        // PC ↔ téléphone échoue très souvent avec "Délai dépassé". Serveurs publics gratuits
-        // Open Relay (metered.ca) ; s'ils ne répondent plus un jour, créez des identifiants gratuits
-        // sur https://www.metered.ca/tools/openrelay/ et remplacez username/credential ci-dessous
-        // (c'est le SEUL endroit à modifier).
-        const PEER_CONFIG = {
-            config: {
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:openrelay.metered.ca:80' },
-                    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-                    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-                    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
-                ]
+        // bloqué (téléphone en 4G/CGNAT, box avec isolation WiFi, pare-feu). Il n'existe plus de
+        // relais TURN public gratuit fiable : l'hôte peut configurer le sien (compte gratuit
+        // metered.ca, 50 Go/mois) via le menu multijoueur → « RELAIS RÉSEAU ». Le relais est
+        // transmis automatiquement aux joueurs dans le lien / QR code d'invitation.
+        const STUN_SERVERS = [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ];
+        function getPeerConfig() {
+            const ice = STUN_SERVERS.slice();
+            const t = appState.turnConfig;
+            if (t && t.urls) {
+                const cred = { username: t.username || '', credential: t.credential || '' };
+                ice.push(Object.assign({ urls: t.urls }, cred));
+                // Variante TCP 443 (passe mieux les pare-feux stricts)
+                const m = t.urls.match(/^turn:([^:\/\?]+)/);
+                if (m && !/transport=tcp/.test(t.urls)) {
+                    ice.push(Object.assign({ urls: `turn:${m[1]}:443?transport=tcp` }, cred));
+                }
             }
-        };
+            return { config: { iceServers: ice } };
+        }
 
         let appState = {
             mode: "classique", explosionEnabled: false, deathRisk: false,
             materiel: {}, quantites: {}, customDecks: [],
             playerName: "Joueur", playerTeamId: "blue", isOrga: false, isCoHost: false,
-            lastGameName: "",
+            lastGameName: "", turnConfig: null,
             customTeams: DEFAULT_TEAMS.map(t => ({...t}))
         };
 
@@ -550,6 +581,9 @@
         let hostResumeRetries = 0;
         let hostResumeAlertShown = false;
         let pongTimer = null;
+        let modeRetourEditeur = null;   // mode à rétablir après un réglage ouvert depuis l'Éditeur hôte
+        let modeChangeManuel = false;   // l'hôte a changé le mode lui-même dans les réglages
+        let deckShareMode = 'export';
 
         /* --- HELPERS --- */
         function escapeHtml(s) {
@@ -565,6 +599,8 @@
         function qtyFor(rid) { const q = appState.quantites[rid]; return (q === undefined || q === null) ? 2 : q; }
         function ridForMode(r) { return r.id || (appState.mode + "_" + r.titre); }
         function estEnPartieClient() { return !!(myConn && myConn.open && !appState.isOrga); }
+        // Les réglages sont verrouillés pour un joueur en partie, sauf s'il est co-admin
+        function reglagesVerrouilles() { return estEnPartieClient() && !appState.isCoHost; }
         // Version d'affichage d'un effet : la balise technique [MEMBRE_ALEATOIRE] est retirée
         // (au tirage réel, elle est remplacée par un membre tiré au sort)
         function effetPourAffichage(effet) {
@@ -725,7 +761,7 @@
             if (!appState.isOrga || !liveSession.gameName) return;
             const players = Object.values(playersData).map(p => ({ name: p.name, teamId: p.teamId, isCoHost: !!p.isCoHost }));
             try {
-                localStorage.setItem(HOST_SESSION_KEY, JSON.stringify({ gameName: liveSession.gameName, sessionPacks: liveSession.sessionPacks || [], players }));
+                localStorage.setItem(HOST_SESSION_KEY, JSON.stringify({ gameName: liveSession.gameName, sessionPacks: liveSession.sessionPacks || [], players, teams: appState.customTeams }));
             } catch(e) { console.warn(e); }
         }
         function getClientSession() {
@@ -735,6 +771,72 @@
             try { localStorage.setItem(CLIENT_SESSION_KEY, JSON.stringify(s)); } catch(e) { console.warn(e); }
         }
         function clearClientSession() { localStorage.removeItem(CLIENT_SESSION_KEY); }
+
+        /* --- RELAIS RÉSEAU (TURN) --- */
+        // Le relais configuré par l'hôte voyage dans le lien / QR code (?relay=base64) pour que
+        // les joueurs l'utilisent aussi, sans aucune manipulation de leur côté.
+        function appliquerRelayBase64(b64) {
+            try {
+                const cfg = JSON.parse(decodeURIComponent(escape(atob(b64))));
+                if (cfg && cfg.urls) {
+                    appState.turnConfig = { urls: String(cfg.urls), username: String(cfg.username || ''), credential: String(cfg.credential || '') };
+                    saveState();
+                }
+            } catch (e) { console.warn('Paramètre relay invalide', e); }
+        }
+        function appliquerRelayParam(raw) {
+            const m = String(raw).match(/[?&]relay=([^&\s]+)/);
+            if (m) appliquerRelayBase64(decodeURIComponent(m[1]));
+        }
+        function sauverTurnConfig() {
+            const urls = document.getElementById('turn-url').value.trim();
+            const username = document.getElementById('turn-user').value.trim();
+            const credential = document.getElementById('turn-pass').value.trim();
+            appState.turnConfig = urls ? { urls, username, credential } : null;
+            saveState();
+            alert(urls ? 'Relais enregistré. Il sera utilisé pour les prochaines connexions et transmis aux joueurs via le lien / QR code.' : 'Relais effacé.');
+        }
+        async function testerReseau() {
+            const el = document.getElementById('net-test-result');
+            el.style.display = 'block';
+            el.innerHTML = 'Test en cours (~15 s)...';
+            // 1. Serveur de mise en relation PeerJS
+            const sig = await new Promise(res => {
+                if (typeof Peer === 'undefined') { res(false); return; }
+                let done = false;
+                const fin = (ok, p) => { if (!done) { done = true; try { p.destroy(); } catch(e){} res(ok); } };
+                const p = new Peer(getPeerConfig());
+                setTimeout(() => fin(false, p), 8000);
+                p.on('open', () => fin(true, p));
+                p.on('error', () => fin(false, p));
+            });
+            // 2. STUN / TURN
+            const types = await new Promise(res => {
+                const found = { srflx: false, relay: false };
+                let pc;
+                try { pc = new RTCPeerConnection(getPeerConfig().config); } catch(e) { res(found); return; }
+                pc.createDataChannel('t');
+                pc.onicecandidate = (e) => {
+                    if (!e.candidate) return;
+                    const t = e.candidate.type || (e.candidate.candidate.split(' typ ')[1] || '').split(' ')[0];
+                    if (t === 'srflx') found.srflx = true;
+                    if (t === 'relay') found.relay = true;
+                };
+                pc.createOffer().then(o => pc.setLocalDescription(o)).catch(() => {});
+                setTimeout(() => { try { pc.close(); } catch(e){} res(found); }, 8000);
+            });
+            const lignes = [
+                (sig ? '✅' : '❌') + ' Mise en relation (serveur PeerJS)',
+                (types.srflx ? '✅' : '❌') + ' STUN — connexion directe possible',
+                (types.relay ? '✅' : '❌') + ' TURN — relais si le direct est bloqué' + (appState.turnConfig && appState.turnConfig.urls ? '' : ' (aucun relais configuré)')
+            ];
+            let verdict;
+            if (sig && types.relay) verdict = '✅ Tout est opérationnel : la connexion devrait marcher, même entre réseaux différents (4G ↔ box).';
+            else if (sig && types.srflx) verdict = '⚠️ Pas de relais TURN : la connexion peut échouer entre réseaux différents ou si la box isole ses appareils. Configurez un relais ci-dessous (🛠), il sera transmis aux joueurs par le QR code.';
+            else if (sig) verdict = '❌ WebRTC semble bloqué par ce réseau (pare-feu). Essayez un autre réseau ou configurez un relais TURN.';
+            else verdict = '❌ Serveur de mise en relation injoignable : vérifiez l\'accès Internet.';
+            el.innerHTML = lignes.map(l => `<div>${l}</div>`).join('') + `<div style="margin-top:8px;color:#ccc;">${verdict}</div>`;
+        }
 
         /* --- INIT --- */
         window.onload = function() {
@@ -773,13 +875,16 @@
 
             // Reprise / auto-join : le lien ?join= est prioritaire, sinon on reprend une session
             // hôte ou joueur interrompue (appareil éteint, réseau perdu, page rechargée...)
-            const jp = new URLSearchParams(location.search).get('join');
+            const urlParams = new URLSearchParams(location.search);
+            const jp = urlParams.get('join');
+            const relayParam = urlParams.get('relay');
+            if (relayParam) appliquerRelayBase64(relayParam); // relais TURN transmis par l'hôte
             const hostSession = getHostSession();
             if (jp) {
                 document.getElementById('join-code').value = jp.trim();
                 rejoindrePartieEnLigne(jp.trim()); // Skip modal, auto join!
             } else if (hostSession && hostSession.gameName) {
-                demarrerHost(hostSession.gameName, { resume: true, players: hostSession.players || [], sessionPacks: hostSession.sessionPacks || [] });
+                demarrerHost(hostSession.gameName, { resume: true, players: hostSession.players || [], sessionPacks: hostSession.sessionPacks || [], teams: hostSession.teams });
             } else if (getClientSession()) {
                 demarrerReconnexionClient({ maxAttempts: 20, silentFail: true });
             }
@@ -795,7 +900,7 @@
                 if (peer && !peer.destroyed) {
                     if (peer.disconnected) { try { peer.reconnect(); } catch (e) {} }
                 } else if (hs && hs.gameName) {
-                    demarrerHost(hs.gameName, { resume: true, players: hs.players || [], sessionPacks: hs.sessionPacks || [] });
+                    demarrerHost(hs.gameName, { resume: true, players: hs.players || [], sessionPacks: hs.sessionPacks || [], teams: hs.teams });
                 }
                 return;
             }
@@ -988,6 +1093,7 @@
         function ouvrirReglages(keepSnapshot = false) {
             // Instantané pour pouvoir réellement ANNULER (les contrôles modifient appState en direct)
             if (!keepSnapshot || settingsSnapshot === null) settingsSnapshot = takeSettingsSnapshot();
+            if (!keepSnapshot) { modeRetourEditeur = null; modeChangeManuel = false; }
 
             document.getElementById('settings-pseudo').value = appState.playerName || '';
 
@@ -998,7 +1104,7 @@
             s.value = appState.mode;
             document.getElementById('chk-death').checked = appState.deathRisk;
 
-            const isLocked = estEnPartieClient();
+            const isLocked = reglagesVerrouilles();
             s.disabled = isLocked;
             document.getElementById('chk-death').disabled = isLocked;
             document.getElementById('chk-explosion').disabled = isLocked;
@@ -1020,7 +1126,7 @@
 
         function renderSettingsList() {
             const activeRules = getActiveRulesForMode();
-            const isLocked = estEnPartieClient();
+            const isLocked = reglagesVerrouilles();
 
             // Matériel requis par les cartes actives (quantité > 0)
             const requiredMatos = new Set();
@@ -1100,23 +1206,39 @@
             renderSettingsList();
             updateUI_Game();
         }
-        function changerModeMenu(v) { appState.mode=v; renderSettingsList(); updateUI_Game(); }
+        function changerModeMenu(v) { appState.mode=v; modeChangeManuel = true; renderSettingsList(); updateUI_Game(); }
         function toggleDeathRisk() { appState.deathRisk = document.getElementById('chk-death').checked; }
         function toggleExplosion() { appState.explosionEnabled=document.getElementById('chk-explosion').checked; renderSettingsList(); updateUI_Game(); }
 
         function sauvegarderEtQuitter() {
             settingsSnapshot = null;
-            saveState();
-            if (appState.isOrga) broadcastFullState();
+            if (appState.isOrga) {
+                // Réglage ouvert depuis l'Éditeur pour ajuster UN paquet : le mode joué n'est pas
+                // modifié, sauf si l'hôte l'a changé lui-même dans la liste déroulante
+                if (modeRetourEditeur !== null && !modeChangeManuel) appState.mode = modeRetourEditeur;
+                modeRetourEditeur = null;
+                saveState();
+                broadcastFullState();
+                hostRefreshHostPanels();
+            } else if (estEnPartieClient() && appState.isCoHost) {
+                // Co-admin : la configuration est envoyée à l'hôte, qui la redistribue à tous
+                saveState();
+                try {
+                    myConn.send({ type: 'CFG_PUSH', mode: appState.mode, explosionEnabled: appState.explosionEnabled, deathRisk: appState.deathRisk, materiel: appState.materiel, quantites: appState.quantites });
+                } catch (e) {}
+            } else {
+                saveState();
+            }
             quitterEcranReglages();
         }
 
         function annulerReglages() {
-            // On restaure l'état capturé à l'ouverture (sauf client verrouillé : ses données viennent de l'hôte)
-            if (settingsSnapshot && !estEnPartieClient()) {
+            // On restaure l'état capturé à l'ouverture (sauf joueur verrouillé : ses données viennent de l'hôte)
+            if (settingsSnapshot && !reglagesVerrouilles()) {
                 try { Object.assign(appState, JSON.parse(settingsSnapshot)); } catch(e) { console.warn(e); }
             }
             settingsSnapshot = null;
+            modeRetourEditeur = null;
             updateUI_Game();
             quitterEcranReglages();
         }
@@ -1153,7 +1275,10 @@
                 return `<div class="deck-card" onclick="editDeck(${jsAttr(d.id)})">
                     <div class="deck-card-head">
                         <span class="deck-card-title">${escapeHtml(d.name)}</span>
-                        <button type="button" class="header-btn" onclick="event.stopPropagation(); editDeck(${jsAttr(d.id)})">✏️</button>
+                        <span style="display:flex; gap:6px;">
+                            <button type="button" class="header-btn" title="Partager" onclick="event.stopPropagation(); partagerPaquet(${jsAttr(d.id)})">📤</button>
+                            <button type="button" class="header-btn" onclick="event.stopPropagation(); editDeck(${jsAttr(d.id)})">✏️</button>
+                        </span>
                     </div>
                     <div class="deck-card-meta"><span>${cards.length} carte${cards.length > 1 ? 's' : ''}</span>${homeBadge}</div>
                     ${pills ? `<div class="grav-pills">${pills}</div>` : ''}
@@ -1169,15 +1294,21 @@
                 { id: 'avance', label: 'Mode : Avancé' },
                 ...appState.customDecks.map(d => ({ id: d.id, label: 'Perso : ' + d.name, perso: true }))
             ];
-            l.innerHTML = rows.map(r => `<div class="player-row" style="border-left:4px solid ${r.perso ? 'var(--accent-orange)' : 'var(--accent-blue)'}; flex-direction:row; justify-content:space-between; align-items:center;">
-                    <strong>${escapeHtml(r.label)}</strong>
+            l.innerHTML = rows.map(r => {
+                const actif = appState.mode === r.id;
+                return `<div class="player-row" style="border-left:4px solid ${r.perso ? 'var(--accent-orange)' : 'var(--accent-blue)'}; flex-direction:row; justify-content:space-between; align-items:center;">
+                    <span><strong>${escapeHtml(r.label)}</strong>${actif ? ' <span class="deck-badge home">JOUÉ</span>' : ''}</span>
                     <button type="button" class="btn-dash" style="background:var(--accent-blue);" onclick="hostEditSettings(${jsAttr(r.id)})">Réglages</button>
-                </div>`).join('');
+                </div>`;
+            }).join('');
         }
 
         function hostEditSettings(id) {
-            // Instantané AVANT le changement de mode : ANNULER rétablira aussi le mode précédent
+            // Instantané AVANT le changement de mode : ANNULER rétablira aussi le mode précédent.
+            // On mémorise aussi le mode joué : régler un paquet ne doit pas changer le mode en cours.
             settingsSnapshot = takeSettingsSnapshot();
+            modeRetourEditeur = appState.mode;
+            modeChangeManuel = false;
             appState.mode = id;
             ouvrirReglages(true);
         }
@@ -1221,6 +1352,62 @@
             if (!confirm(`Supprimer la carte « ${d.cards[i].titre || 'Sans titre'} » ?`)) return;
             d.cards.splice(i, 1);
             renderCardsList(d);
+        }
+
+        /* --- PARTAGE DE PAQUETS (export / import par code) --- */
+        function encoderPaquet(d) {
+            const payload = { v: 1, name: d.name, cards: cloneCards(d.cards), materials: (d.materials || []).slice() };
+            return 'TMDECK1.' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+        }
+        function decoderPaquet(code) {
+            try {
+                const c = String(code).trim();
+                if (!c.startsWith('TMDECK1.')) return null;
+                const p = JSON.parse(decodeURIComponent(escape(atob(c.slice(8)))));
+                if (!p || !Array.isArray(p.cards)) return null;
+                return p;
+            } catch (e) { return null; }
+        }
+        function partagerPaquet(id) {
+            const d = appState.customDecks.find(x => x.id === id);
+            if (!d) return;
+            deckShareMode = 'export';
+            document.getElementById('deck-share-title').innerText = 'Partager « ' + d.name + ' »';
+            document.getElementById('deck-share-hint').innerText = 'Envoyez ce code à un autre joueur (SMS, WhatsApp, mail...). Il l\'importera via « IMPORTER UN PAQUET » dans Mes paquets.';
+            const ta = document.getElementById('deck-share-code');
+            ta.value = encoderPaquet(d);
+            ta.readOnly = true;
+            document.getElementById('deck-share-action').innerText = 'COPIER LE CODE';
+            document.getElementById('deckShareModal').style.display = 'block';
+        }
+        function importerPaquetUI() {
+            deckShareMode = 'import';
+            document.getElementById('deck-share-title').innerText = 'Importer un paquet';
+            document.getElementById('deck-share-hint').innerText = 'Collez ici le code de partage reçu (il commence par TMDECK1).';
+            const ta = document.getElementById('deck-share-code');
+            ta.value = '';
+            ta.readOnly = false;
+            document.getElementById('deck-share-action').innerText = 'IMPORTER';
+            document.getElementById('deckShareModal').style.display = 'block';
+        }
+        function deckShareAction() {
+            const ta = document.getElementById('deck-share-code');
+            if (deckShareMode === 'export') {
+                const fallbackCopy = () => { ta.select(); document.execCommand('copy'); alert('Code copié !'); };
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(ta.value).then(() => alert('Code copié !')).catch(fallbackCopy);
+                } else fallbackCopy();
+                return;
+            }
+            const p = decoderPaquet(ta.value);
+            if (!p) { alert('Code invalide ou incomplet. Vérifiez qu\'il a été copié en entier.'); return; }
+            const d = { id: 'd_' + Date.now(), name: p.name || 'Paquet importé', showOnHome: true, cards: p.cards, materials: Array.isArray(p.materials) ? p.materials : [] };
+            appState.customDecks.push(d);
+            initDefaults(); // quantités par défaut + disponibilité du matériel importé
+            saveState();
+            document.getElementById('deckShareModal').style.display = 'none';
+            ouvrirBuilder();
+            alert('Paquet « ' + d.name + ' » importé (' + d.cards.length + ' cartes) !');
         }
 
         function sauvegarderPaquetCourant() {
@@ -1356,14 +1543,36 @@
             const panel = document.getElementById('host-panel-' + id);
             if (panel) panel.classList.add('active');
         }
-        function hostPushLog(text) {
-            hostLogs.unshift(`[${new Date().toLocaleTimeString('fr-FR')}] ${text}`);
+        function couleurJoueur(p) {
+            if (!p) return null;
+            const t = appState.customTeams.find(x => x.id === p.teamId);
+            return t ? t.color : null;
+        }
+        function hostPushLog(text, color) {
+            hostLogs.unshift({ time: new Date().toLocaleTimeString('fr-FR'), text: String(text), color: color || null });
             if (hostLogs.length > 400) hostLogs.length = 400;
             renderHostLogs();
         }
         function renderHostLogs() {
             const box = document.getElementById('host-log-box');
-            if (box) box.textContent = hostLogs.join('\n');
+            if (!box) return;
+            box.innerHTML = hostLogs.map(e => {
+                if (typeof e === 'string') return `<div>${escapeHtml(e)}</div>`;
+                return `<div style="color:${e.color || '#9ccc65'}">[${e.time}] ${escapeHtml(e.text)}</div>`;
+            }).join('');
+        }
+        function construireTexteLogs() {
+            return hostLogs.slice().reverse().map(e => typeof e === 'string' ? e : `[${e.time}] ${e.text}`).join('\r\n');
+        }
+        function telechargerLogs() {
+            if (!hostLogs.length) { alert('Aucun log à télécharger.'); return; }
+            const blob = new Blob(['﻿' + construireTexteLogs()], { type: 'text/plain;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'logs_' + (liveSession.gameName || 'partie').replace(/[^\w-]/g, '_') + '_' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.txt';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
         }
         function hostPackScopeUI() {
             const sc = document.getElementById('host-pack-scope');
@@ -1515,6 +1724,10 @@
                 document.getElementById('multiplayerModal').style.display = 'block';
                 document.getElementById('multi-pseudo').value = appState.playerName;
                 document.getElementById('multi-game-name').value = appState.lastGameName || liveSession.gameName || '';
+                const tc = appState.turnConfig || {};
+                document.getElementById('turn-url').value = tc.urls || '';
+                document.getElementById('turn-user').value = tc.username || '';
+                document.getElementById('turn-pass').value = tc.credential || '';
             }
         }
 
@@ -1528,17 +1741,12 @@
             if (!html5QrcodeScanner) {
                 html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
                 html5QrcodeScanner.render((decodedText) => {
-                    let code = decodedText;
-                    if(code.includes('?join=')) code = code.split('?join=')[1].split('&')[0];
-                    code = decodeURIComponent(code);
-
-                    document.getElementById('join-code').value = code;
-
+                    document.getElementById('join-code').value = decodedText;
                     try { html5QrcodeScanner.clear(); } catch(e){}
                     html5QrcodeScanner = null;
                     document.getElementById('qr-reader').style.display = 'none';
-
-                    rejoindrePartieEnLigne(code);
+                    // Le lien complet est transmis : rejoindre en extrait le code ET le relais TURN
+                    rejoindrePartieEnLigne(decodedText);
                 }, () => {});
             }
         }
@@ -1582,7 +1790,8 @@
                 fromModal: true,
                 resume: resume,
                 players: resume ? (saved.players || []) : [],
-                sessionPacks: resume ? (saved.sessionPacks || []) : (liveSession.sessionPacks || [])
+                sessionPacks: resume ? (saved.sessionPacks || []) : (liveSession.sessionPacks || []),
+                teams: resume ? saved.teams : null
             });
         }
 
@@ -1596,10 +1805,15 @@
             hostConns = {};
             playersData = {};
             if (opts.resume) {
-                // Les joueurs connus sont restaurés "hors ligne" en attendant leur reconnexion automatique
+                // Reprise : on restaure les équipes de la session et les joueurs connus ("hors ligne"
+                // en attendant leur reconnexion automatique)
+                if (Array.isArray(opts.teams) && opts.teams.length >= 2) appState.customTeams = opts.teams;
                 (opts.players || []).forEach((p, i) => {
                     if (p && p.name) playersData['off_' + i] = { id: null, name: p.name, teamId: p.teamId, isCoHost: !!p.isCoHost, offline: true };
                 });
+            } else {
+                // Nouvelle partie : on repart des deux équipes par défaut (Bleu / Rouge)
+                appState.customTeams = DEFAULT_TEAMS.map(t => ({...t}));
             }
 
             if (opts.fromModal) {
@@ -1611,7 +1825,7 @@
             const baseName = gameName.toUpperCase().replace(/[^A-Z0-9]/g, '');
             const peerId = baseName ? ('TM32-' + baseName) : ('TM32-' + Math.floor(1000 + Math.random() * 9000));
 
-            peer = new Peer(peerId, PEER_CONFIG);
+            peer = new Peer(peerId, getPeerConfig());
             attacherAutoReconnexionSignal(peer);
 
             peer.on('error', (err) => {
@@ -1644,7 +1858,11 @@
                 document.getElementById('host-connection-id').innerText = id;
                 document.getElementById('host-game-title').innerText = liveSession.gameName;
                 const baseUrl = (location.href || '').split('?')[0].split('#')[0];
-                const joinLink = `${baseUrl}?join=${encodeURIComponent(id)}`;
+                let joinLink = `${baseUrl}?join=${encodeURIComponent(id)}`;
+                // Le relais TURN de l'hôte est transmis aux joueurs dans le lien / QR code
+                if (appState.turnConfig && appState.turnConfig.urls) {
+                    joinLink += '&relay=' + encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(appState.turnConfig)))));
+                }
                 const inp = document.getElementById('host-join-link');
                 if (inp) inp.value = joinLink;
 
@@ -1675,7 +1893,7 @@
                     if (p) {
                         // On garde le joueur dans la partie : il repassera "en ligne" à sa reconnexion
                         p.offline = true;
-                        hostPushLog(`${p.name} déconnecté (en attente de reconnexion)`);
+                        hostPushLog(`${p.name} déconnecté (en attente de reconnexion)`, couleurJoueur(p));
                     }
                     updateDashboard();
                     hostPopulatePackTeamPlayerSelects();
@@ -1696,6 +1914,7 @@
 
             const rawInput = autoCode || document.getElementById('join-code').value.trim();
             if (!rawInput) { alert('Indiquez le nom de la partie ou scannez le QR code.'); return; }
+            appliquerRelayParam(rawInput); // récupère le relais TURN si le lien complet a été collé/scanné
 
             appState.isOrga = false;
             appState.isCoHost = false;
@@ -1726,7 +1945,7 @@
             lastHostCode = code;
             if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
 
-            peer = new Peer(PEER_CONFIG);
+            peer = new Peer(getPeerConfig());
             const p = peer;
             attacherAutoReconnexionSignal(p);
             let connectionTimeout = null;
@@ -1755,7 +1974,7 @@
                     if (token !== connectToken) return;
                     if (myConn && myConn.open) return;
                     if (!manuel) { programmerProchaineTentative(); return; }
-                    alert("Délai dépassé. L'Hôte est introuvable (vérifiez que la page du créateur est bien ouverte !) ou le réseau bloque la communication. Vérifiez que les deux appareils ont accès à Internet, puis réessayez.");
+                    alert("Délai dépassé : la liaison avec l'Hôte n'a pas pu s'établir. Vérifiez que sa page est ouverte, puis lancez « TESTER LE RÉSEAU » dans le menu multijoueur : si TURN est ❌, l'hôte doit configurer un relais (🛠 RELAIS RÉSEAU) — il sera transmis automatiquement par son QR code.");
                     document.getElementById('multi-status').style.display = 'none';
                     isWaitingForTeamSelection = false;
                     const conn = myConn; myConn = null;
@@ -1916,7 +2135,7 @@
                     teamToAssign = (appState.customTeams[0] && appState.customTeams[0].id) || 'blue';
                 }
                 playersData[conn.peer] = { id: conn.peer, name: nom, teamId: teamToAssign, isCoHost: !!(ancien && ancien.isCoHost) };
-                hostPushLog(ancien ? `${nom} s'est reconnecté` : `${nom} a rejoint`);
+                hostPushLog(ancien ? `${nom} s'est reconnecté` : `${nom} a rejoint`, couleurJoueur(playersData[conn.peer]));
                 if (ancien && ancien.isCoHost) { try { conn.send({ type: 'CMD_ROLE', isCoHost: true }); } catch (e) {} }
                 broadcastFullState();
                 updateDashboard();
@@ -1927,15 +2146,30 @@
                 try { conn.send({ type: 'PONG' }); } catch (e) {}
                 return;
             }
+            if (data.type === 'CFG_PUSH') {
+                // Configuration envoyée par un co-admin : appliquée puis redistribuée à tous
+                const p = playersData[conn.peer];
+                if (!p || !p.isCoHost) return; // sécurité : réservé aux co-admins
+                if (data.mode) appState.mode = data.mode;
+                if (data.explosionEnabled !== undefined) appState.explosionEnabled = !!data.explosionEnabled;
+                if (data.deathRisk !== undefined) appState.deathRisk = !!data.deathRisk;
+                if (data.materiel) appState.materiel = data.materiel;
+                if (data.quantites) appState.quantites = data.quantites;
+                saveState();
+                hostPushLog(`${p.name} (co-admin) a modifié la configuration`, couleurJoueur(p));
+                broadcastFullState();
+                hostRefreshHostPanels();
+                return;
+            }
             if (data.type === 'DRAW_LOG') {
                 const p = playersData[conn.peer];
                 const n = p ? p.name : conn.peer;
-                hostPushLog(`${n} · tirage : ${data.titre || '?'} [${data.gravite || ''}] · ${data.src || ''}`);
+                hostPushLog(`${n} · tirage : ${data.titre || '?'} [${data.gravite || ''}] · ${data.src || ''}`, couleurJoueur(p));
                 return;
             }
             if (data.type === 'LEAVE') {
                 // Départ volontaire : on retire le joueur (pas d'attente de reconnexion)
-                hostPushLog(`${data.name || 'Joueur'} quitte la partie`);
+                hostPushLog(`${data.name || 'Joueur'} quitte la partie`, couleurJoueur(playersData[conn.peer]));
                 delete hostConns[conn.peer];
                 delete playersData[conn.peer];
                 updateDashboard();
@@ -2025,7 +2259,7 @@
             if (!p || !c) return;
             p.isCoHost = !p.isCoHost;
             try { c.send({ type: 'CMD_ROLE', isCoHost: p.isCoHost }); } catch (e) {}
-            hostPushLog(`${p.name} · co-admin : ${p.isCoHost ? 'oui' : 'non'}`);
+            hostPushLog(`${p.name} · co-admin : ${p.isCoHost ? 'oui' : 'non'}`, couleurJoueur(p));
             updateDashboard();
         }
         function cmdTeam(pid, tid) {
@@ -2038,6 +2272,7 @@
         function cmdKick(pid) {
             const c = hostConns[pid];
             const nom = (playersData[pid] && playersData[pid].name) || pid;
+            const coul = couleurJoueur(playersData[pid]);
             if (c) {
                 try { c.send({ type: 'CLOSE_SESSION', reason: 'Vous avez été exclu de la partie.' }); } catch (e) {}
                 // Laisse le temps au message de partir avant de couper la connexion
@@ -2045,7 +2280,7 @@
             }
             delete hostConns[pid];
             delete playersData[pid];
-            hostPushLog(`Retiré de la partie : ${nom}`);
+            hostPushLog(`Retiré de la partie : ${nom}`, coul);
             updateDashboard();
             hostPopulatePackTeamPlayerSelects();
         }
@@ -2069,6 +2304,9 @@
             appState.lastGameName = '';
             appState.isOrga = false;
             appState.isCoHost = false;
+            // Les équipes ajoutées pendant la session ne survivent pas à la clôture
+            appState.customTeams = DEFAULT_TEAMS.map(t => ({...t}));
+            appState.playerTeamId = appState.customTeams[0].id;
             hostResumeRetries = 0;
             hostResumeAlertShown = false;
             localStorage.removeItem(HOST_SESSION_KEY); // la session ne sera plus reprise au prochain lancement
