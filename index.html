@@ -157,6 +157,14 @@
         .form-label { display: block; font-size: 0.72em; color: #888; text-transform: uppercase; letter-spacing: 1px; margin: 12px 0 4px 2px; font-weight: bold; }
         .form-label:first-child { margin-top: 0; }
 
+        /* --- SILHOUETTE (MODE EXTRÊME) --- */
+        /* Zones invisibles posées sur l'image silhouette.png ; elles s'illuminent au survol/toucher */
+        .sil-zone { fill: rgba(211,47,47,0); cursor: pointer; transition: fill 0.15s; }
+        .sil-zone:hover, .sil-zone:active { fill: rgba(211,47,47,0.45); }
+        /* Repli si silhouette.png est absente : les zones redeviennent visibles */
+        #sil-svg.sil-nophoto .sil-zone { fill: #2b2b2b; stroke: #777; stroke-width: 2; }
+        #sil-svg.sil-nophoto .sil-zone:hover, #sil-svg.sil-nophoto .sil-zone:active { fill: var(--accent-red); }
+
         /* --- MODALS --- */
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); backdrop-filter: blur(5px); }
         .modal-content { background-color: #222; color: #eee; margin: 15% auto; padding: 20px; border-radius: 8px; width: 85%; max-width: 400px; border: 1px solid #444; max-height: 80vh; overflow-y: auto;}
@@ -201,6 +209,28 @@
         <div style="margin-top:40px; font-size:0.9em; color:#888; text-transform:uppercase; letter-spacing:2px;">Analyse en cours...</div>
     </div>
 
+    <div id="screen-silhouette" class="flex-center">
+        <div style="font-size:1.15em; font-weight:800; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; color:var(--accent-red);">Zone touchée ?</div>
+        <div style="font-size:0.8em; color:#888; margin-bottom:12px;">Touchez la partie du corps atteinte<br><span style="font-size:0.9em;">(vue en miroir : son bras droit est à votre gauche)</span></div>
+        <!-- Image anatomique + zones cliquables en surimpression (effet miroir : gauche écran = côté droit du blessé) -->
+        <div id="sil-wrap" style="position:relative; width:min(225px, 56vw); aspect-ratio: 474 / 800;">
+            <!-- invert(1) : le dessin (traits noirs, fond transparent) devient traits blancs sur le fond sombre.
+                 Le cadre adopte les proportions réelles de l'image pour ne jamais la déformer. -->
+            <img id="sil-img" src="silhouette.png" alt="Silhouette" style="position:absolute; inset:0; width:100%; height:100%; filter: invert(1) drop-shadow(0 0 5px rgba(255,255,255,0.25));"
+                 onload="if(this.naturalWidth) document.getElementById('sil-wrap').style.aspectRatio = this.naturalWidth + ' / ' + this.naturalHeight;"
+                 onerror="this.style.display='none'; document.getElementById('sil-svg').classList.add('sil-nophoto');">
+            <svg id="sil-svg" viewBox="0 0 474 800" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%;" xmlns="http://www.w3.org/2000/svg">
+                <polygon class="sil-zone" points="165,112 309,112 346,155 336,300 318,432 156,432 138,300 128,155" onclick="zoneChoisie('torse')"><title>Torse</title></polygon>
+                <circle class="sil-zone" cx="237" cy="60" r="56" onclick="zoneChoisie('tete')"><title>Tête</title></circle>
+                <polygon class="sil-zone" points="150,148 110,166 82,278 40,390 24,452 86,486 126,420 146,300 154,184" onclick="zoneChoisie('membre','Bras Droit')"><title>Bras Droit</title></polygon>
+                <polygon class="sil-zone" points="324,148 364,166 392,278 434,390 450,452 388,486 348,420 328,300 320,184" onclick="zoneChoisie('membre','Bras Gauche')"><title>Bras Gauche</title></polygon>
+                <polygon class="sil-zone" points="152,432 237,432 237,796 150,796 142,600" onclick="zoneChoisie('membre','Jambe Droite')"><title>Jambe Droite</title></polygon>
+                <polygon class="sil-zone" points="237,432 322,432 332,600 324,796 237,796" onclick="zoneChoisie('membre','Jambe Gauche')"><title>Jambe Gauche</title></polygon>
+            </svg>
+        </div>
+        <button class="btn-action" style="background:#333; max-width:225px;" onclick="annulerTirageExtreme()">ANNULER</button>
+    </div>
+
     <div id="screen-result" class="screen" style="padding:0; overflow:hidden;">
         <div class="result-wrapper">
             <div id="ui-card" class="tac-card">
@@ -214,6 +244,7 @@
                 <div class="card-title" id="txt-titre">Titre</div>
                 <span class="card-label">ZONE</span>
                 <div class="card-desc" id="txt-zone">Bras</div>
+                <div id="protection-indicator" style="display:none; margin-top:10px; font-size:0.85em; font-weight:bold; color:#ffb74d; border:1px dashed #f57c00; border-radius:6px; padding:6px 10px;"></div>
                 <span class="card-label">PROTOCOLE</span>
                 <div id="txt-soins" class="card-box">Soins...</div>
                 <div id="danger-zone-container">
@@ -346,7 +377,8 @@
         <div class="box">
             <label class="form-label">Nom du paquet</label>
             <input type="text" id="deck-name" class="form-input" placeholder="Ex : Blessures chimiques">
-            <div class="check-item" style="border-bottom:none; padding-bottom:0;"><span>Afficher sur l'accueil</span><input type="checkbox" id="deck-show-home" style="transform:scale(1.3);"></div>
+            <div class="check-item"><span>Afficher sur l'accueil</span><input type="checkbox" id="deck-show-home" style="transform:scale(1.3);"></div>
+            <div class="check-item" style="border-bottom:none; padding-bottom:0;"><span>Mode extrême <span style="color:#888; font-size:0.8em;">(silhouette : zone touchée + protection)</span></span><input type="checkbox" id="deck-extreme" style="transform:scale(1.3);"></div>
         </div>
         <div class="box">
             <h3>CARTES (<span id="deck-cards-count">0</span>)</h3>
@@ -449,6 +481,16 @@
                 <select id="modal-join-team" class="form-input"></select>
             </div>
             <button type="button" class="btn-action btn-join" style="margin-top:20px;" onclick="validerEquipeRejoindre()">REJOINDRE LA PARTIE</button>
+        </div>
+    </div>
+
+    <div id="protectionModal" class="modal" style="z-index: 230;">
+        <div class="modal-content" style="border: 2px solid var(--accent-red); text-align:center;">
+            <h3 id="protection-question" style="color:var(--accent-red); margin-top:0;">Protection balistique portée ?</h3>
+            <div style="display:flex; gap:10px;">
+                <button type="button" class="btn-action btn-create" onclick="repondreProtection(true)">🛡 OUI</button>
+                <button type="button" class="btn-action" style="background:#d32f2f;" onclick="repondreProtection(false)">NON</button>
+            </div>
         </div>
     </div>
 
@@ -586,6 +628,8 @@
         let deckShareMode = 'export';
         let adminHostId = '';           // infos du QG reçues par un co-admin (miroir de l'hôte)
         let adminJoinLink = '';
+        let extremeCtx = null;          // tirage en cours du mode Extrême (zone cliquée, protection)
+        let marchToken = 0;             // invalide l'animation MARCH d'un tirage abandonné/remplacé
 
         /* --- HELPERS --- */
         function escapeHtml(s) {
@@ -617,6 +661,15 @@
             return `${srcKey}_${(card && card.titre) ? card.titre : 'carte'}`;
         }
 
+        // Le mode Extrême utilise (pour l'instant) les cartes du mode Avancé
+        function reglesBaseDuMode(mode) {
+            return DB_REGLES[mode === 'extreme' ? 'avance' : mode] || [];
+        }
+        // Les cartes Explosion sont disponibles dans les modes Avancé et Extrême
+        function modeAvecExplosion() {
+            return appState.mode === 'avance' || appState.mode === 'extreme';
+        }
+
         function getRulesArrayForDrawSource(src) {
             if (DB_REGLES[src]) return DB_REGLES[src].slice(); // classique, avance, explosion
             if (src === 'bille') {
@@ -624,7 +677,7 @@
                     const deck = appState.customDecks.find(d => d.id === appState.mode);
                     return (deck && deck.cards) ? deck.cards.slice() : [];
                 }
-                return (DB_REGLES[appState.mode] || []).slice();
+                return reglesBaseDuMode(appState.mode).slice();
             }
             const deck = appState.customDecks.find(d => d.id === src);
             return (deck && deck.cards) ? deck.cards.slice() : [];
@@ -637,9 +690,9 @@
                 const cd = appState.customDecks.find(d => d.id === appState.mode);
                 rules = (cd && cd.cards) ? cd.cards : [];
             } else {
-                rules = DB_REGLES[appState.mode] || [];
+                rules = reglesBaseDuMode(appState.mode);
             }
-            if (appState.mode === 'avance' && appState.explosionEnabled) {
+            if (modeAvecExplosion() && appState.explosionEnabled) {
                 rules = [...rules, ...(DB_REGLES.explosion || [])];
             }
             return rules;
@@ -660,8 +713,8 @@
                 (cd && cd.cards ? cd.cards : []).forEach(r => rows.push({ r, rid: ridForMode(r), sec: 'Paquet perso' }));
                 return rows;
             }
-            (DB_REGLES[appState.mode] || []).forEach(r => rows.push({ r, rid: ridForMode(r), sec: 'Mode' }));
-            if (appState.mode === 'avance' && appState.explosionEnabled) {
+            reglesBaseDuMode(appState.mode).forEach(r => rows.push({ r, rid: ridForMode(r), sec: 'Mode' }));
+            if (modeAvecExplosion() && appState.explosionEnabled) {
                 (DB_REGLES.explosion || []).forEach(r => rows.push({ r, rid: r.id, sec: 'Explosion' }));
             }
             return rows;
@@ -697,8 +750,8 @@
                 const d = appState.customDecks.find(x => x.id === appState.mode);
                 return d ? d.name : 'Perso';
             }
-            let s = appState.mode;
-            if (appState.mode === 'avance' && appState.explosionEnabled) s += ' + explosion';
+            let s = appState.mode === 'extreme' ? 'extrême' : appState.mode;
+            if (modeAvecExplosion() && appState.explosionEnabled) s += ' + explosion';
             return s;
         }
 
@@ -964,44 +1017,53 @@
         function lancerSequenceTirage(src) {
             lastDrawSrc = src;
             initAudio();
+            if (tirageEstExtreme(src)) { demarrerTirageExtreme(src); return; }
             const card = preparerTirage(src);
             if(!card) return;
+            lancerAnimationMarch(card, null);
+        }
+
+        function lancerAnimationMarch(card, ctxExtreme) {
+            const token = ++marchToken;
             showScreen('screen-march');
             const march = document.querySelector('.march-list');
             march.innerHTML = march.innerHTML; // recrée les <li> pour relancer l'animation CSS
             setTimeout(() => {
-                // Si l'utilisateur a navigué ailleurs pendant l'animation, on n'affiche pas le résultat
-                if (document.getElementById('screen-march').classList.contains('active')) afficherResultat(card);
+                // N'affiche le résultat que si ce tirage est toujours le tirage courant
+                // et que l'utilisateur n'a pas navigué ailleurs pendant l'animation
+                if (token !== marchToken) return;
+                if (document.getElementById('screen-march').classList.contains('active')) afficherResultat(card, ctxExtreme);
             }, 4000);
         }
 
-        function preparerTirage(src) {
-            let rules = [];
-            let drawSrcForQty = src;
-            const isSessionPack = String(src).startsWith('sp_');
-
-            if (isSessionPack) {
+        // Récupère les règles et la clé de quantités pour une source de tirage (avec alertes)
+        function collecterReglesTirage(src) {
+            if (String(src).startsWith('sp_')) {
                 const sp = (clientSessionMeta.sessionPacks || []).find(p => p.id === src);
                 if (!sp) { alert("Ce paquet n'est plus disponible."); return null; }
-                rules = sp.cards || [];
-                drawSrcForQty = sp.src;
-            } else {
-                rules = getRulesArrayForDrawSource(src);
-                if (!rules.length) {
-                    alert("Aucun paquet de cartes pour ce mode. Vérifiez les réglages ou le paquet personnalisé.");
-                    return null;
-                }
+                return { rules: sp.cards || [], drawSrcForQty: sp.src, isSessionPack: true };
             }
+            const rules = getRulesArrayForDrawSource(src);
+            if (!rules.length) {
+                alert("Aucun paquet de cartes pour ce mode. Vérifiez les réglages ou le paquet personnalisé.");
+                return null;
+            }
+            return { rules, drawSrcForQty: src, isSessionPack: false };
+        }
+
+        function preparerTirage(src) {
+            const col = collecterReglesTirage(src);
+            if (!col) return null;
 
             const pool = [];
-            rules.forEach(r => {
-                const q = qtyFor(getCardQtyKey(drawSrcForQty, r));
+            col.rules.forEach(r => {
+                const q = qtyFor(getCardQtyKey(col.drawSrcForQty, r));
                 if (q > 0 && cardMatos(r).every(hasMateriel)) {
                     for (let i = 0; i < q; i++) pool.push(r);
                 }
             });
 
-            if (!isSessionPack) appendSessionPackPool(src, pool);
+            if (!col.isSessionPack) appendSessionPackPool(src, pool);
 
             if (!pool.length) {
                 alert("Aucune carte disponible. Vérifiez que vous avez le matériel requis (Réglages).");
@@ -1010,7 +1072,93 @@
             return pool[Math.floor(Math.random()*pool.length)];
         }
 
-        function afficherResultat(card) {
+        /* --- MODE EXTRÊME (silhouette : zone touchée + protection) --- */
+        // L'explosion, elle, reste un tirage classique sans silhouette.
+        function tirageEstExtreme(src) {
+            if (src === 'explosion') return false;
+            if (String(src).startsWith('sp_')) {
+                const sp = (clientSessionMeta.sessionPacks || []).find(p => p.id === src);
+                if (!sp) return false;
+                if (sp.extremeMode !== undefined) return !!sp.extremeMode;
+                const d = appState.customDecks.find(x => x.id === sp.src);
+                return !!(d && d.extremeMode);
+            }
+            if (src === 'bille') {
+                if (appState.mode === 'extreme') return true;
+                if (appState.mode.startsWith('d_')) {
+                    const d = appState.customDecks.find(x => x.id === appState.mode);
+                    return !!(d && d.extremeMode);
+                }
+                return false;
+            }
+            const d = appState.customDecks.find(x => x.id === src);
+            return !!(d && d.extremeMode);
+        }
+
+        function carteCorrespondZone(r, zone) {
+            if (r.typeZone === 'membre') return zone === 'membre';
+            const z = (r.zone || '').toLowerCase();
+            if (zone === 'tete') return z.includes('tête') || z.includes('tete') || z.includes('casque');
+            if (zone === 'torse') return z.includes('torse') || z.includes('corps') || z.includes('buste') || z.includes('gilet');
+            return z.includes('bras') || z.includes('jambe') || z.includes('membre');
+        }
+
+        function demarrerTirageExtreme(src) {
+            const col = collecterReglesTirage(src);
+            if (!col) return;
+            extremeCtx = { rules: col.rules, drawSrcForQty: col.drawSrcForQty, zone: null, membre: null, protection: null };
+            showScreen('screen-silhouette');
+        }
+
+        function zoneChoisie(zone, membreLabel) {
+            if (!extremeCtx) return;
+            extremeCtx.zone = zone;                    // 'tete' | 'torse' | 'membre'
+            extremeCtx.membre = membreLabel || null;   // 'Bras Gauche', 'Jambe Droite'...
+            if (zone === 'tete' || zone === 'torse') {
+                document.getElementById('protection-question').innerText =
+                    zone === 'tete' ? 'Casque balistique porté ?' : 'Gilet pare-balles porté ?';
+                document.getElementById('protectionModal').style.display = 'block';
+            } else {
+                finaliserTirageExtreme();
+            }
+        }
+
+        function repondreProtection(oui) {
+            document.getElementById('protectionModal').style.display = 'none';
+            if (!extremeCtx) return;
+            extremeCtx.protection = oui;
+            finaliserTirageExtreme();
+        }
+
+        function finaliserTirageExtreme() {
+            const ctx = extremeCtx;
+            extremeCtx = null;
+            if (!ctx) return;
+            const pool = [];
+            ctx.rules.forEach(r => {
+                if (!carteCorrespondZone(r, ctx.zone)) return;
+                const q = qtyFor(getCardQtyKey(ctx.drawSrcForQty, r));
+                if (q > 0 && cardMatos(r).every(hasMateriel)) {
+                    for (let i = 0; i < q; i++) pool.push(r);
+                }
+            });
+            if (!pool.length) {
+                alert('Aucune carte disponible pour cette zone (quantités à 0 ou matériel manquant).');
+                retourAccueil();
+                return;
+            }
+            const card = pool[Math.floor(Math.random()*pool.length)];
+            const zoneLabel = ctx.zone === 'tete' ? 'Tête' : (ctx.zone === 'torse' ? 'Torse' : ctx.membre);
+            lancerAnimationMarch(card, { zoneLabel, membre: ctx.membre, protection: ctx.protection });
+        }
+
+        function annulerTirageExtreme() {
+            extremeCtx = null;
+            document.getElementById('protectionModal').style.display = 'none';
+            retourAccueil();
+        }
+
+        function afficherResultat(card, ctxExtreme) {
             const col = getColor(card.gravite);
             document.getElementById('badge-gravite').innerText = card.gravite;
             document.getElementById('badge-gravite').style.backgroundColor = col;
@@ -1020,12 +1168,23 @@
             document.getElementById('btn-card').innerText = "Nouveau Diagnostic";
             document.getElementById('txt-titre').innerText = card.titre;
 
-            let z = card.zone; if(card.typeZone==='membre') z = MEMBRES[Math.floor(Math.random()*4)];
+            // En mode Extrême, la zone affichée est celle cliquée sur la silhouette
+            let z = card.zone;
+            if (ctxExtreme && ctxExtreme.zoneLabel) z = ctxExtreme.zoneLabel;
+            else if (card.typeZone === 'membre') z = MEMBRES[Math.floor(Math.random()*4)];
             document.getElementById('txt-zone').innerText = z;
+
+            const protEl = document.getElementById('protection-indicator');
+            if (ctxExtreme && ctxExtreme.protection !== null && ctxExtreme.protection !== undefined) {
+                protEl.style.display = 'block';
+                protEl.innerText = '🛡 Protection balistique portée : ' + (ctxExtreme.protection ? 'OUI' : 'NON');
+            } else {
+                protEl.style.display = 'none';
+            }
 
             let effetAffiche = card.effet || '';
             if (effetAffiche.includes('[MEMBRE_ALEATOIRE]')) {
-                effetAffiche = effetAffiche.split('[MEMBRE_ALEATOIRE]').join(MEMBRES[Math.floor(Math.random()*4)]);
+                effetAffiche = effetAffiche.split('[MEMBRE_ALEATOIRE]').join((ctxExtreme && ctxExtreme.membre) || MEMBRES[Math.floor(Math.random()*4)]);
             }
             document.getElementById('txt-soins').innerText = effetAffiche;
 
@@ -1112,7 +1271,7 @@
             document.getElementById('settings-pseudo').value = appState.playerName || '';
 
             const s = document.getElementById('select-mode');
-            s.innerHTML = `<option value="classique">CLASSIQUE</option><option value="avance">AVANCÉ</option>`;
+            s.innerHTML = `<option value="classique">CLASSIQUE</option><option value="avance">AVANCÉ</option><option value="extreme">EXTRÊME (silhouette)</option>`;
             appState.customDecks.forEach(d => s.innerHTML += `<option value="${escapeHtml(d.id)}">${escapeHtml(d.name)} (Custom)</option>`);
             if (![...s.options].some(o => o.value === appState.mode)) appState.mode = 'classique';
             s.value = appState.mode;
@@ -1160,7 +1319,7 @@
             document.getElementById('liste-materiel').innerHTML = matosHtml ||
                 "<div style='color:#666; font-style:italic; padding:10px;'>Aucun matériel requis pour ce mode ou cette sélection.</div>";
 
-            document.getElementById('box-explosion-opt').style.display = (appState.mode==='avance') ? 'block' : 'none';
+            document.getElementById('box-explosion-opt').style.display = modeAvecExplosion() ? 'block' : 'none';
             document.getElementById('chk-explosion').checked = appState.explosionEnabled;
 
             // Total du paquet auquel appartient chaque carte, pour calculer sa probabilité de
@@ -1194,12 +1353,12 @@
                 const cd = appState.customDecks.find(d => d.id === appState.mode);
                 baseRules = (cd && cd.cards) ? cd.cards : [];
             } else {
-                baseRules = DB_REGLES[appState.mode] || [];
+                baseRules = reglesBaseDuMode(appState.mode);
             }
 
             const totalBase = poolTotal(baseRules);
             let rulesHtml = baseRules.map(r => renderRow(r, totalBase)).join('');
-            if (appState.mode === 'avance' && appState.explosionEnabled) {
+            if (modeAvecExplosion() && appState.explosionEnabled) {
                 const totalExplosion = poolTotal(DB_REGLES.explosion);
                 rulesHtml += `<div class="separator">💥 PACK EXPLOSION</div>`;
                 rulesHtml += DB_REGLES.explosion.map(r => renderRow(r, totalExplosion)).join('');
@@ -1289,6 +1448,7 @@
                 const pills = Object.entries(counts).map(([g, n]) =>
                     `<span class="grav-pill" style="background:${getColor(g)}">${n} ${escapeHtml(g)}</span>`).join('');
                 const homeBadge = d.showOnHome ? '<span class="deck-badge home">Sur l\'accueil</span>' : '<span class="deck-badge">Masqué</span>';
+                const extremeBadge = d.extremeMode ? '<span class="deck-badge" style="border:1px solid var(--accent-red); background:rgba(211,47,47,0.2); color:#ef9a9a;">Extrême</span>' : '';
                 return `<div class="deck-card" onclick="editDeck(${jsAttr(d.id)})">
                     <div class="deck-card-head">
                         <span class="deck-card-title">${escapeHtml(d.name)}</span>
@@ -1297,7 +1457,7 @@
                             <button type="button" class="header-btn" onclick="event.stopPropagation(); editDeck(${jsAttr(d.id)})">✏️</button>
                         </span>
                     </div>
-                    <div class="deck-card-meta"><span>${cards.length} carte${cards.length > 1 ? 's' : ''}</span>${homeBadge}</div>
+                    <div class="deck-card-meta"><span>${cards.length} carte${cards.length > 1 ? 's' : ''}</span>${homeBadge}${extremeBadge}</div>
                     ${pills ? `<div class="grav-pills">${pills}</div>` : ''}
                 </div>`;
             }).join('');
@@ -1309,6 +1469,7 @@
             const rows = [
                 { id: 'classique', label: 'Mode : Classique' },
                 { id: 'avance', label: 'Mode : Avancé' },
+                { id: 'extreme', label: 'Mode : Extrême (silhouette)' },
                 ...appState.customDecks.map(d => ({ id: d.id, label: 'Perso : ' + d.name, perso: true }))
             ];
             l.innerHTML = rows.map(r => {
@@ -1336,6 +1497,7 @@
             if (!d) { retourApresEditionDeck(); return; }
             document.getElementById('deck-name').value = d.name;
             document.getElementById('deck-show-home').checked = !!d.showOnHome;
+            document.getElementById('deck-extreme').checked = !!d.extremeMode;
             renderCardsList(d);
             showScreen('screen-deck-edit');
         }
@@ -1373,7 +1535,7 @@
 
         /* --- PARTAGE DE PAQUETS (export / import par code) --- */
         function encoderPaquet(d) {
-            const payload = { v: 1, name: d.name, cards: cloneCards(d.cards), materials: (d.materials || []).slice() };
+            const payload = { v: 1, name: d.name, cards: cloneCards(d.cards), materials: (d.materials || []).slice(), extremeMode: !!d.extremeMode };
             return 'TMDECK1.' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
         }
         function decoderPaquet(code) {
@@ -1418,7 +1580,7 @@
             }
             const p = decoderPaquet(ta.value);
             if (!p) { alert('Code invalide ou incomplet. Vérifiez qu\'il a été copié en entier.'); return; }
-            const d = { id: 'd_' + Date.now(), name: p.name || 'Paquet importé', showOnHome: true, cards: p.cards, materials: Array.isArray(p.materials) ? p.materials : [] };
+            const d = { id: 'd_' + Date.now(), name: p.name || 'Paquet importé', showOnHome: true, cards: p.cards, materials: Array.isArray(p.materials) ? p.materials : [], extremeMode: !!p.extremeMode };
             appState.customDecks.push(d);
             initDefaults(); // quantités par défaut + disponibilité du matériel importé
             saveState();
@@ -1432,6 +1594,7 @@
             if (!d) { retourApresEditionDeck(); return; }
             d.name = document.getElementById('deck-name').value.trim() || 'Paquet sans nom';
             d.showOnHome = document.getElementById('deck-show-home').checked;
+            d.extremeMode = document.getElementById('deck-extreme').checked;
             saveState();
 
             if (appState.isOrga) {
@@ -1693,7 +1856,8 @@
             const cards = cloneCards(getRulesArrayForDrawSource(src));
             if (!cards.length) { alert('Ce paquet est vide pour la configuration actuelle.'); return; }
             const label = libellePaquetSource(src);
-            const pack = { id: 'sp_' + Date.now(), src, scope, cards, teamId: teamId || null, peerId: peerId || null, label };
+            const deckSrc = appState.customDecks.find(x => x.id === src);
+            const pack = { id: 'sp_' + Date.now(), src, scope, cards, teamId: teamId || null, peerId: peerId || null, label, extremeMode: !!(deckSrc && deckSrc.extremeMode) };
             liveSession.sessionPacks.push(pack);
             hostPushLog(`Paquet distribué : ${label} → ${scope}`);
             broadcastFullState();
@@ -2507,7 +2671,7 @@
                 `<div class="btn-container-shared"><div class="${ringClass}"></div><button class="btn-core-shared" onclick="lancerSequenceTirage(${jsAttr(src)})"><img src="${img}" class="${iconClass}" onerror="this.onerror=null;this.src='picto-blesse.png'"></button><div class="btn-label">${escapeHtml(label)}</div></div>`;
 
             let html = drawBtn('bille', 'BALISTIQUE', 'pulse-ring', 'picto-blesse.png', 'icon-wounded');
-            if (appState.mode === 'avance' && appState.explosionEnabled) {
+            if (modeAvecExplosion() && appState.explosionEnabled) {
                 html += drawBtn('explosion', 'EXPLOSION', 'pulse-ring-blast', 'btn-explosion.png', 'icon-blast');
             }
 
