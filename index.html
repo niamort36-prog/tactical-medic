@@ -904,6 +904,7 @@
         let deckShareMode = 'export';
         let adminHostId = '';           // infos du QG reçues par un co-admin (miroir de l'hôte)
         let adminJoinLink = '';
+        let monJeton = '';              // identité secrète de ce joueur dans la partie en cours
         let extremeCtx = null;          // tirage en cours du mode Extrême (zone cliquée, protection)
         let marchToken = 0;             // invalide l'animation MARCH d'un tirage abandonné/remplacé
 
@@ -1090,7 +1091,9 @@
         }
         function sauvegarderSessionHote() {
             if (!appState.isOrga || !liveSession.gameName) return;
-            const players = Object.values(playersData).map(p => ({ name: p.name, teamId: p.teamId, isCoHost: !!p.isCoHost }));
+            // Le jeton est conservé pour que chaque joueur retrouve son profil
+            // après un redémarrage de l'hôte. Il ne quitte jamais cet appareil.
+            const players = Object.values(playersData).map(p => ({ name: p.name, teamId: p.teamId, isCoHost: !!p.isCoHost, token: p.token || '' }));
             try {
                 localStorage.setItem(HOST_SESSION_KEY, JSON.stringify({ gameName: liveSession.gameName, sessionPacks: liveSession.sessionPacks || [], players, teams: appState.customTeams }));
             } catch(e) { console.warn(e); }
@@ -2248,6 +2251,9 @@
             const inp = document.getElementById('host-join-link');
             const payload = {
                 type: 'ADMIN_STATE',
+                // Champs recopiés un par un, volontairement : le jeton d'identité
+                // des joueurs ne doit JAMAIS partir vers un co-admin, sinon il
+                // pourrait se faire passer pour n'importe lequel d'entre eux.
                 players: Object.entries(playersData).map(([key, p]) => ({ key, id: p.id, name: p.name, teamId: p.teamId, isCoHost: !!p.isCoHost, offline: !!p.offline })),
                 logs: hostLogs.slice(0, 120),
                 hostId: peer ? peer.id : '',
@@ -2385,7 +2391,7 @@
                 // en attendant leur reconnexion automatique)
                 if (Array.isArray(opts.teams) && opts.teams.length >= 2) appState.customTeams = opts.teams;
                 (opts.players || []).forEach((p, i) => {
-                    if (p && p.name) playersData['off_' + i] = { id: null, name: p.name, teamId: p.teamId, isCoHost: !!p.isCoHost, offline: true };
+                    if (p && p.name) playersData['off_' + i] = { id: null, name: p.name, teamId: p.teamId, isCoHost: !!p.isCoHost, offline: true, token: p.token || '' };
                 });
             } else {
                 // Nouvelle partie : on repart des deux équipes par défaut (Bleu / Rouge)
@@ -2495,6 +2501,9 @@
             appState.isOrga = false;
             appState.isCoHost = false;
             isWaitingForTeamSelection = true;
+            // Entrer dans une partie par le menu = nouvelle identité : on ne
+            // reprend jamais le jeton d'une session précédente déjà quittée.
+            monJeton = nouveauJeton();
             clientReconnect.active = false;
             clearTimeout(clientReconnect.timer);
 
@@ -2640,7 +2649,11 @@
             isWaitingForTeamSelection = false;
             if (saved.name) appState.playerName = saved.name;
             if (saved.teamId) appState.playerTeamId = saved.teamId;
-            try { myConn.send({ type: 'JOIN', name: appState.playerName, teamId: appState.playerTeamId }); } catch(e){}
+            // Le jeton mémorisé est ce qui permet à l'hôte de rendre au joueur
+            // son équipe, son grade et ses paquets après une coupure.
+            monJeton = saved.token || monJeton || nouveauJeton();
+            if (saved.code && saved.token !== monJeton) { saved.token = monJeton; setClientSession(saved); }
+            try { myConn.send({ type: 'JOIN', name: appState.playerName, teamId: appState.playerTeamId, token: monJeton }); } catch(e){}
             document.getElementById('btn-multi-icon').classList.add('online');
             updateUI_Game();
         }
@@ -2680,9 +2693,12 @@
             appState.playerTeamId = teamId;
             isWaitingForTeamSelection = false;
 
-            try { myConn.send({ type: 'JOIN', name: appState.playerName, teamId: teamId }); } catch(e){}
-            // Mémorise l'identité de session pour la reconnexion automatique
-            setClientSession({ code: lastHostCode, name: appState.playerName, teamId: teamId });
+            if (!monJeton) monJeton = nouveauJeton();
+            try { myConn.send({ type: 'JOIN', name: appState.playerName, teamId: teamId, token: monJeton }); } catch(e){}
+            // Mémorise l'identité de session pour la reconnexion automatique.
+            // Le jeton reste sur cet appareil : il n'est jamais affiché ni
+            // transmis à un autre joueur.
+            setClientSession({ code: lastHostCode, name: appState.playerName, teamId: teamId, token: monJeton });
 
             document.getElementById('teamSelectionModal').style.display = 'none';
             document.getElementById('btn-multi-icon').classList.add('online');
@@ -2690,28 +2706,68 @@
             alert('Connecté à la partie !');
         }
 
+        /* --- IDENTITE DES JOUEURS --- */
+        // Un joueur est identifie par un jeton aleatoire tire sur son appareil,
+        // jamais par son pseudo. Avant, l'hote reconnaissait un joueur a son nom :
+        // taper le pseudo d'un co-admin suffisait pour heriter de son grade, de
+        // son equipe et de ses paquets attribues.
+        function nouveauJeton() {
+            try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+            try {
+                const a = new Uint8Array(16); crypto.getRandomValues(a);
+                return [...a].map(b => b.toString(16).padStart(2, '0')).join('');
+            } catch (e) {}
+            return 'j' + Date.now().toString(36) + Math.random().toString(36).slice(2, 14);
+        }
+        // Deux joueurs ne doivent pas apparaitre sous le meme nom dans le QG
+        function nomLibre(nom, exclureCle) {
+            let candidat = nom, n = 2;
+            while (Object.keys(playersData).some(k => k !== exclureCle && playersData[k].name === candidat)) {
+                candidat = `${nom} (${n++})`;
+            }
+            return candidat;
+        }
+
         function handleHostData(conn, data) {
             if (!data || !data.type) return;
             if (data.type === 'JOIN') {
-                const nom = data.name || 'Joueur';
-                // Reconnexion : si un joueur du même nom existe déjà (hors ligne ou ancienne
-                // connexion), on récupère son profil (équipe, grade) et ses paquets ciblés
+                const nomDemande = String(data.name || 'Joueur').slice(0, 32).trim() || 'Joueur';
+                const jeton = (typeof data.token === 'string' && data.token.length >= 8) ? data.token.slice(0, 100) : '';
+
+                // Reconnexion : reconnue au seul jeton. Un client sans jeton
+                // (version anterieure de l'application) entre comme un nouveau
+                // venu, sans aucun droit herite : c'est le comportement sur.
                 let ancien = null;
-                Object.keys(playersData).forEach(k => {
-                    if (k !== conn.peer && playersData[k].name === nom) {
+                if (jeton) {
+                    Object.keys(playersData).forEach(k => {
+                        if (k === conn.peer || playersData[k].token !== jeton) return;
                         ancien = playersData[k];
                         const oldConn = hostConns[k];
                         if (oldConn) { try { oldConn.close(); } catch (e) {} delete hostConns[k]; }
                         (liveSession.sessionPacks || []).forEach(sp => { if (sp.peerId && sp.peerId === ancien.id) sp.peerId = conn.peer; });
                         delete playersData[k];
-                    }
-                });
-                let teamToAssign = data.teamId || (ancien && ancien.teamId);
+                    });
+                }
+
+                // L'equipe memorisee prime sur celle annoncee par le client :
+                // un joueur ne se remet pas dans l'equipe de son choix en se
+                // reconnectant apres avoir ete deplace par l'orga.
+                let teamToAssign = (ancien && ancien.teamId) || data.teamId;
                 if (!appState.customTeams.find(t => t.id === teamToAssign)) {
                     teamToAssign = (appState.customTeams[0] && appState.customTeams[0].id) || 'blue';
                 }
-                playersData[conn.peer] = { id: conn.peer, name: nom, teamId: teamToAssign, isCoHost: !!(ancien && ancien.isCoHost) };
+                const nom = nomLibre(nomDemande, conn.peer);
+
+                playersData[conn.peer] = {
+                    id: conn.peer, name: nom, teamId: teamToAssign,
+                    isCoHost: !!(ancien && ancien.isCoHost),
+                    token: jeton
+                };
                 hostPushLog(ancien ? `${nom} s'est reconnecté` : `${nom} a rejoint`, couleurJoueur(playersData[conn.peer]));
+                if (nom !== nomDemande) {
+                    try { conn.send({ type: 'CMD_NAME', name: nom }); } catch (e) {}
+                    hostPushLog(`Pseudo « ${nomDemande} » déjà utilisé : ce joueur devient « ${nom} »`, couleurJoueur(playersData[conn.peer]));
+                }
                 if (ancien && ancien.isCoHost) { try { conn.send({ type: 'CMD_ROLE', isCoHost: true }); } catch (e) {} }
                 broadcastFullState();
                 updateDashboard();
@@ -2805,6 +2861,19 @@
                 return;
             }
             if (data.type === 'PONG') { clearTimeout(pongTimer); return; }
+            if (data.type === 'CMD_NAME') {
+                // Le pseudo demandé était déjà porté par un autre joueur :
+                // l'hôte en a attribué une variante, on s'aligne dessus.
+                const n = String(data.name || '').slice(0, 40);
+                if (!n || n === appState.playerName) return;
+                appState.playerName = n;
+                const cs = getClientSession();
+                if (cs) { cs.name = n; setClientSession(cs); }
+                saveState();
+                updateUI_Game();
+                alert('Ce pseudo était déjà pris dans la partie. Vous y apparaissez sous : ' + n);
+                return;
+            }
             if (data.type === 'CMD_TEAM') {
                 appState.playerTeamId = data.teamId;
                 const cs = getClientSession();

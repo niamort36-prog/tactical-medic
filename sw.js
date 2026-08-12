@@ -4,9 +4,10 @@
    sans aucun reseau (terrain sans couverture). Tout ce dont
    l'application a besoin est mis en cache a la premiere visite.
 
-   IMPORTANT : a chaque mise en ligne d'une nouvelle version,
-   incrementer CACHE_VERSION. C'est ce qui declenche le
-   remplacement des fichiers sur les telephones des joueurs.
+   index.html se met a jour tout seul (reseau d'abord). En revanche,
+   si un fichier de APP_SHELL change — bibliotheque de vendor/, image,
+   icone — il faut incrementer CACHE_VERSION : c'est la seule chose qui
+   remplace ces fichiers sur les telephones deja equipes.
    ========================================================= */
 
 const CACHE_VERSION = 'bse-medic-v1';
