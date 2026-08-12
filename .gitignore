@@ -1,0 +1,17 @@
+# Journaux et cache produits par le CLI Firebase
+firebase-debug.log*
+firebase-debug.*.log*
+.firebase/
+
+# Ne jamais versionner une cle de compte de service :
+# elle vit dans les secrets GitHub, pas dans le depot.
+*serviceAccount*.json
+*-firebase-adminsdk-*.json
+
+node_modules/
+
+# Documentation d'assistance deposee par le CLI Firebase (~100 fichiers sans
+# rapport avec l'application) : utile en local, inutile dans le depot.
+.agents/
+.claude/
+skills-lock.json
