@@ -9,8 +9,8 @@
     ],
     "headers": [
       {
-        "comment": "L'application tient dans index.html : jamais de cache, sinon les joueurs gardent l'ancienne version apres un deploiement.",
-        "source": "/index.html",
+        "comment": "L'application tient dans index.html : jamais de cache, sinon les joueurs gardent l'ancienne version apres un deploiement. La racine / et /index.html sont deux chemins distincts pour Firebase : les deux doivent etre couverts.",
+        "source": "@(/|/index.html)",
         "headers": [
           {
             "key": "Cache-Control",
