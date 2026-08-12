@@ -1048,9 +1048,14 @@
 
         function appendSessionPackPool(src, pool) {
             if (appState.isOrga || !peer) return;
+            // Un seul apport par source : si le même paquet a été attribué par
+            // deux règles qui se recouvrent, ses cartes ne comptent pas double
+            // dans le tirage (cela faussait les probabilités).
+            let dejaAjoute = false;
             (clientSessionMeta.sessionPacks || []).forEach(p => {
-                if (p.src !== src) return;
+                if (dejaAjoute || p.src !== src) return;
                 if (!sessionPackApplies(p, peer.id, appState.playerTeamId)) return;
+                dejaAjoute = true;
                 (p.cards || []).forEach(r => {
                     if (cardMatos(r).every(hasMateriel)) pool.push(r);
                 });
@@ -2196,18 +2201,50 @@
             if (scope === 'team' && !teamId) { alert('Choisissez une équipe.'); return; }
             if (scope === 'player' && !peerId) { alert('Choisissez un joueur (connecté).'); return; }
             if (!appState.isOrga) { envoyerAdminCmd({ action: 'addPack', src, scope, teamId, peerId }); return; }
-            ajouterPaquetSessionDirect(src, scope, teamId, peerId);
+            const refus = ajouterPaquetSessionDirect(src, scope, teamId, peerId);
+            if (refus) alert(refus);
         }
+        // Renvoie null si le paquet a été attribué, sinon la raison du refus.
+        // Un même paquet attribué deux fois à des cibles qui se recouvrent
+        // donnait au joueur deux boutons de tirage identiques.
         function ajouterPaquetSessionDirect(src, scope, teamId, peerId) {
-            const cards = cloneCards(getRulesArrayForDrawSource(src));
-            if (!cards.length) { alert('Ce paquet est vide pour la configuration actuelle.'); return; }
             const label = libellePaquetSource(src);
+            const dejaLa = liveSession.sessionPacks || [];
+
+            const memeCible = dejaLa.some(p => p.src === src && p.scope === scope &&
+                (p.teamId || null) === (teamId || null) && (p.peerId || null) === (peerId || null));
+            if (memeCible) return `« ${label} » est déjà attribué à cette cible.`;
+
+            if (scope !== 'all' && dejaLa.some(p => p.src === src && p.scope === 'all')) {
+                return `« ${label} » est déjà attribué à tout le monde : inutile de le redonner à une équipe ou à un joueur.`;
+            }
+
+            const cards = cloneCards(getRulesArrayForDrawSource(src));
+            if (!cards.length) return 'Ce paquet est vide pour la configuration actuelle.';
+
+            // « Tout le monde » remplace les attributions plus étroites du même
+            // paquet, pour que la liste reflète exactement ce que voient les joueurs.
+            if (scope === 'all') {
+                const retires = dejaLa.filter(p => p.src === src).length;
+                if (retires) {
+                    liveSession.sessionPacks = dejaLa.filter(p => p.src !== src);
+                    hostPushLog(`${label} : ${retires} attribution(s) ciblée(s) remplacée(s) par « tout le monde »`);
+                }
+            }
+
             const deckSrc = appState.customDecks.find(x => x.id === src);
             const pack = { id: 'sp_' + Date.now(), src, scope, cards, teamId: teamId || null, peerId: peerId || null, label, extremeMode: !!(deckSrc && deckSrc.extremeMode) };
             liveSession.sessionPacks.push(pack);
-            hostPushLog(`Paquet distribué : ${label} → ${scope}`);
+            hostPushLog(`Paquet distribué : ${label} → ${libelleDestination(pack)}`);
             broadcastFullState();
             renderHostSessionPacksList();
+            return null;
+        }
+        // Description lisible de la cible d'un paquet
+        function libelleDestination(p) {
+            if (p.scope === 'team') return 'Équipe ' + ((appState.customTeams.find(t => t.id === p.teamId) || {}).name || '?');
+            if (p.scope === 'player') return 'Joueur ' + ((playersData[p.peerId] || {}).name || p.peerId || '?');
+            return 'Tout le monde';
         }
         function hostRetirerPaquetSession(pid) {
             if (!appState.isOrga) { envoyerAdminCmd({ action: 'delPack', packId: pid }); return; }
@@ -2219,13 +2256,28 @@
             const el = document.getElementById('host-session-packs-list');
             if (!el) return;
             const packs = liveSession.sessionPacks || [];
-            if (!packs.length) { el.innerHTML = '<p style="color:#666;font-size:0.85em;">Aucun paquet supplémentaire.</p>'; return; }
-            el.innerHTML = packs.map(p => {
-                let dest = 'Tous';
-                if (p.scope === 'team') dest = 'Équipe : ' + ((appState.customTeams.find(t => t.id === p.teamId) || {}).name || '?');
-                if (p.scope === 'player') dest = 'Joueur : ' + ((playersData[p.peerId] || {}).name || p.peerId);
-                return `<div class="check-item"><div><strong>${escapeHtml(p.label)}</strong><br><span style="font-size:0.75em;color:#888;">${escapeHtml(p.src)} · ${escapeHtml(dest)}</span></div><button type="button" class="btn-mini" style="background:#b71c1c" onclick="hostRetirerPaquetSession(${jsAttr(p.id)})">×</button></div>`;
+            if (!packs.length) {
+                el.innerHTML = '<div class="builder-empty">Aucun paquet distribué.<br>Les joueurs n\'ont que le tirage Balistique.</div>';
+                return;
+            }
+            // Une ligne = un paquet et sa cible. L'identifiant technique de la
+            // source n'est plus affiché : il n'apportait rien et brouillait la lecture.
+            const lignes = packs.map(p => {
+                const equipe = p.scope === 'team' ? appState.customTeams.find(t => t.id === p.teamId) : null;
+                const couleur = equipe ? equipe.color : (p.scope === 'player' ? 'var(--accent-blue)' : 'var(--bse-gold)');
+                const nbCartes = (p.cards || []).length;
+                return `<div class="player-row" style="flex-direction:row; align-items:center; justify-content:space-between; gap:10px; border-left:3px solid ${couleur};">
+                    <div style="min-width:0;">
+                        <div class="deck-card-title">${escapeHtml(p.label)}</div>
+                        <div class="deck-card-meta">
+                            <span class="deck-badge" style="border-color:${couleur}; color:${couleur};">${escapeHtml(libelleDestination(p))}</span>
+                            <span>${nbCartes} carte${nbCartes > 1 ? 's' : ''}</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-mini" title="Retirer ce paquet" style="color:var(--accent-red)" onclick="hostRetirerPaquetSession(${jsAttr(p.id)})">${ico('trash')}</button>
+                </div>`;
             }).join('');
+            el.innerHTML = `<div class="separator" style="margin-top:4px;">${packs.length} paquet${packs.length > 1 ? 's' : ''} distribué${packs.length > 1 ? 's' : ''}</div>` + lignes;
         }
         function copierLienInvitation() {
             const el = document.getElementById('host-join-link');
@@ -2808,7 +2860,10 @@
                 else if (a === 'kick' && data.pid) cmdKick(data.pid);
                 else if (a === 'addTeam' && data.name) ajouterEquipeDirect(String(data.name).slice(0, 40), data.color);
                 else if (a === 'delTeam' && data.teamId) hostSupprimerEquipe(data.teamId);
-                else if (a === 'addPack' && data.src) ajouterPaquetSessionDirect(data.src, data.scope, data.teamId, data.peerId);
+                else if (a === 'addPack' && data.src) {
+                    const refus = ajouterPaquetSessionDirect(data.src, data.scope, data.teamId, data.peerId);
+                    if (refus) hostPushLog(`Ajout refusé (${admin.name}) : ${refus}`, couleurJoueur(admin));
+                }
                 else if (a === 'delPack' && data.packId) hostRetirerPaquetSession(data.packId);
                 else if (a === 'close') executerCloture(admin.name);
                 return;
@@ -3108,9 +3163,14 @@
                 // Connecté comme joueur : chaque paquet attribué par le QG devient un bouton de
                 // tirage portant son nom (Classique, Avancé, ou le nom du paquet perso).
                 // Les anciens paquets « bille »/« explosion » fusionnent dans les tirages existants.
+                // Un même paquet attribué via deux règles qui se recouvrent
+                // (« tout le monde » puis « équipe Bleu ») ne donne qu'un bouton.
+                const dejaProposes = new Set();
                 (clientSessionMeta.sessionPacks || []).forEach(p => {
                     if (p.src === 'bille' || p.src === 'explosion') return;
+                    if (dejaProposes.has(p.src)) return;
                     if (sessionPackApplies(p, peer ? peer.id : null, appState.playerTeamId)) {
+                        dejaProposes.add(p.src);
                         html += drawBtn(p.id, p.label, 'pulse-ring-custom', ico('cards', 'icon-custom'));
                     }
                 });
