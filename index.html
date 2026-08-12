@@ -5,9 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BSE Medical System — Frontline</title>
     <meta name="theme-color" content="#070707">
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <!-- Application installable, utilisable sans reseau -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="BSE Medic">
+
+    <!-- Bibliotheques embarquees dans le depot : sur le terrain il n'y a pas
+         toujours de reseau, et un CDN injoignable rendait l'application
+         entierement inutilisable, meme en solo. -->
+    <script src="vendor/peerjs.min.js"></script>
+    <script src="vendor/qrcode.min.js"></script>
+    <script src="vendor/html5-qrcode.min.js"></script>
 
     <style>
         /* =========================================================
@@ -765,11 +778,24 @@
 
     <script>
         /* --- AUDIO --- */
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        // L'AudioContext etait cree au chargement, au niveau global du script :
+        // si le navigateur le refusait, l'exception arretait TOUT le JavaScript
+        // et l'application s'affichait inerte. Il est desormais cree a la
+        // premiere interaction, et son indisponibilite n'empeche jamais de jouer.
+        let audioCtx = null;
         let beepInterval = null; let flatlineOsc = null;
-        function initAudio() { if (audioCtx.state === 'suspended') audioCtx.resume(); }
-        function playBeep() { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.type = 'sine'; osc.frequency.value = 900; gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15); osc.start(); osc.stop(audioCtx.currentTime + 0.15); }
-        function playFlatline() { if(flatlineOsc) return; const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.type = 'sine'; osc.frequency.value = 800; gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); flatlineOsc = osc; }
+        function getAudio() {
+            if (audioCtx) return audioCtx;
+            try {
+                const Ctor = window.AudioContext || window.webkitAudioContext;
+                if (!Ctor) return null;
+                audioCtx = new Ctor();
+            } catch (e) { console.warn('Audio indisponible sur cet appareil', e); audioCtx = null; }
+            return audioCtx;
+        }
+        function initAudio() { const c = getAudio(); if (c && c.state === 'suspended') c.resume(); }
+        function playBeep() { const c = getAudio(); if (!c) return; const osc = c.createOscillator(); const gain = c.createGain(); osc.connect(gain); gain.connect(c.destination); osc.type = 'sine'; osc.frequency.value = 900; gain.gain.setValueAtTime(0.1, c.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.15); osc.start(); osc.stop(c.currentTime + 0.15); }
+        function playFlatline() { const c = getAudio(); if (!c || flatlineOsc) return; const osc = c.createOscillator(); const gain = c.createGain(); osc.connect(gain); gain.connect(c.destination); osc.type = 'sine'; osc.frequency.value = 800; gain.gain.setValueAtTime(0.1, c.currentTime); osc.start(); flatlineOsc = osc; }
         function stopAllAudio() { if(beepInterval) { clearInterval(beepInterval); beepInterval = null; } if(flatlineOsc) { try { flatlineOsc.stop(); } catch(e){} flatlineOsc = null; } }
 
         /* --- DATA --- */
@@ -1157,6 +1183,17 @@
             el.innerHTML = lignes.map(l => `<div>${l}</div>`).join('') + `<div style="margin-top:8px;color:#ccc;">${verdict}</div>`;
         }
 
+        /* --- MISE EN CACHE HORS LIGNE --- */
+        // Le service worker met l'application entiere en cache a la premiere
+        // visite : elle s'ouvre ensuite sans reseau. Sans lui, un terrain sans
+        // couverture signifiait une application qui ne demarrait meme pas.
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .catch(e => console.warn('Mode hors ligne indisponible', e));
+            });
+        }
+
         /* --- INIT --- */
         window.onload = function() {
             const raw = localStorage.getItem(STORAGE_KEY);
@@ -1214,6 +1251,9 @@
         // liaison est toujours vivante et on relance la reprise/reconnexion si besoin.
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState !== 'visible') return;
+            // Le verrou d'ecran est perdu quand l'appareil se met en veille :
+            // on le reprend si une fiche de soin est toujours a l'ecran.
+            if (ecranCourant === 'screen-result') garderEcranAllume();
             const hs = getHostSession();
             if (appState.isOrga || hs) {
                 if (peer && !peer.destroyed) {
@@ -1257,10 +1297,54 @@
             });
         }
 
+        /* --- ECRAN ALLUME PENDANT LES SOINS --- */
+        // Le telephone se verrouillait pendant que le medic posait un garrot :
+        // le protocole disparaissait et le compte a rebours continuait sans
+        // qu'il le voie. On maintient l'ecran allume tant qu'une fiche est
+        // affichee, et on relache des le retour a l'accueil.
+        let wakeLock = null;
+        async function garderEcranAllume() {
+            if (!('wakeLock' in navigator) || wakeLock) return;
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+                wakeLock.addEventListener('release', () => { wakeLock = null; });
+            } catch (e) { /* refus (batterie faible, onglet en arriere-plan) : sans consequence */ }
+        }
+        function relacherEcran() {
+            if (!wakeLock) return;
+            try { wakeLock.release(); } catch (e) {}
+            wakeLock = null;
+        }
+
         /* --- NAVIGATION --- */
-        function showScreen(id) { document.querySelectorAll('.screen, .flex-center').forEach(e => e.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+        let ecranCourant = 'screen-game';
+        let etatHistoriquePousse = false;
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen, .flex-center').forEach(e => e.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            ecranCourant = id;
+            // Une seule entree d'historique pour toute la profondeur de
+            // navigation : le bouton retour d'Android ramene a l'accueil au
+            // lieu de quitter l'application.
+            if (id === 'screen-game') {
+                etatHistoriquePousse = false;
+            } else if (!etatHistoriquePousse) {
+                try { history.pushState({ bse: 1 }, ''); etatHistoriquePousse = true; } catch (e) {}
+            }
+        }
+
+        window.addEventListener('popstate', () => {
+            // Une modale ouverte se ferme en premier, comme partout ailleurs
+            const modale = [...document.querySelectorAll('.modal')].reverse()
+                .find(m => m.style.display === 'block');
+            if (modale) { modale.style.display = 'none'; return; }
+            if (ecranCourant !== 'screen-game') retourAccueil();
+        });
+
         function retourAccueil() {
             stopAllAudio(); clearInterval(timerLogic); isTimerActive=false;
+            relacherEcran();
             document.getElementById('death-overlay').style.display='none';
             document.getElementById('danger-zone-container').style.display='none';
             showScreen('screen-game');
@@ -1443,6 +1527,7 @@
             document.getElementById('txt-soins').innerText = effetAffiche;
 
             showScreen('screen-result');
+            garderEcranAllume();
 
             if (estEnPartieClient()) {
                 try {
@@ -2247,18 +2332,22 @@
             document.getElementById('qr-reader').style.display = 'none';
         }
 
+        // Le QR est genere sur l'appareil, jamais par un service exterieur :
+        // le lien d'invitation contient l'identifiant de partie et, le cas
+        // echeant, les identifiants du relais TURN. Il fonctionne donc aussi
+        // hors ligne, ce qui est le cas d'usage sur un terrain.
         function genererQR(link) {
             const wrap = document.getElementById('host-qr-wrap');
             if (!wrap) return;
-            const fallbackApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(link)}`;
-            const setImg = (url) => { wrap.innerHTML = `<img src="${url}" alt="QR Code" style="display:block; margin:0 auto; border-radius:4px;">`; };
-            if (typeof window.QRCode !== 'undefined') {
-                try {
-                    window.QRCode.toDataURL(link, { width: 180, margin: 2 }, (err, url) => setImg(err ? fallbackApiUrl : url));
-                } catch(e) { setImg(fallbackApiUrl); }
-            } else {
-                setImg(fallbackApiUrl);
-            }
+            const echec = (raison) => {
+                wrap.innerHTML = '<span style="color:#777;font-size:0.78em;line-height:1.5;">QR indisponible.<br>Partagez le lien ou le nom de la partie.</span>';
+                console.warn('QR non genere :', raison);
+            };
+            const setImg = (url) => { wrap.innerHTML = `<img src="${url}" alt="QR code d'invitation" style="display:block; margin:0 auto;">`; };
+            if (typeof window.QRCode === 'undefined') { echec('bibliotheque absente'); return; }
+            try {
+                window.QRCode.toDataURL(link, { width: 180, margin: 2 }, (err, url) => err ? echec(err) : setImg(url));
+            } catch (e) { echec(e); }
         }
 
         function creerPartieEnLigne() {
