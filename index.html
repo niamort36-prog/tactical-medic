@@ -2380,6 +2380,10 @@
         function demarrerHost(gameName, opts) {
             opts = opts || {};
             if (typeof Peer === 'undefined') return;
+            // En devenant hôte, les paquets présents deviennent les siens : on
+            // retire la marque héritée d'une partie précédente où l'on était
+            // simple joueur, sinon ils resteraient masqués sur son accueil.
+            (appState.customDecks || []).forEach(d => { delete d.fromHost; });
             liveSession.gameName = gameName;
             appState.lastGameName = gameName;
             liveSession.sessionPacks = Array.isArray(opts.sessionPacks) ? opts.sessionPacks : (liveSession.sessionPacks || []);
@@ -2830,7 +2834,11 @@
             if (data.type === 'SYNC_CONFIG') {
                 backupLocalConfig(); // avant le premier écrasement par la config de l'hôte
                 appState.mode = data.mode;
-                appState.customDecks = data.decks || [];
+                // L'hôte transmet TOUTE sa bibliothèque de paquets, car le mode
+                // joué peut pointer sur l'un d'eux. Ils sont marqués comme
+                // n'appartenant pas au joueur : seuls les paquets réellement
+                // attribués par le QG doivent apparaître sur son accueil.
+                appState.customDecks = (data.decks || []).map(d => Object.assign({}, d, { fromHost: true }));
                 if (data.teams && data.teams.length) appState.customTeams = data.teams;
                 if (data.explosionEnabled !== undefined) appState.explosionEnabled = data.explosionEnabled;
                 if (data.deathRisk !== undefined) appState.deathRisk = data.deathRisk;
@@ -3107,9 +3115,13 @@
                     }
                 });
             } else {
-                // Solo ou Hôte : ses propres paquets locaux
+                // Solo ou Hôte : uniquement ses PROPRES paquets. Ceux reçus de
+                // l'hôte (fromHost) ne remontent jamais ici, sinon toute la
+                // bibliothèque de l'orga apparaissait sur l'accueil du joueur
+                // dès que la liaison était coupée, au lieu des seuls paquets
+                // qui lui avaient été attribués.
                 appState.customDecks.forEach(d => {
-                    if (d.showOnHome) html += drawBtn(d.id, d.name, 'pulse-ring-custom', ico('cards', 'icon-custom'));
+                    if (d.showOnHome && !d.fromHost) html += drawBtn(d.id, d.name, 'pulse-ring-custom', ico('cards', 'icon-custom'));
                 });
             }
             document.getElementById('dynamic-buttons-container').innerHTML = html;
