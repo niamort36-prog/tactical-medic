@@ -479,6 +479,10 @@
                         <div class="card-desc" id="txt-zone">Bras</div>
                     </div>
                     <div id="protection-indicator" style="display:none; align-items:center; gap:7px; margin:-6px 0 14px; padding:7px 10px; font-size:0.8rem; font-weight:600; color:var(--bse-gold-light); border:1px solid var(--bse-gold); border-radius:var(--radius-s);"></div>
+                    <div id="bloc-bilan" class="card-field" style="display:none;">
+                        <span class="card-label">Bilan</span>
+                        <div id="txt-bilan" style="font-size:0.95rem; line-height:1.5; color:#ddd;"></div>
+                    </div>
                     <div class="card-field">
                         <span class="card-label">Protocole de soin</span>
                         <div id="txt-soins" class="card-box">Soins...</div>
@@ -847,6 +851,64 @@
                   },
                   matos: [] }
             ],
+            // MODE EXTRÊME — le tirage part de la zone touchée sur la silhouette.
+            // `cibles` dit à quelles zones une carte peut sortir : 'tete', 'torse',
+            // 'bras', 'jambe'. C'est ce qui permet de séparer bras et jambes, que
+            // le clic sur la silhouette renvoyait indistinctement comme « membre ».
+            // `description` est le bilan lu au blessé ; `effet` reste le protocole.
+            extreme: [
+                /* ---- TÊTE ---- */
+                { id: "x1", titre: "Impact sur casque", zone: "Tête", cibles: ["tete"], gravite: "Spécial",
+                  description: "Impact direct sur le casque lourd.", effet: "Repos 2 minutes", matos: [] },
+                { id: "x2", titre: "Éraflure au visage", zone: "Tête", cibles: ["tete"], gravite: "Légère",
+                  description: "Éraflure superficielle due à un éclat sur la joue ou le lobe de l'oreille.", effet: "Bandage", matos: ["Bandage"] },
+                { id: "x3", titre: "Plaie au front", zone: "Tête", cibles: ["tete"], gravite: "Grave",
+                  description: "Plaie ouverte et profonde au front.", effet: "Bandage + Morphine", matos: ["Bandage", "Morphine"] },
+                { id: "x4", titre: "Traumatisme crânien", zone: "Tête", cibles: ["tete"], gravite: "Critique",
+                  description: "Traumatisme crânien sévère.", effet: "Bandage + Épinéphrine + Morphine", matos: ["Bandage", "Épinéphrine", "Morphine"] },
+                { id: "x5", titre: "Tir à la tête", zone: "Tête", cibles: ["tete"], gravite: "DÉCÈS",
+                  description: "Tir direct à la tête (sans port du casque).", effet: "Respawn direct", matos: [] },
+
+                /* ---- TORSE ---- */
+                { id: "x6", titre: "Impact sur plaque", zone: "Torse", cibles: ["torse"], gravite: "Spécial",
+                  description: "Impact encaissé par la plaque balistique du porte-plaques.", effet: "Repos 1 minute", matos: [] },
+                { id: "x7", titre: "Éraflure au flanc", zone: "Torse", cibles: ["torse"], gravite: "Légère",
+                  description: "Éraflure sur le flanc, hors de la zone couverte par les plaques balistiques.", effet: "Bandage", matos: ["Bandage"] },
+                { id: "x8", titre: "Pneumothorax", zone: "Torse", cibles: ["torse"], gravite: "Grave",
+                  description: "Pneumothorax suite à une balle perforante latérale.", effet: "Pansement 3 côtés + Morphine", matos: ["Pansement 3 côtés", "Morphine"] },
+                { id: "x9", titre: "Côtes fracturées", zone: "Torse", cibles: ["torse"], gravite: "Grave",
+                  description: "Fracture de plusieurs côtes par impact lourd.", effet: "Bandage compressif + Morphine", matos: ["Bandage", "Morphine"] },
+                { id: "x10", titre: "Hémorragie interne", zone: "Torse", cibles: ["torse"], gravite: "Critique",
+                  description: "Blessure perforante à l'abdomen causant une importante hémorragie interne.", effet: "Bandage + Poche de transfusion + Épinéphrine", matos: ["Bandage", "Poche de transfusion", "Épinéphrine"] },
+                { id: "x11", titre: "Tir vital", zone: "Torse", cibles: ["torse"], gravite: "DÉCÈS",
+                  description: "Tir direct au niveau du cœur ou de la colonne vertébrale (sans port de plaques balistiques).", effet: "Respawn direct", matos: [] },
+
+                /* ---- BRAS (droit ou gauche) ---- */
+                { id: "x12", titre: "Balle dans l'avant-bras", zone: "Bras", cibles: ["bras"], gravite: "Légère",
+                  description: "Balle logée dans les tissus mous de l'avant-bras.", effet: "Bandage", matos: ["Bandage"] },
+                { id: "x13", titre: "Fracture de l'avant-bras", zone: "Bras", cibles: ["bras"], gravite: "Grave",
+                  description: "Fracture de l'os de l'avant-bras (radius / cubitus).", effet: "Attelle + Bandage", matos: ["Attelle", "Bandage"] },
+                { id: "x14", titre: "Éclats au bras", zone: "Bras", cibles: ["bras"], gravite: "Grave",
+                  description: "Multiples plaies par éclats de grenade sur le bras.", effet: "Bandage + Morphine", matos: ["Bandage", "Morphine"] },
+                { id: "x15", titre: "Artère brachiale", zone: "Bras", cibles: ["bras"], gravite: "Critique",
+                  description: "Sectionnement de l'artère brachiale.", effet: "Garrot + Bandage + Poche de transfusion", matos: ["Garrot", "Bandage", "Poche de transfusion"] },
+
+                /* ---- JAMBES (droite ou gauche) ---- */
+                { id: "x16", titre: "Balle au mollet", zone: "Jambe", cibles: ["jambe"], gravite: "Légère",
+                  description: "Balle logée dans le muscle du mollet.", effet: "Bandage", matos: ["Bandage"] },
+                { id: "x17", titre: "Fracture du fémur", zone: "Jambe", cibles: ["jambe"], gravite: "Grave",
+                  description: "Fracture du fémur.", effet: "Attelle + Bandage + Morphine", matos: ["Attelle", "Bandage", "Morphine"] },
+                { id: "x18", titre: "Fracture de la rotule", zone: "Jambe", cibles: ["jambe"], gravite: "Grave",
+                  description: "Fracture de la rotule du genou.", effet: "Attelle + Morphine", matos: ["Attelle", "Morphine"] },
+                { id: "x19", titre: "Artère fémorale", zone: "Jambe", cibles: ["jambe"], gravite: "Critique",
+                  description: "Sectionnement de l'artère fémorale.", effet: "Garrot + Poche de transfusion + Épinéphrine", matos: ["Garrot", "Poche de transfusion", "Épinéphrine"] },
+
+                /* ---- MULTI-ZONES (dégâts de zone / explosions) ---- */
+                { id: "x20", titre: "Criblage d'éclats", zone: "Jambes", cibles: ["jambe"], gravite: "Grave",
+                  description: "Criblage d'éclats de shrapnel sur l'ensemble des deux jambes.", effet: "2x Bandages + Morphine", matos: ["Bandage", "Morphine"] },
+                { id: "x21", titre: "Souffle d'explosion", zone: "Torse et bras", cibles: ["torse", "bras"], gravite: "Critique",
+                  description: "Traumatisme contondant lourd au torse et sectionnement artériel à un bras suite à une explosion à proximité.", effet: "Garrot + Pansement 3 côtés + Poche de transfusion + Épinéphrine", matos: ["Garrot", "Pansement 3 côtés", "Poche de transfusion", "Épinéphrine"] }
+            ],
             explosion: [
                 { id: "e1", titre: "DCD (Blast)", zone: "Tête ou Torse", zones: ["Tête", "Torse"], gravite: "DÉCÈS", effet: "Respawn direct", matos: [] },
                 { id: "e3", titre: "Inconscient", zone: "Torse", gravite: "Critique", effet: "Bandage + 30s Massage + Épi + Poche", matos: ["Bandage", "Épinéphrine", "Poche de transfusion"] },
@@ -966,9 +1028,9 @@
             return `${srcKey}_${(card && card.titre) ? card.titre : 'carte'}`;
         }
 
-        // Le mode Extrême utilise (pour l'instant) les cartes du mode Avancé
+        // Chaque mode a désormais son propre paquet, Extrême compris
         function reglesBaseDuMode(mode) {
-            return DB_REGLES[mode === 'extreme' ? 'avance' : mode] || [];
+            return DB_REGLES[mode] || [];
         }
         // Les cartes Explosion sont disponibles dans les modes Avancé et Extrême
         function modeAvecExplosion() {
@@ -1050,7 +1112,8 @@
                 html += `<div class="${hl}"><div class="preview-card-mini" style="border-left-color:${getColorTexte(r.gravite)}">`;
                 html += `<span style="font-size:0.65em;color:#888;">${escapeHtml(sec)}</span>`;
                 html += `<h4 style="color:${getColorTexte(r.gravite)};margin:4px 0 0 0;">${escapeHtml(r.gravite)}</h4>`;
-                html += `<p><strong>${escapeHtml(r.titre)}</strong></p>`;
+                html += `<p><strong>${escapeHtml(r.titre)}</strong>${r.zone ? ` <span style="font-size:0.8em;color:#888;">· ${escapeHtml(r.zone)}</span>` : ''}</p>`;
+                if (r.description) html += `<p style="font-size:0.82em;color:#bbb;font-style:italic;">${escapeHtml(r.description)}</p>`;
                 html += `<p style="font-size:0.85em;">${escapeHtml(effetPourAffichage(r.effet))}</p>`;
                 html += `<p style="font-size:0.75em;color:#888;">Matos: ${mats.length ? escapeHtml(mats.join(', ')) : '—'}</p>`;
                 html += '</div></div>';
@@ -1350,7 +1413,7 @@
             const allItems = [...DB_MATERIEL_BASE];
             (appState.customDecks || []).forEach(d => (d.materials || []).forEach(m => allItems.push(m)));
             allItems.forEach(m => { if(appState.materiel[m]===undefined) appState.materiel[m]=true; });
-            ["classique","avance","explosion"].forEach(m => {
+            ["classique","avance","extreme","explosion"].forEach(m => {
                 (DB_REGLES[m] || []).forEach(r => {
                     const rid = r.id || (m+"_"+r.titre);
                     if(appState.quantites[rid] === undefined) appState.quantites[rid]=2;
@@ -1499,7 +1562,17 @@
             return !!(d && d.extremeMode);
         }
 
-        function carteCorrespondZone(r, zone) {
+        // `membre` est le libellé cliqué sur la silhouette (« Bras Droit »,
+        // « Jambe Gauche »...). Il permet de distinguer bras et jambes, que la
+        // silhouette renvoie toutes deux comme la zone « membre ».
+        function carteCorrespondZone(r, zone, membre) {
+            // Ciblage explicite (paquet Extrême) : prioritaire et sans ambiguïté
+            if (Array.isArray(r.cibles) && r.cibles.length) {
+                const cible = zone === 'membre'
+                    ? (/jambe/i.test(membre || '') ? 'jambe' : 'bras')
+                    : zone;
+                return r.cibles.includes(cible);
+            }
             if (r.typeZone === 'membre') return zone === 'membre';
             const z = (r.zone || '').toLowerCase();
             if (zone === 'tete') return z.includes('tête') || z.includes('tete') || z.includes('casque');
@@ -1540,7 +1613,7 @@
             if (!ctx) return;
             const pool = [];
             ctx.rules.forEach(r => {
-                if (!carteCorrespondZone(r, ctx.zone)) return;
+                if (!carteCorrespondZone(r, ctx.zone, ctx.membre)) return;
                 const q = qtyFor(getCardQtyKey(ctx.drawSrcForQty, r));
                 if (q > 0 && cardMatos(r).every(hasMateriel)) {
                     for (let i = 0; i < q; i++) pool.push(r);
@@ -1590,6 +1663,15 @@
                 protEl.innerHTML = ico('shield') + '<span>Protection balistique portée : ' + (ctxExtreme.protection ? 'OUI' : 'NON') + '</span>';
             } else {
                 protEl.style.display = 'none';
+            }
+
+            // Bilan de la blessure, lu au blessé avant les soins
+            const blocBilan = document.getElementById('bloc-bilan');
+            if (card.description) {
+                document.getElementById('txt-bilan').innerText = card.description;
+                blocBilan.style.display = 'block';
+            } else {
+                blocBilan.style.display = 'none';
             }
 
             // Protocole propre à la zone retenue (casque / gilet), sinon le texte commun
