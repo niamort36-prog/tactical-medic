@@ -815,10 +815,11 @@
                 { id: "c9", titre: "Choc Gilet", zone: "Torse", gravite: "Spécial", effet: "Si Protégé : Sonné (Médic aide à relever). Sinon : Bandage ([MEMBRE_ALEATOIRE])", matos: ["Bandage"] }
             ],
             avance: [
-                // « Tête ou Torse » couvre les deux zones à la fois : en mode
-                // Extrême, la carte reste tirable que la silhouette soit
-                // touchée à la tête ou au torse.
-                { id: "a1", titre: "DCD", zone: "Tête ou Torse", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] },
+                // `zones` : la carte couvre plusieurs zones. Au tirage, l'une
+                // d'elles est tirée au sort et affichée sur la fiche ; en mode
+                // Extrême c'est la zone touchée sur la silhouette qui prime.
+                // `effets` donne le protocole propre à chaque zone.
+                { id: "a1", titre: "DCD", zone: "Tête ou Torse", zones: ["Tête", "Torse"], gravite: "DÉCÈS", effet: "Respawn direct", matos: [] },
                 { id: "a3", titre: "Inconscient", zone: "Torse", gravite: "Critique", effet: "Bandage + Massage + Épi + Poche", matos: ["Bandage", "Épinéphrine", "Poche de transfusion"] },
                 { id: "a4", titre: "Plaie soufflante", zone: "Torse", gravite: "Critique", effet: "Pnsmt 3 côtés + Morphine + Poche", matos: ["Pansement 3 côtés", "Morphine", "Poche de transfusion"] },
                 { id: "a5", titre: "Hémorragie", typeZone: "membre", gravite: "Critique", effet: "Garrot + Bandage + Morphine + Poche", matos: ["Garrot", "Bandage", "Morphine", "Poche de transfusion"] },
@@ -826,14 +827,28 @@
                 { id: "a7", titre: "Saignement", typeZone: "membre", gravite: "Grave", effet: "Bandage", matos: ["Bandage"] },
                 { id: "a8", titre: "Fracture", typeZone: "membre", gravite: "Grave", effet: "Bandage + Attelle + Morphine", matos: ["Bandage", "Attelle", "Morphine"] },
                 { id: "a9", titre: "Éraflure", typeZone: "membre", gravite: "Légère", effet: "Bandage", matos: ["Bandage"] },
-                // Les deux branches d'origine (casque / gilet) sont conservées
-                // dans le texte : aucune règle de soin n'est perdue.
-                { id: "a10", titre: "Prot. Balistique", zone: "Tête ou Torse", gravite: "Spécial", effet: "Si protégé : Tête → rien ; Torse → hématome (Morphine). Sinon : Bandage", matos: ["Morphine", "Bandage"] },
-                { id: "a12", titre: "Choc Balistique", zone: "Tête ou Torse", gravite: "Spécial", effet: "Si protégé : Sonné (le médic aide à relever). Sinon : DCD", matos: [] }
+                // Chaque zone garde son protocole d'origine (casque / gilet) :
+                // la fiche affiche celui de la zone réellement tirée.
+                // Matériel requis = le Bandage seul, commun aux deux branches ;
+                // la Morphine n'est demandée que par le cas « torse protégé »,
+                // sinon la carte disparaîtrait faute de Morphine.
+                { id: "a10", titre: "Prot. Balistique", zone: "Tête ou Torse", zones: ["Tête", "Torse"], gravite: "Spécial",
+                  effet: "Tête — protégé : rien, sinon Éraflure (Bandage). Torse — protégé : Hématome (Morphine), sinon Bandage",
+                  effets: {
+                      "Tête": "Casque porté : aucune blessure.\nSinon : Éraflure → Bandage",
+                      "Torse": "Gilet porté : Hématome → Morphine.\nSinon : Bandage"
+                  },
+                  matos: ["Bandage"] },
+                { id: "a12", titre: "Choc Balistique", zone: "Tête ou Torse", zones: ["Tête", "Torse"], gravite: "Spécial",
+                  effet: "Protégé : Sonné (le médic aide à relever). Sinon : DCD",
+                  effets: {
+                      "Tête": "Casque porté : Sonné → le médic aide à relever.\nSinon : DCD",
+                      "Torse": "Gilet porté : Sonné → le médic aide à relever.\nSinon : DCD"
+                  },
+                  matos: [] }
             ],
             explosion: [
-                { id: "e1", titre: "DCD (Blast)", zone: "Tête", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] },
-                { id: "e2", titre: "DCD (Blast)", zone: "Torse", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] },
+                { id: "e1", titre: "DCD (Blast)", zone: "Tête ou Torse", zones: ["Tête", "Torse"], gravite: "DÉCÈS", effet: "Respawn direct", matos: [] },
                 { id: "e3", titre: "Inconscient", zone: "Torse", gravite: "Critique", effet: "Bandage + 30s Massage + Épi + Poche", matos: ["Bandage", "Épinéphrine", "Poche de transfusion"] },
                 { id: "e4", titre: "Plaie Soufflante", zone: "Torse", gravite: "Critique", effet: "Pnsmt 3 côtés + Morphine + Poche", matos: ["Pansement 3 côtés", "Morphine", "Poche de transfusion"] },
                 { id: "e5", titre: "Hémorragie Massive", typeZone: "membre", gravite: "Critique", effet: "Garrot + Bandage + Morphine + Poche", matos: ["Garrot", "Bandage", "Morphine", "Poche de transfusion"] },
@@ -841,10 +856,20 @@
                 { id: "e7", titre: "Saignement", typeZone: "membre", gravite: "Grave", effet: "Bandage", matos: ["Bandage"] },
                 { id: "e8", titre: "Fracture Ouverte", typeZone: "membre", gravite: "Grave", effet: "Bandage + Attelle + Morphine", matos: ["Bandage", "Attelle", "Morphine"] },
                 { id: "e9", titre: "Éraflure (Éclat)", typeZone: "membre", gravite: "Légère", effet: "Bandage", matos: ["Bandage"] },
-                { id: "e10", titre: "Prot. Balistique", zone: "Tête", gravite: "Spécial", effet: "Protégé: Rien. Sinon: Éraflure", matos: [] },
-                { id: "e11", titre: "Prot. Balistique", zone: "Torse", gravite: "Spécial", effet: "Protégé: Hématome. Sinon: Bandage", matos: ["Morphine", "Bandage"] },
-                { id: "e12", titre: "Souffle (Casque)", zone: "Tête", gravite: "Spécial", effet: "Protégé: Sonné. Sinon: DCD", matos: [] },
-                { id: "e13", titre: "Souffle (Gilet)", zone: "Torse", gravite: "Spécial", effet: "Protégé: Sonné. Sinon: DCD", matos: [] }
+                { id: "e10", titre: "Prot. Balistique", zone: "Tête ou Torse", zones: ["Tête", "Torse"], gravite: "Spécial",
+                  effet: "Tête — protégé : rien, sinon Éraflure (Bandage). Torse — protégé : Hématome (Morphine), sinon Bandage",
+                  effets: {
+                      "Tête": "Casque porté : aucune blessure.\nSinon : Éraflure → Bandage",
+                      "Torse": "Gilet porté : Hématome → Morphine.\nSinon : Bandage"
+                  },
+                  matos: ["Bandage"] },
+                { id: "e12", titre: "Souffle (Blast)", zone: "Tête ou Torse", zones: ["Tête", "Torse"], gravite: "Spécial",
+                  effet: "Protégé : Sonné (le médic aide à relever). Sinon : DCD",
+                  effets: {
+                      "Tête": "Casque porté : Sonné → le médic aide à relever.\nSinon : DCD",
+                      "Torse": "Gilet porté : Sonné → le médic aide à relever.\nSinon : DCD"
+                  },
+                  matos: [] }
             ]
         };
 
@@ -1548,10 +1573,15 @@
             document.getElementById('btn-card').innerText = "Nouveau diagnostic";
             document.getElementById('txt-titre').innerText = card.titre;
 
-            // En mode Extrême, la zone affichée est celle cliquée sur la silhouette
+            // Zone finale de la fiche, par ordre de priorité :
+            //  1. mode Extrême : la zone cliquée sur la silhouette fait foi ;
+            //  2. carte de membre : un membre est tiré au sort ;
+            //  3. carte multi-zones (Tête ou Torse) : une zone est tirée au sort,
+            //     pour que la fiche annonce une zone précise et non un choix.
             let z = card.zone;
             if (ctxExtreme && ctxExtreme.zoneLabel) z = ctxExtreme.zoneLabel;
             else if (card.typeZone === 'membre') z = MEMBRES[Math.floor(Math.random()*4)];
+            else if (Array.isArray(card.zones) && card.zones.length) z = card.zones[Math.floor(Math.random()*card.zones.length)];
             document.getElementById('txt-zone').innerText = z;
 
             const protEl = document.getElementById('protection-indicator');
@@ -1562,7 +1592,8 @@
                 protEl.style.display = 'none';
             }
 
-            let effetAffiche = card.effet || '';
+            // Protocole propre à la zone retenue (casque / gilet), sinon le texte commun
+            let effetAffiche = (card.effets && card.effets[z]) || card.effet || '';
             if (effetAffiche.includes('[MEMBRE_ALEATOIRE]')) {
                 effetAffiche = effetAffiche.split('[MEMBRE_ALEATOIRE]').join((ctxExtreme && ctxExtreme.membre) || MEMBRES[Math.floor(Math.random()*4)]);
             }
