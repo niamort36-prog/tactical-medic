@@ -538,8 +538,9 @@
             <div id="host-decks-list"></div>
         </div>
         <div id="host-panel-packs" class="host-panel box">
-            <h3>PAQUETS SUPPLÉMENTAIRES</h3>
-            <p style="font-size:0.8em; color:#888; margin-top:0;">Attribuez des paquets aux joueurs connectés : chaque paquet apparaît comme un <b>bouton de tirage à son nom</b> (Classique, Avancé ou paquet perso) sur l'accueil des destinataires, avec les quantités réglées dans l'Éditeur. Les cartes <b>Explosion</b> s'activent via l'Éditeur (mode Avancé + explosion).</p>
+            <h3>PAQUETS ATTRIBUÉS</h3>
+            <p style="font-size:0.8em; color:var(--bse-muted); margin-top:0;">Choisissez ce que chaque joueur va tirer : Classique, Avancé, Extrême, Explosion ou l'un de vos paquets perso. Le paquet attribué <b>remplace</b> le tirage du mode chez le destinataire — il ne verra que celui-là, avec les quantités réglées dans l'Éditeur.</p>
+            <p style="font-size:0.8em; color:var(--bse-muted); margin-top:0;">Un joueur sans aucune attribution joue le <b>mode en cours</b> défini dans l'Éditeur.</p>
             <div class="host-inline-form" style="flex-direction:column; align-items:stretch;">
                 <select id="host-pack-source" class="form-input" style="margin:0;"></select>
                 <select id="host-pack-scope" class="form-input" style="margin:0;" onchange="hostPackScopeUI()">
@@ -949,6 +950,9 @@
 
         function getRulesArrayForDrawSource(src) {
             if (DB_REGLES[src]) return DB_REGLES[src].slice(); // classique, avance, explosion
+            // Le mode Extrême n'a pas encore ses propres cartes : il rejoue
+            // celles du mode Avancé, mais avec la silhouette (zone + protection).
+            if (src === 'extreme') return reglesBaseDuMode('extreme').slice();
             if (src === 'bille') {
                 if (appState.mode.startsWith('d_')) {
                     const deck = appState.customDecks.find(d => d.id === appState.mode);
@@ -976,7 +980,16 @@
         }
 
         function computeActiveCardCount() {
+            // Le compteur doit refléter ce que le joueur peut RÉELLEMENT tirer :
+            // s'il a des paquets attribués, le mode de l'hôte ne le concerne plus.
+            const attribues = paquetsAttribues();
             let total = 0;
+            if (attribues.length) {
+                attribues.forEach(p => (p.cards || []).forEach(r => {
+                    if (cardMatos(r).every(hasMateriel)) total += qtyFor(getCardQtyKey(p.src, r));
+                }));
+                return total;
+            }
             getActiveRulesForMode().forEach(r => {
                 if (cardMatos(r).every(hasMateriel)) total += qtyFor(ridForMode(r));
             });
@@ -1044,6 +1057,25 @@
             if (p.scope === 'team') return p.teamId && p.teamId === teamId;
             if (p.scope === 'player') return p.peerId && p.peerId === peerId;
             return false;
+        }
+
+        // Paquets réellement attribués à CE joueur par le QG, dédoublonnés par
+        // source. S'il y en a au moins un, ils remplacent le tirage du mode :
+        // le joueur ne joue que ce que l'orga lui a donné.
+        function paquetsAttribues() {
+            if (appState.isOrga) return [];
+            // Vaut aussi pendant une reconnexion : une coupure réseau ne doit pas
+            // rebasculer le joueur sur le mode de l'hôte, donc sur d'autres cartes.
+            if (!estEnPartieClient() && !clientReconnect.active) return [];
+            const vus = new Set();
+            const res = [];
+            (clientSessionMeta.sessionPacks || []).forEach(p => {
+                if (!p || vus.has(p.src)) return;
+                if (!sessionPackApplies(p, peer ? peer.id : null, appState.playerTeamId)) return;
+                vus.add(p.src);
+                res.push(p);
+            });
+            return res;
         }
 
         function appendSessionPackPool(src, pool) {
@@ -2120,12 +2152,16 @@
             // l'Éditeur (mode Avancé + cartes explosion), pas par attribution.
             const sel = document.getElementById('host-pack-source');
             if (!sel) return;
-            sel.innerHTML = '<option value="classique">Classique</option><option value="avance">Avancé</option>' +
+            sel.innerHTML = '<option value="classique">Classique</option>' +
+                '<option value="avance">Avancé</option>' +
+                '<option value="extreme">Extrême (silhouette)</option>' +
+                '<option value="explosion">Explosion</option>' +
                 appState.customDecks.map(d => `<option value="${escapeHtml(d.id)}">${escapeHtml(d.name)}</option>`).join('');
         }
         function libellePaquetSource(src) {
             if (src === 'classique') return 'Classique';
             if (src === 'avance') return 'Avancé';
+            if (src === 'extreme') return 'Extrême';
             if (src === 'explosion') return 'Explosion';
             if (src === 'bille') return 'Balistique';
             const d = appState.customDecks.find(x => x.id === src);
@@ -2233,7 +2269,10 @@
             }
 
             const deckSrc = appState.customDecks.find(x => x.id === src);
-            const pack = { id: 'sp_' + Date.now(), src, scope, cards, teamId: teamId || null, peerId: peerId || null, label, extremeMode: !!(deckSrc && deckSrc.extremeMode) };
+            // Le mode Extrême impose la silhouette ; un paquet perso l'active
+            // par sa propre case « mode extrême ».
+            const extremeMode = src === 'extreme' || !!(deckSrc && deckSrc.extremeMode);
+            const pack = { id: 'sp_' + Date.now(), src, scope, cards, teamId: teamId || null, peerId: peerId || null, label, extremeMode };
             liveSession.sessionPacks.push(pack);
             hostPushLog(`Paquet distribué : ${label} → ${libelleDestination(pack)}`);
             broadcastFullState();
@@ -3154,35 +3193,41 @@
                 `<div class="btn-container-shared"><div class="${ringClass}"></div><button class="btn-core-shared" onclick="lancerSequenceTirage(${jsAttr(src)})">${inner}</button><div class="btn-label">${escapeHtml(label)}</div></div>`;
             const imgArt = (file, cls) => `<img src="${file}" class="${cls}" alt="" onerror="this.onerror=null;this.style.display='none'">`;
 
-            let html = drawBtn('bille', 'Balistique', 'pulse-ring', imgArt('picto-blesse.png', 'icon-wounded'));
-            if (modeAvecExplosion() && appState.explosionEnabled) {
-                html += drawBtn('explosion', 'Explosion', 'pulse-ring-blast', imgArt('btn-explosion.png', 'icon-blast'));
-            }
+            // Chaque paquet garde l'allure de sa nature : balistique, explosion, perso
+            const apparence = (src) => {
+                if (src === 'explosion') return ['pulse-ring-blast', imgArt('btn-explosion.png', 'icon-blast')];
+                if (src === 'classique' || src === 'avance' || src === 'extreme' || src === 'bille')
+                    return ['pulse-ring', imgArt('picto-blesse.png', 'icon-wounded')];
+                return ['pulse-ring-custom', ico('cards', 'icon-custom')];
+            };
 
-            if (inPartie) {
-                // Connecté comme joueur : chaque paquet attribué par le QG devient un bouton de
-                // tirage portant son nom (Classique, Avancé, ou le nom du paquet perso).
-                // Les anciens paquets « bille »/« explosion » fusionnent dans les tirages existants.
-                // Un même paquet attribué via deux règles qui se recouvrent
-                // (« tout le monde » puis « équipe Bleu ») ne donne qu'un bouton.
-                const dejaProposes = new Set();
-                (clientSessionMeta.sessionPacks || []).forEach(p => {
-                    if (p.src === 'bille' || p.src === 'explosion') return;
-                    if (dejaProposes.has(p.src)) return;
-                    if (sessionPackApplies(p, peer ? peer.id : null, appState.playerTeamId)) {
-                        dejaProposes.add(p.src);
-                        html += drawBtn(p.id, p.label, 'pulse-ring-custom', ico('cards', 'icon-custom'));
-                    }
+            let html = '';
+            const attribues = paquetsAttribues();
+
+            if (attribues.length) {
+                // Un paquet attribué REMPLACE le tirage du mode : le joueur ne
+                // tire que dans ce que l'orga lui a donné, sans hériter du mode
+                // de l'hôte ni de ses cartes explosion.
+                attribues.forEach(p => {
+                    const [ring, inner] = apparence(p.src);
+                    html += drawBtn(p.id, p.label, ring, inner);
                 });
             } else {
-                // Solo ou Hôte : uniquement ses PROPRES paquets. Ceux reçus de
-                // l'hôte (fromHost) ne remontent jamais ici, sinon toute la
-                // bibliothèque de l'orga apparaissait sur l'accueil du joueur
-                // dès que la liaison était coupée, au lieu des seuls paquets
-                // qui lui avaient été attribués.
-                appState.customDecks.forEach(d => {
-                    if (d.showOnHome && !d.fromHost) html += drawBtn(d.id, d.name, 'pulse-ring-custom', ico('cards', 'icon-custom'));
-                });
+                // Aucun paquet attribué : on joue le mode en cours — celui de
+                // l'hôte pour un joueur en partie, le sien en solo.
+                html = drawBtn('bille', 'Balistique', 'pulse-ring', imgArt('picto-blesse.png', 'icon-wounded'));
+                if (modeAvecExplosion() && appState.explosionEnabled) {
+                    html += drawBtn('explosion', 'Explosion', 'pulse-ring-blast', imgArt('btn-explosion.png', 'icon-blast'));
+                }
+                if (!inPartie) {
+                    // Solo ou hôte : uniquement ses PROPRES paquets. Ceux reçus
+                    // de l'hôte (fromHost) ne remontent jamais ici, sinon toute
+                    // sa bibliothèque apparaissait sur l'accueil du joueur dès
+                    // que la liaison était coupée.
+                    appState.customDecks.forEach(d => {
+                        if (d.showOnHome && !d.fromHost) html += drawBtn(d.id, d.name, 'pulse-ring-custom', ico('cards', 'icon-custom'));
+                    });
+                }
             }
             document.getElementById('dynamic-buttons-container').innerHTML = html;
         }
