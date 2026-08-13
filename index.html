@@ -815,8 +815,10 @@
                 { id: "c9", titre: "Choc Gilet", zone: "Torse", gravite: "Spécial", effet: "Si Protégé : Sonné (Médic aide à relever). Sinon : Bandage ([MEMBRE_ALEATOIRE])", matos: ["Bandage"] }
             ],
             avance: [
-                { id: "a1", titre: "DCD", zone: "Tête", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] },
-                { id: "a2", titre: "DCD", zone: "Torse", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] },
+                // « Tête ou Torse » couvre les deux zones à la fois : en mode
+                // Extrême, la carte reste tirable que la silhouette soit
+                // touchée à la tête ou au torse.
+                { id: "a1", titre: "DCD", zone: "Tête ou Torse", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] },
                 { id: "a3", titre: "Inconscient", zone: "Torse", gravite: "Critique", effet: "Bandage + Massage + Épi + Poche", matos: ["Bandage", "Épinéphrine", "Poche de transfusion"] },
                 { id: "a4", titre: "Plaie soufflante", zone: "Torse", gravite: "Critique", effet: "Pnsmt 3 côtés + Morphine + Poche", matos: ["Pansement 3 côtés", "Morphine", "Poche de transfusion"] },
                 { id: "a5", titre: "Hémorragie", typeZone: "membre", gravite: "Critique", effet: "Garrot + Bandage + Morphine + Poche", matos: ["Garrot", "Bandage", "Morphine", "Poche de transfusion"] },
@@ -824,10 +826,10 @@
                 { id: "a7", titre: "Saignement", typeZone: "membre", gravite: "Grave", effet: "Bandage", matos: ["Bandage"] },
                 { id: "a8", titre: "Fracture", typeZone: "membre", gravite: "Grave", effet: "Bandage + Attelle + Morphine", matos: ["Bandage", "Attelle", "Morphine"] },
                 { id: "a9", titre: "Éraflure", typeZone: "membre", gravite: "Légère", effet: "Bandage", matos: ["Bandage"] },
-                { id: "a10", titre: "Prot. Balistique", zone: "Tête", gravite: "Spécial", effet: "Si Prot: Rien. Sinon: Éraflure (Bandage)", matos: [] },
-                { id: "a11", titre: "Prot. Balistique", zone: "Torse", gravite: "Spécial", effet: "Si Prot: Hématome (Morphine). Sinon: Bandage", matos: ["Morphine", "Bandage"] },
-                { id: "a12", titre: "Choc Casque", zone: "Tête", gravite: "Spécial", effet: "Si Prot: Sonné (Relevé). Sinon: DCD", matos: [] },
-                { id: "a13", titre: "Choc Gilet", zone: "Torse", gravite: "Spécial", effet: "Si Prot: Sonné (Relevé). Sinon: DCD", matos: [] }
+                // Les deux branches d'origine (casque / gilet) sont conservées
+                // dans le texte : aucune règle de soin n'est perdue.
+                { id: "a10", titre: "Prot. Balistique", zone: "Tête ou Torse", gravite: "Spécial", effet: "Si protégé : Tête → rien ; Torse → hématome (Morphine). Sinon : Bandage", matos: ["Morphine", "Bandage"] },
+                { id: "a12", titre: "Choc Balistique", zone: "Tête ou Torse", gravite: "Spécial", effet: "Si protégé : Sonné (le médic aide à relever). Sinon : DCD", matos: [] }
             ],
             explosion: [
                 { id: "e1", titre: "DCD (Blast)", zone: "Tête", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] },
