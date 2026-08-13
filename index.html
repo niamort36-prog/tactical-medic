@@ -857,30 +857,32 @@
             // le clic sur la silhouette renvoyait indistinctement comme « membre ».
             // `description` est le bilan lu au blessé ; `effet` reste le protocole.
             extreme: [
-                /* ---- TÊTE ---- */
-                { id: "x1", titre: "Impact sur casque", zone: "Tête", cibles: ["tete"], gravite: "Spécial",
+                /* ---- TÊTE — casque porté ---- */
+                { id: "x1", titre: "Impact sur casque", zone: "Tête", cibles: ["tete"], protection: true, gravite: "Spécial",
                   description: "Impact direct sur le casque lourd.", effet: "Repos 2 minutes", matos: [] },
-                { id: "x2", titre: "Éraflure au visage", zone: "Tête", cibles: ["tete"], gravite: "Légère",
+                { id: "x2", titre: "Éraflure au visage", zone: "Tête", cibles: ["tete"], protection: true, gravite: "Légère",
                   description: "Éraflure superficielle due à un éclat sur la joue ou le lobe de l'oreille.", effet: "Bandage", matos: ["Bandage"] },
-                { id: "x3", titre: "Plaie au front", zone: "Tête", cibles: ["tete"], gravite: "Grave",
+                /* ---- TÊTE — sans casque ---- */
+                { id: "x3", titre: "Plaie au front", zone: "Tête", cibles: ["tete"], protection: false, gravite: "Grave",
                   description: "Plaie ouverte et profonde au front.", effet: "Bandage + Morphine", matos: ["Bandage", "Morphine"] },
-                { id: "x4", titre: "Traumatisme crânien", zone: "Tête", cibles: ["tete"], gravite: "Critique",
+                { id: "x4", titre: "Traumatisme crânien", zone: "Tête", cibles: ["tete"], protection: false, gravite: "Critique",
                   description: "Traumatisme crânien sévère.", effet: "Bandage + Épinéphrine + Morphine", matos: ["Bandage", "Épinéphrine", "Morphine"] },
-                { id: "x5", titre: "Tir à la tête", zone: "Tête", cibles: ["tete"], gravite: "DÉCÈS",
+                { id: "x5", titre: "Tir à la tête", zone: "Tête", cibles: ["tete"], protection: false, gravite: "DÉCÈS",
                   description: "Tir direct à la tête (sans port du casque).", effet: "Respawn direct", matos: [] },
 
-                /* ---- TORSE ---- */
-                { id: "x6", titre: "Impact sur plaque", zone: "Torse", cibles: ["torse"], gravite: "Spécial",
+                /* ---- TORSE — plaques portées ---- */
+                { id: "x6", titre: "Impact sur plaque", zone: "Torse", cibles: ["torse"], protection: true, gravite: "Spécial",
                   description: "Impact encaissé par la plaque balistique du porte-plaques.", effet: "Repos 1 minute", matos: [] },
-                { id: "x7", titre: "Éraflure au flanc", zone: "Torse", cibles: ["torse"], gravite: "Légère",
+                { id: "x7", titre: "Éraflure au flanc", zone: "Torse", cibles: ["torse"], protection: true, gravite: "Légère",
                   description: "Éraflure sur le flanc, hors de la zone couverte par les plaques balistiques.", effet: "Bandage", matos: ["Bandage"] },
-                { id: "x8", titre: "Pneumothorax", zone: "Torse", cibles: ["torse"], gravite: "Grave",
-                  description: "Pneumothorax suite à une balle perforante latérale.", effet: "Pansement 3 côtés + Morphine", matos: ["Pansement 3 côtés", "Morphine"] },
-                { id: "x9", titre: "Côtes fracturées", zone: "Torse", cibles: ["torse"], gravite: "Grave",
+                { id: "x9", titre: "Côtes fracturées", zone: "Torse", cibles: ["torse"], protection: true, gravite: "Grave",
                   description: "Fracture de plusieurs côtes par impact lourd.", effet: "Bandage compressif + Morphine", matos: ["Bandage", "Morphine"] },
-                { id: "x10", titre: "Hémorragie interne", zone: "Torse", cibles: ["torse"], gravite: "Critique",
+                /* ---- TORSE — sans plaques ---- */
+                { id: "x8", titre: "Pneumothorax", zone: "Torse", cibles: ["torse"], protection: false, gravite: "Grave",
+                  description: "Pneumothorax suite à une balle perforante latérale.", effet: "Pansement 3 côtés + Morphine", matos: ["Pansement 3 côtés", "Morphine"] },
+                { id: "x10", titre: "Hémorragie interne", zone: "Torse", cibles: ["torse"], protection: false, gravite: "Critique",
                   description: "Blessure perforante à l'abdomen causant une importante hémorragie interne.", effet: "Bandage + Poche de transfusion + Épinéphrine", matos: ["Bandage", "Poche de transfusion", "Épinéphrine"] },
-                { id: "x11", titre: "Tir vital", zone: "Torse", cibles: ["torse"], gravite: "DÉCÈS",
+                { id: "x11", titre: "Tir vital", zone: "Torse", cibles: ["torse"], protection: false, gravite: "DÉCÈS",
                   description: "Tir direct au niveau du cœur ou de la colonne vertébrale (sans port de plaques balistiques).", effet: "Respawn direct", matos: [] },
 
                 /* ---- BRAS (droit ou gauche) ---- */
@@ -1112,7 +1114,10 @@
                 html += `<div class="${hl}"><div class="preview-card-mini" style="border-left-color:${getColorTexte(r.gravite)}">`;
                 html += `<span style="font-size:0.65em;color:#888;">${escapeHtml(sec)}</span>`;
                 html += `<h4 style="color:${getColorTexte(r.gravite)};margin:4px 0 0 0;">${escapeHtml(r.gravite)}</h4>`;
-                html += `<p><strong>${escapeHtml(r.titre)}</strong>${r.zone ? ` <span style="font-size:0.8em;color:#888;">· ${escapeHtml(r.zone)}</span>` : ''}</p>`;
+                // Condition de protection : indique à l'orga quand la carte peut sortir
+                const cond = r.protection === true ? '<span class="deck-badge" style="border-color:var(--accent-green);color:#a8d3ae;">protection portée</span>'
+                           : r.protection === false ? '<span class="deck-badge" style="border-color:var(--accent-red);color:#e8a0a0;">sans protection</span>' : '';
+                html += `<p><strong>${escapeHtml(r.titre)}</strong>${r.zone ? ` <span style="font-size:0.8em;color:#888;">· ${escapeHtml(r.zone)}</span>` : ''} ${cond}</p>`;
                 if (r.description) html += `<p style="font-size:0.82em;color:#bbb;font-style:italic;">${escapeHtml(r.description)}</p>`;
                 html += `<p style="font-size:0.85em;">${escapeHtml(effetPourAffichage(r.effet))}</p>`;
                 html += `<p style="font-size:0.75em;color:#888;">Matos: ${mats.length ? escapeHtml(mats.join(', ')) : '—'}</p>`;
@@ -1562,6 +1567,18 @@
             return !!(d && d.extremeMode);
         }
 
+        // Filtre selon la réponse à la question de protection :
+        //   protection: true  → carte réservée au cas « casque / plaque portée »
+        //   protection: false → carte réservée au cas « sans protection »
+        //   champ absent      → la carte sort dans les deux cas
+        // Les membres ne déclenchent pas la question : la protection y vaut null
+        // et n'écarte donc jamais rien.
+        function carteCorrespondProtection(r, protection) {
+            if (r.protection === undefined || r.protection === null) return true;
+            if (protection === undefined || protection === null) return true;
+            return !!r.protection === !!protection;
+        }
+
         // `membre` est le libellé cliqué sur la silhouette (« Bras Droit »,
         // « Jambe Gauche »...). Il permet de distinguer bras et jambes, que la
         // silhouette renvoie toutes deux comme la zone « membre ».
@@ -1614,13 +1631,16 @@
             const pool = [];
             ctx.rules.forEach(r => {
                 if (!carteCorrespondZone(r, ctx.zone, ctx.membre)) return;
+                if (!carteCorrespondProtection(r, ctx.protection)) return;
                 const q = qtyFor(getCardQtyKey(ctx.drawSrcForQty, r));
                 if (q > 0 && cardMatos(r).every(hasMateriel)) {
                     for (let i = 0; i < q; i++) pool.push(r);
                 }
             });
             if (!pool.length) {
-                alert('Aucune carte disponible pour cette zone (quantités à 0 ou matériel manquant).');
+                const etat = ctx.protection === true ? ' avec protection portée'
+                           : ctx.protection === false ? ' sans protection' : '';
+                alert('Aucune carte disponible pour cette zone' + etat + '.\n\nVérifiez les quantités et le matériel disponible dans les Réglages.');
                 retourAccueil();
                 return;
             }
