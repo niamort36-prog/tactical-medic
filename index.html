@@ -375,6 +375,29 @@
         #sil-svg.sil-nophoto .sil-zone { fill: #1e1e1c; stroke: var(--bse-border); stroke-width: 2; }
         #sil-svg.sil-nophoto .sil-zone:hover, #sil-svg.sil-nophoto .sil-zone:active { fill: var(--accent-red); }
 
+        /* --- SIGNATURE BRAVO SIERRA EVENTS (coin bas droit) --- */
+        /* Masquée par défaut : elle n'apparaît que sur les écrans de menu, jamais
+           pendant une séquence de soin. On ne risque pas d'envoyer le médic sur
+           un site externe alors qu'il est en train de traiter un blessé, et elle
+           ne passe pas sous le pied de page fixe des réglages. */
+        #lien-bse {
+            display: none;
+            position: fixed; right: 10px; bottom: 10px; z-index: 15;
+            padding: 4px; line-height: 0;
+            opacity: 0.72; transition: opacity 0.15s, transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #lien-bse:hover, #lien-bse:focus-visible { opacity: 1; }
+        #lien-bse:active { opacity: 1; transform: scale(0.95); }
+        #lien-bse img { height: 34px; width: auto; display: block; }
+        /* Uniquement sur l'accueil : c'est le seul écran qui ne défile pas
+           jusqu'au bord bas. Ailleurs, un bouton d'action finit par arriver
+           dans le coin et le logo le recouvrirait. */
+        #screen-game.active ~ #lien-bse { display: block; }
+        @media (min-width: 620px) { #lien-bse img { height: 42px; } }
+        /* En paysage la hauteur est comptée : on réduit pour ne rien gêner */
+        @media (max-height: 420px) { #lien-bse img { height: 26px; } }
+
         /* --- MODALES --- */
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(4,4,4,0.9); backdrop-filter: blur(4px); }
         /* Marges en vh, pas en % : un pourcentage se calcule sur la LARGEUR du
@@ -799,6 +822,15 @@
             <button type="button" class="btn-action" onclick="document.getElementById('confirmLeaveModal').style.display='none'">Annuler</button>
         </div>
     </div>
+
+    <!-- Signature de l'organisateur : renvoie vers le site Bravo Sierra Events.
+         Placée en fin de <body> pour que les sélecteurs « écran actif ~ lien »
+         du bloc de style puissent la montrer ou la masquer selon l'écran. -->
+    <a id="lien-bse" href="https://bravosierraevents.com" target="_blank" rel="noopener noreferrer"
+       title="Bravo Sierra Events — ouvrir le site" aria-label="Ouvrir le site de Bravo Sierra Events">
+        <img src="icons/logo-bse.png" srcset="icons/logo-bse.png 1x, icons/logo-bse@2x.png 2x"
+             alt="Bravo Sierra Events">
+    </a>
 
     <!-- ================= PICTOGRAMMES MONOCHROMES =================
          Un seul jeu de symboles au trait, appelé par <svg class="ico"><use href="#i-xxx">.
@@ -2011,7 +2043,8 @@
             }
             document.getElementById('liste-regles').innerHTML = rulesHtml;
 
-            document.getElementById('info-deck').innerText = computeActiveCardCount() + " cartes actives";
+            // Même libellé que sur l'accueil : le bandeau porte déjà « Paquet actif »
+            document.getElementById('info-deck').innerText = computeActiveCardCount() + " cartes";
         }
 
         function setMaterielFlag(name, v) {

@@ -10,7 +10,7 @@
    remplace ces fichiers sur les telephones deja equipes.
    ========================================================= */
 
-const CACHE_VERSION = 'bse-medic-v2';
+const CACHE_VERSION = 'bse-medic-v3';
 
 // Tout ce qui compose l'application. Chemins relatifs : l'application
 // fonctionne aussi bien a la racine d'un domaine que dans un sous-dossier.
@@ -31,7 +31,9 @@ const APP_SHELL = [
     './icons/icon-192.png',
     './icons/icon-512.png',
     './icons/apple-touch-icon.png',
-    './icons/favicon-32.png'
+    './icons/favicon-32.png',
+    './icons/logo-bse.png',
+    './icons/logo-bse@2x.png'
 ];
 
 self.addEventListener('install', (event) => {
