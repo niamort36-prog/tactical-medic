@@ -594,6 +594,33 @@
         <div class="box" style="border-color:var(--accent-red)">
             <h3 style="color:var(--accent-red)"><svg class="ico"><use href="#i-skull"></use></svg>Option hardcore</h3>
             <div class="check-item"><span>Activer le risque de mort</span><input type="checkbox" id="chk-death" onchange="toggleDeathRisk()" style="transform:scale(1.4);"></div>
+            <div id="death-options" style="display:none;">
+                <div class="check-item">
+                    <span style="flex:1 1 auto; min-width:0;">Probabilité<br><span style="font-size:0.72em;color:var(--bse-muted);">sur une blessure éligible</span></span>
+                    <div style="display:flex; align-items:center; gap:5px; flex:none;">
+                        <button type="button" class="btn-mini" onclick="changeDeathOpt('deathChance',-5)">-</button>
+                        <span id="val-death-chance" style="min-width:46px;text-align:center;">40 %</span>
+                        <button type="button" class="btn-mini" onclick="changeDeathOpt('deathChance',5)">+</button>
+                    </div>
+                </div>
+                <div class="check-item">
+                    <span style="flex:1 1 auto; min-width:0;">Délai mini<br><span style="font-size:0.72em;color:var(--bse-muted);">avant le décès</span></span>
+                    <div style="display:flex; align-items:center; gap:5px; flex:none;">
+                        <button type="button" class="btn-mini" onclick="changeDeathOpt('deathMin',-5)">-</button>
+                        <span id="val-death-min" style="min-width:46px;text-align:center;">30 s</span>
+                        <button type="button" class="btn-mini" onclick="changeDeathOpt('deathMin',5)">+</button>
+                    </div>
+                </div>
+                <div class="check-item">
+                    <span style="flex:1 1 auto; min-width:0;">Délai maxi</span>
+                    <div style="display:flex; align-items:center; gap:5px; flex:none;">
+                        <button type="button" class="btn-mini" onclick="changeDeathOpt('deathMax',-5)">-</button>
+                        <span id="val-death-max" style="min-width:46px;text-align:center;">60 s</span>
+                        <button type="button" class="btn-mini" onclick="changeDeathOpt('deathMax',5)">+</button>
+                    </div>
+                </div>
+                <div class="check-item"><span>Étendre aux blessures Graves</span><input type="checkbox" id="chk-death-grave" onchange="toggleDeathGrave()" style="transform:scale(1.4);"></div>
+            </div>
         </div>
         <div id="box-explosion-opt" class="box" style="display:none; border-color:var(--accent-orange)">
             <h3 style="color:var(--accent-orange)"><svg class="ico"><use href="#i-blast"></use></svg>Explosion</h3>
@@ -980,6 +1007,11 @@
 
         let appState = {
             mode: "classique", explosionEnabled: false, deathRisk: false,
+            // Risque de mort : réglable par l'orga au lieu d'être figé dans le code
+            deathChance: 40,       // % de chances qu'une blessure éligible déclenche le compte à rebours
+            deathMin: 30,          // délai de soin le plus court, en secondes
+            deathMax: 60,          // délai de soin le plus long
+            deathOnGrave: false,   // étendre le risque aux blessures Graves
             materiel: {}, quantites: {}, customDecks: [],
             playerName: "Joueur", playerTeamId: "blue", isOrga: false, isCoHost: false,
             lastGameName: "", turnConfig: null,
@@ -1238,7 +1270,15 @@
             // après un redémarrage de l'hôte. Il ne quitte jamais cet appareil.
             const players = Object.values(playersData).map(p => ({ name: p.name, teamId: p.teamId, isCoHost: !!p.isCoHost, token: p.token || '' }));
             try {
-                localStorage.setItem(HOST_SESSION_KEY, JSON.stringify({ gameName: liveSession.gameName, sessionPacks: liveSession.sessionPacks || [], players, teams: appState.customTeams }));
+                // Le journal est sauvegardé avec la session : il ne vivait qu'en
+                // mémoire et un simple rechargement effaçait tout l'historique
+                // de la partie, qui est justement ce qu'on débriefe après coup.
+                localStorage.setItem(HOST_SESSION_KEY, JSON.stringify({
+                    gameName: liveSession.gameName,
+                    sessionPacks: liveSession.sessionPacks || [],
+                    players, teams: appState.customTeams,
+                    logs: hostLogs.slice(0, 400)
+                }));
             } catch(e) { console.warn(e); }
         }
         function getClientSession() {
@@ -1386,7 +1426,7 @@
                 document.getElementById('join-code').value = jp.trim();
                 rejoindrePartieEnLigne(jp.trim()); // Skip modal, auto join!
             } else if (hostSession && hostSession.gameName) {
-                demarrerHost(hostSession.gameName, { resume: true, players: hostSession.players || [], sessionPacks: hostSession.sessionPacks || [], teams: hostSession.teams });
+                demarrerHost(hostSession.gameName, { resume: true, players: hostSession.players || [], sessionPacks: hostSession.sessionPacks || [], teams: hostSession.teams, logs: hostSession.logs });
             } else if (getClientSession()) {
                 demarrerReconnexionClient({ maxAttempts: 20, silentFail: true });
             }
@@ -1405,7 +1445,7 @@
                 if (peer && !peer.destroyed) {
                     if (peer.disconnected) { try { peer.reconnect(); } catch (e) {} }
                 } else if (hs && hs.gameName) {
-                    demarrerHost(hs.gameName, { resume: true, players: hs.players || [], sessionPacks: hs.sessionPacks || [], teams: hs.teams });
+                    demarrerHost(hs.gameName, { resume: true, players: hs.players || [], sessionPacks: hs.sessionPacks || [], teams: hs.teams, logs: hs.logs });
                 }
                 return;
             }
@@ -1721,9 +1761,35 @@
                 } catch (e) { console.warn(e); }
             }
 
-            if (appState.deathRisk && card.gravite === "Critique" && Math.random() < 0.40) {
+            if (appState.deathRisk && graviteRisqueMort(card.gravite)
+                && Math.random() < (nombreValide(appState.deathChance, 40, 0, 100) / 100)) {
                 activerTimerMort();
             }
+        }
+
+        // Borne une valeur réglée par l'orga, en retombant sur le défaut si elle
+        // est absente ou aberrante (config ancienne, saisie manuelle, sync).
+        function nombreValide(v, defaut, min, max) {
+            // null, undefined et '' donnent 0 avec Number() : sans ce test, une
+            // valeur absente était ramenée à la borne basse au lieu du défaut.
+            if (v === null || v === undefined || v === '') return defaut;
+            // Ces réglages arrivent aussi par le réseau : un type inattendu
+            // ([] vaut 0 avec Number()) ne doit pas fausser le compte à rebours.
+            if (typeof v !== 'number' && typeof v !== 'string') return defaut;
+            const n = Number(v);
+            if (!isFinite(n)) return defaut;
+            return Math.min(max, Math.max(min, n));
+        }
+        function graviteRisqueMort(g) {
+            if (g === 'Critique') return true;
+            return !!appState.deathOnGrave && g === 'Grave';
+        }
+        // Délai de soin : bornes réglables, remises dans l'ordre si inversées
+        function dureeAvantMort() {
+            let min = nombreValide(appState.deathMin, 30, 5, 600);
+            let max = nombreValide(appState.deathMax, 60, 5, 600);
+            if (min > max) { const t = min; min = max; max = t; }
+            return min + Math.random() * (max - min);
         }
 
         function activerTimerMort() {
@@ -1734,7 +1800,7 @@
             btn.style.backgroundColor = "#d43838";
             btn.style.borderColor = "#d43838";
             beepInterval = setInterval(playBeep, 1000);
-            let duree = 30 + Math.random() * 30;
+            let duree = dureeAvantMort();
             timerLogic = setInterval(() => { duree -= 0.1; if(duree <= 0) { clearInterval(timerLogic); mortDuPatient(); } }, 100);
         }
 
@@ -1777,6 +1843,10 @@
                 mode: appState.mode,
                 explosionEnabled: appState.explosionEnabled,
                 deathRisk: appState.deathRisk,
+                deathChance: appState.deathChance,
+                deathMin: appState.deathMin,
+                deathMax: appState.deathMax,
+                deathOnGrave: appState.deathOnGrave,
                 materiel: appState.materiel,
                 quantites: appState.quantites
             });
@@ -1805,6 +1875,7 @@
             if (![...s.options].some(o => o.value === appState.mode)) appState.mode = 'classique';
             s.value = appState.mode;
             document.getElementById('chk-death').checked = appState.deathRisk;
+            renderDeathOptions();
 
             const isLocked = reglagesVerrouilles();
             s.disabled = isLocked;
@@ -1911,7 +1982,32 @@
             updateUI_Game();
         }
         function changerModeMenu(v) { appState.mode=v; modeChangeManuel = true; renderSettingsList(); updateUI_Game(); }
-        function toggleDeathRisk() { appState.deathRisk = document.getElementById('chk-death').checked; }
+        function toggleDeathRisk() {
+            appState.deathRisk = document.getElementById('chk-death').checked;
+            renderDeathOptions();
+        }
+        function toggleDeathGrave() { appState.deathOnGrave = document.getElementById('chk-death-grave').checked; }
+        function changeDeathOpt(cle, delta) {
+            const bornes = { deathChance: [0, 100], deathMin: [5, 600], deathMax: [5, 600] };
+            const defauts = { deathChance: 40, deathMin: 30, deathMax: 60 };
+            const [min, max] = bornes[cle];
+            appState[cle] = nombreValide(nombreValide(appState[cle], defauts[cle], min, max) + delta, defauts[cle], min, max);
+            // Les bornes du délai ne peuvent pas se croiser
+            if (cle === 'deathMin' && appState.deathMin > appState.deathMax) appState.deathMax = appState.deathMin;
+            if (cle === 'deathMax' && appState.deathMax < appState.deathMin) appState.deathMin = appState.deathMax;
+            renderDeathOptions();
+        }
+        function renderDeathOptions() {
+            const bloc = document.getElementById('death-options');
+            if (!bloc) return;
+            bloc.style.display = appState.deathRisk ? 'block' : 'none';
+            document.getElementById('val-death-chance').innerText = nombreValide(appState.deathChance, 40, 0, 100) + ' %';
+            document.getElementById('val-death-min').innerText = nombreValide(appState.deathMin, 30, 5, 600) + ' s';
+            document.getElementById('val-death-max').innerText = nombreValide(appState.deathMax, 60, 5, 600) + ' s';
+            document.getElementById('chk-death-grave').checked = !!appState.deathOnGrave;
+            const verrou = reglagesVerrouilles();
+            bloc.querySelectorAll('button, input').forEach(e => { e.disabled = verrou; e.style.opacity = verrou ? 0.4 : 1; });
+        }
         function toggleExplosion() { appState.explosionEnabled=document.getElementById('chk-explosion').checked; renderSettingsList(); updateUI_Game(); }
 
         function sauvegarderEtQuitter() {
@@ -1931,7 +2027,10 @@
                 modeRetourEditeur = null;
                 saveState();
                 try {
-                    myConn.send({ type: 'CFG_PUSH', mode: appState.mode, explosionEnabled: appState.explosionEnabled, deathRisk: appState.deathRisk, materiel: appState.materiel, quantites: appState.quantites });
+                    myConn.send({ type: 'CFG_PUSH', mode: appState.mode, explosionEnabled: appState.explosionEnabled,
+                        deathRisk: appState.deathRisk, deathChance: appState.deathChance, deathMin: appState.deathMin,
+                        deathMax: appState.deathMax, deathOnGrave: appState.deathOnGrave,
+                        materiel: appState.materiel, quantites: appState.quantites });
                 } catch (e) {}
             } else {
                 saveState();
@@ -1960,19 +2059,46 @@
             else ouvrirBuilder();
         }
 
+        // Créer ou importer pendant une partie serait perdu au prochain envoi de
+        // configuration de l'hôte : on prévient plutôt que d'effacer en silence.
+        function bloqueEditionEnPartie() {
+            if (!joueurSimpleEnPartie()) return false;
+            alert("Impossible pendant une partie : la configuration vient de l'organisateur et votre paquet serait effacé.\n\nQuittez la partie pour retrouver et modifier vos paquets personnels.");
+            return true;
+        }
         function creerNouveauPaquet() {
+            if (bloqueEditionEnPartie()) return;
             const id = "d_"+Date.now();
             appState.customDecks.push({id:id, name:"Nouveau paquet", showOnHome:true, cards:[], materials:[]});
             editDeck(id);
         }
 
+        // Un joueur simple en partie ne doit pas voir — ni pouvoir modifier — la
+        // bibliothèque de l'organisateur : elle lui arrive par la synchro et
+        // écrasait l'affichage de ses propres paquets, mis de côté le temps du jeu.
+        // Un co-admin, lui, gère bien les paquets de la partie.
+        function joueurSimpleEnPartie() { return estEnPartieClient() && !appState.isCoHost; }
+
         function renderDecksList() {
             const l = document.getElementById('custom-decks-list');
-            if (!appState.customDecks.length) {
-                l.innerHTML = '<div class="builder-empty">Aucun paquet personnalisé pour le moment.<br>Appuyez sur « + CRÉER UN PAQUET » pour commencer.</div>';
+            const enPartie = joueurSimpleEnPartie();
+            const decks = enPartie ? appState.customDecks.filter(d => !d.fromHost) : appState.customDecks;
+            const avis = enPartie
+                ? `<div class="box" style="border-color:var(--bse-gold); margin-bottom:14px;">
+                     <div style="display:flex; gap:9px; align-items:flex-start;">
+                       ${ico('lock')}
+                       <div style="font-size:0.82rem; line-height:1.5; color:var(--bse-muted);">
+                         <b style="color:var(--bse-gold-light);">Partie en cours.</b> Vous jouez les paquets attribués par l'organisateur.
+                         Vos paquets personnels sont mis de côté et vous seront rendus dès que vous quitterez la partie.
+                       </div>
+                     </div>
+                   </div>` : '';
+            if (!decks.length) {
+                l.innerHTML = avis + '<div class="builder-empty">Aucun paquet personnalisé pour le moment.'
+                    + (enPartie ? '' : '<br>Appuyez sur « + CRÉER UN PAQUET » pour commencer.') + '</div>';
                 return;
             }
-            l.innerHTML = appState.customDecks.map(d => {
+            l.innerHTML = avis + decks.map(d => {
                 const cards = d.cards || [];
                 const counts = {};
                 cards.forEach(c => { const g = c.gravite || 'Spécial'; counts[g] = (counts[g] || 0) + 1; });
@@ -2091,6 +2217,7 @@
             document.getElementById('deckShareModal').style.display = 'block';
         }
         function importerPaquetUI() {
+            if (bloqueEditionEnPartie()) return;
             deckShareMode = 'import';
             document.getElementById('deck-share-title').innerText = 'Importer un paquet';
             document.getElementById('deck-share-hint').innerText = 'Collez ici le code de partage reçu (il commence par TMDECK1).';
@@ -2259,11 +2386,19 @@
             const t = appState.customTeams.find(x => x.id === p.teamId);
             return t ? t.color : null;
         }
+        let sauvegardeLogsTimer = null;
         function hostPushLog(text, color) {
-            hostLogs.unshift({ time: new Date().toLocaleTimeString('fr-FR'), text: String(text), color: color || null });
+            const d = new Date();
+            // La date accompagne l'heure : sur un événement de plusieurs jours,
+            // un journal horodaté à l'heure seule est inexploitable.
+            hostLogs.unshift({ time: d.toLocaleTimeString('fr-FR'), date: d.toLocaleDateString('fr-FR'), text: String(text), color: color || null });
             if (hostLogs.length > 400) hostLogs.length = 400;
             renderHostLogs();
             broadcastAdminState(); // tient les QG des co-admins à jour
+            // Écriture différée : un tirage par joueur toutes les secondes ne doit
+            // pas déclencher autant d'écritures dans le stockage local.
+            clearTimeout(sauvegardeLogsTimer);
+            sauvegardeLogsTimer = setTimeout(sauvegarderSessionHote, 1000);
         }
         function renderHostLogs() {
             const box = document.getElementById('host-log-box');
@@ -2274,7 +2409,13 @@
             }).join('');
         }
         function construireTexteLogs() {
-            return hostLogs.slice().reverse().map(e => typeof e === 'string' ? e : `[${e.time}] ${e.text}`).join('\r\n');
+            const entete = 'BSE MEDICAL SYSTEM — journal de partie' +
+                (liveSession.gameName ? ' « ' + liveSession.gameName + ' »' : '') +
+                '\r\nExporté le ' + new Date().toLocaleString('fr-FR') +
+                '\r\n' + '-'.repeat(60) + '\r\n';
+            const lignes = hostLogs.slice().reverse().map(e =>
+                typeof e === 'string' ? e : `[${e.date ? e.date + ' ' : ''}${e.time}] ${e.text}`);
+            return entete + lignes.join('\r\n');
         }
         function telechargerLogs() {
             if (!hostLogs.length) { alert('Aucun log à télécharger.'); return; }
@@ -2520,6 +2661,10 @@
                 teams: appState.customTeams,
                 explosionEnabled: appState.explosionEnabled,
                 deathRisk: appState.deathRisk,
+                deathChance: appState.deathChance,
+                deathMin: appState.deathMin,
+                deathMax: appState.deathMax,
+                deathOnGrave: appState.deathOnGrave,
                 materiel: appState.materiel,
                 quantites: appState.quantites,
                 gameName: liveSession.gameName,
@@ -2612,7 +2757,8 @@
                 resume: resume,
                 players: resume ? (saved.players || []) : [],
                 sessionPacks: resume ? (saved.sessionPacks || []) : (liveSession.sessionPacks || []),
-                teams: resume ? saved.teams : null
+                teams: resume ? saved.teams : null,
+                logs: resume ? saved.logs : null
             });
         }
 
@@ -2633,6 +2779,7 @@
                 // Reprise : on restaure les équipes de la session et les joueurs connus ("hors ligne"
                 // en attendant leur reconnexion automatique)
                 if (Array.isArray(opts.teams) && opts.teams.length >= 2) appState.customTeams = opts.teams;
+                if (Array.isArray(opts.logs) && opts.logs.length) hostLogs = opts.logs; // journal repris
                 (opts.players || []).forEach((p, i) => {
                     if (p && p.name) playersData['off_' + i] = { id: null, name: p.name, teamId: p.teamId, isCoHost: !!p.isCoHost, offline: true, token: p.token || '' };
                 });
@@ -3039,6 +3186,10 @@
                 if (data.mode) appState.mode = data.mode;
                 if (data.explosionEnabled !== undefined) appState.explosionEnabled = !!data.explosionEnabled;
                 if (data.deathRisk !== undefined) appState.deathRisk = !!data.deathRisk;
+                if (data.deathChance !== undefined) appState.deathChance = data.deathChance;
+                if (data.deathMin !== undefined) appState.deathMin = data.deathMin;
+                if (data.deathMax !== undefined) appState.deathMax = data.deathMax;
+                if (data.deathOnGrave !== undefined) appState.deathOnGrave = !!data.deathOnGrave;
                 if (data.materiel) appState.materiel = data.materiel;
                 if (data.quantites) appState.quantites = data.quantites;
                 saveState();
@@ -3095,6 +3246,10 @@
                 if (data.teams && data.teams.length) appState.customTeams = data.teams;
                 if (data.explosionEnabled !== undefined) appState.explosionEnabled = data.explosionEnabled;
                 if (data.deathRisk !== undefined) appState.deathRisk = data.deathRisk;
+                if (data.deathChance !== undefined) appState.deathChance = data.deathChance;
+                if (data.deathMin !== undefined) appState.deathMin = data.deathMin;
+                if (data.deathMax !== undefined) appState.deathMax = data.deathMax;
+                if (data.deathOnGrave !== undefined) appState.deathOnGrave = !!data.deathOnGrave;
                 if (data.materiel) appState.materiel = data.materiel;
                 if (data.quantites) appState.quantites = data.quantites;
                 clientSessionMeta.sessionPacks = data.sessionPacks || [];
