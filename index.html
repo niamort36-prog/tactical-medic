@@ -905,8 +905,6 @@
                 /* ---- TÊTE — casque porté ---- */
                 { id: "x1", titre: "Impact sur casque", zone: "Tête", cibles: ["tete"], protection: true, gravite: "Spécial",
                   description: "Impact direct sur le casque lourd.", effet: "Repos 2 minutes", matos: [] },
-                { id: "x2", titre: "Éraflure au visage", zone: "Tête", cibles: ["tete"], protection: true, gravite: "Légère",
-                  description: "Éraflure superficielle due à un éclat sur la joue ou le lobe de l'oreille.", effet: "Bandage", matos: ["Bandage"] },
                 /* ---- TÊTE — sans casque ---- */
                 { id: "x3", titre: "Plaie au front", zone: "Tête", cibles: ["tete"], protection: false, gravite: "Grave",
                   description: "Plaie ouverte et profonde au front.", effet: "Bandage + Morphine", matos: ["Bandage", "Morphine"] },
@@ -935,8 +933,6 @@
                   description: "Balle logée dans les tissus mous de l'avant-bras.", effet: "Bandage", matos: ["Bandage"] },
                 { id: "x13", titre: "Fracture de l'avant-bras", zone: "Bras", cibles: ["bras"], gravite: "Grave",
                   description: "Fracture de l'os de l'avant-bras (radius / cubitus).", effet: "Attelle + Bandage", matos: ["Attelle", "Bandage"] },
-                { id: "x14", titre: "Éclats au bras", zone: "Bras", cibles: ["bras"], gravite: "Grave",
-                  description: "Multiples plaies par éclats de grenade sur le bras.", effet: "Bandage + Morphine", matos: ["Bandage", "Morphine"] },
                 { id: "x15", titre: "Artère brachiale", zone: "Bras", cibles: ["bras"], gravite: "Critique",
                   description: "Sectionnement de l'artère brachiale.", effet: "Garrot + Bandage + Poche de transfusion", matos: ["Garrot", "Bandage", "Poche de transfusion"] },
 
@@ -948,13 +944,10 @@
                 { id: "x18", titre: "Fracture de la rotule", zone: "Jambe", cibles: ["jambe"], gravite: "Grave",
                   description: "Fracture de la rotule du genou.", effet: "Attelle + Morphine", matos: ["Attelle", "Morphine"] },
                 { id: "x19", titre: "Artère fémorale", zone: "Jambe", cibles: ["jambe"], gravite: "Critique",
-                  description: "Sectionnement de l'artère fémorale.", effet: "Garrot + Poche de transfusion + Épinéphrine", matos: ["Garrot", "Poche de transfusion", "Épinéphrine"] },
-
-                /* ---- MULTI-ZONES (dégâts de zone / explosions) ---- */
-                { id: "x20", titre: "Criblage d'éclats", zone: "Jambes", cibles: ["jambe"], gravite: "Grave",
-                  description: "Criblage d'éclats de shrapnel sur l'ensemble des deux jambes.", effet: "2x Bandages + Morphine", matos: ["Bandage", "Morphine"] },
-                { id: "x21", titre: "Souffle d'explosion", zone: "Torse et bras", cibles: ["torse", "bras"], gravite: "Critique",
-                  description: "Traumatisme contondant lourd au torse et sectionnement artériel à un bras suite à une explosion à proximité.", effet: "Garrot + Pansement 3 côtés + Poche de transfusion + Épinéphrine", matos: ["Garrot", "Pansement 3 côtés", "Poche de transfusion", "Épinéphrine"] }
+                  description: "Sectionnement de l'artère fémorale.", effet: "Garrot + Poche de transfusion + Épinéphrine", matos: ["Garrot", "Poche de transfusion", "Épinéphrine"] }
+                // Les blessures par souffle, grenade et éclats ont été déplacées
+                // dans le paquet Explosion : le mode Extrême ne garde que les
+                // blessures par impact et par tir.
             ],
             // PAQUET EXPLOSION — volontairement SANS champ `protection`.
             // Combiné au mode Extrême, il ignore donc la réponse casque/plaques :
@@ -982,7 +975,20 @@
                       "Tête": "Casque porté : Sonné → le médic aide à relever.\nSinon : DCD",
                       "Torse": "Gilet porté : Sonné → le médic aide à relever.\nSinon : DCD"
                   },
-                  matos: [] }
+                  matos: [] },
+
+                /* ---- Blessures par éclats, venues du mode Extrême ----
+                   Elles gardent leur ciblage par zone (`cibles`), utile quand le
+                   paquet Explosion est mêlé au mode Extrême. Leur condition de
+                   protection a été retirée : l'explosion ne la respecte pas. */
+                { id: "x2", titre: "Éraflure au visage", zone: "Tête", cibles: ["tete"], gravite: "Légère",
+                  description: "Éraflure superficielle due à un éclat sur la joue ou le lobe de l'oreille.", effet: "Bandage", matos: ["Bandage"] },
+                { id: "x14", titre: "Éclats au bras", zone: "Bras", cibles: ["bras"], gravite: "Grave",
+                  description: "Multiples plaies par éclats de grenade sur le bras.", effet: "Bandage + Morphine", matos: ["Bandage", "Morphine"] },
+                { id: "x20", titre: "Criblage d'éclats", zone: "Jambes", cibles: ["jambe"], gravite: "Grave",
+                  description: "Criblage d'éclats de shrapnel sur l'ensemble des deux jambes.", effet: "2x Bandages + Morphine", matos: ["Bandage", "Morphine"] },
+                { id: "x21", titre: "Souffle d'explosion", zone: "Torse et bras", cibles: ["torse", "bras"], gravite: "Critique",
+                  description: "Traumatisme contondant lourd au torse et sectionnement artériel à un bras suite à une explosion à proximité.", effet: "Garrot + Pansement 3 côtés + Poche de transfusion + Épinéphrine", matos: ["Garrot", "Pansement 3 côtés", "Poche de transfusion", "Épinéphrine"] }
             ]
         };
 
@@ -1144,16 +1150,17 @@
             return total;
         }
 
+        // Catalogue : même ordre que les réglages, trié par gravité
         function getCatalogRulesFlat() {
             const rows = [];
             if (appState.mode.startsWith('d_')) {
                 const cd = appState.customDecks.find(d => d.id === appState.mode);
-                (cd && cd.cards ? cd.cards : []).forEach(r => rows.push({ r, rid: ridForMode(r), sec: 'Paquet perso' }));
+                trierParGravite(cd && cd.cards ? cd.cards : []).forEach(r => rows.push({ r, rid: ridForMode(r), sec: 'Paquet perso' }));
                 return rows;
             }
-            reglesBaseDuMode(appState.mode).forEach(r => rows.push({ r, rid: ridForMode(r), sec: 'Mode' }));
+            trierParGravite(reglesBaseDuMode(appState.mode)).forEach(r => rows.push({ r, rid: ridForMode(r), sec: 'Mode' }));
             if (modeAvecExplosion() && appState.explosionEnabled) {
-                (DB_REGLES.explosion || []).forEach(r => rows.push({ r, rid: r.id, sec: 'Explosion' }));
+                trierParGravite(DB_REGLES.explosion || []).forEach(r => rows.push({ r, rid: r.id, sec: 'Explosion' }));
             }
             return rows;
         }
@@ -1839,6 +1846,17 @@
             retourAccueil();
         }
 
+        // Ordre d'affichage des gravités, du plus grave au plus anodin. Le tri est
+        // stable : à gravité égale, les cartes gardent l'ordre du paquet.
+        const ORDRE_GRAVITE = ['DÉCÈS', 'Critique', 'Grave', 'Légère', 'Spécial'];
+        function rangGravite(g) {
+            const i = ORDRE_GRAVITE.indexOf(g);
+            return i === -1 ? ORDRE_GRAVITE.length : i;
+        }
+        function trierParGravite(cartes) {
+            return (cartes || []).slice().sort((a, b) => rangGravite(a.gravite) - rangGravite(b.gravite));
+        }
+
         // Codes de gravité — mêmes valeurs que les variables CSS --accent-* de la charte BSE
         function getColor(g) {
             if(g==="DÉCÈS") return "#55554f";
@@ -1983,12 +2001,13 @@
                 baseRules = reglesBaseDuMode(appState.mode);
             }
 
+            // Affichage trié par gravité : DÉCÈS, Critique, Grave, Légère, Spécial
             const totalBase = poolTotal(baseRules);
-            let rulesHtml = baseRules.map(r => renderRow(r, totalBase)).join('');
+            let rulesHtml = trierParGravite(baseRules).map(r => renderRow(r, totalBase)).join('');
             if (modeAvecExplosion() && appState.explosionEnabled) {
                 const totalExplosion = poolTotal(DB_REGLES.explosion);
                 rulesHtml += `<div class="separator">${ico('blast')}Pack explosion</div>`;
-                rulesHtml += DB_REGLES.explosion.map(r => renderRow(r, totalExplosion)).join('');
+                rulesHtml += trierParGravite(DB_REGLES.explosion).map(r => renderRow(r, totalExplosion)).join('');
             }
             document.getElementById('liste-regles').innerHTML = rulesHtml;
 
