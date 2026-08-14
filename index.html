@@ -18,6 +18,9 @@
     <!-- Bibliotheques embarquees dans le depot : sur le terrain il n'y a pas
          toujours de reseau, et un CDN injoignable rendait l'application
          entierement inutilisable, meme en solo. -->
+    <script src="vendor/firebase-app-compat.js"></script>
+    <script src="vendor/firebase-auth-compat.js"></script>
+    <script src="vendor/firebase-database-compat.js"></script>
     <script src="vendor/peerjs.min.js"></script>
     <script src="vendor/qrcode.min.js"></script>
     <script src="vendor/html5-qrcode.min.js"></script>
@@ -715,6 +718,14 @@
                 <label class="form-label">Pseudo de l'hôte</label>
                 <input type="text" id="multi-pseudo" class="form-input" placeholder="Ex : Orga">
             </div>
+            <div class="form-group">
+                <label class="form-label">Liaison entre appareils</label>
+                <select id="multi-transport" class="form-input" onchange="changerTransport(this.value)">
+                    <option value="firebase">Serveur Firebase (recommandé)</option>
+                    <option value="peer">Pair-à-pair (ancien)</option>
+                </select>
+                <p id="multi-transport-aide" style="font-size:0.75rem; color:var(--bse-muted); margin:-4px 0 10px;"></p>
+            </div>
             <button type="button" class="btn-action btn-create" onclick="creerPartieEnLigne()">Créer une partie (hôte)</button>
 
             <hr style="border:none; border-top:1px solid var(--bse-border); margin:18px 0;">
@@ -1056,7 +1067,10 @@
         function hasMateriel(m) { return appState.materiel[m] !== false; }
         function qtyFor(rid) { const q = appState.quantites[rid]; return (q === undefined || q === null) ? 2 : q; }
         function ridForMode(r) { return r.id || (appState.mode + "_" + r.titre); }
-        function estEnPartieClient() { return !!(myConn && myConn.open && !appState.isOrga); }
+        function estEnPartieClient() {
+            if (transport === 'firebase' && fbPartieRef) return !appState.isOrga;
+            return !!(myConn && myConn.open && !appState.isOrga);
+        }
         // Les réglages sont verrouillés pour un joueur en partie, sauf s'il est co-admin
         function reglagesVerrouilles() { return estEnPartieClient() && !appState.isCoHost; }
         // Version d'affichage d'un effet : la balise technique [MEMBRE_ALEATOIRE] est retirée
@@ -1265,6 +1279,10 @@
             try { return JSON.parse(localStorage.getItem(HOST_SESSION_KEY) || 'null'); } catch(e) { return null; }
         }
         function sauvegarderSessionHote() {
+            // En liaison Firebase, la partie vit dans la base : enregistrer une
+            // session pair-à-pair ici créerait une partie fantôme, reprise au
+            // prochain démarrage une fois la session Firebase terminée.
+            if (enPartieFirebase()) return;
             if (!appState.isOrga || !liveSession.gameName) return;
             // Le jeton est conservé pour que chaque joueur retrouve son profil
             // après un redémarrage de l'hôte. Il ne quitte jamais cet appareil.
@@ -1424,7 +1442,11 @@
             const hostSession = getHostSession();
             if (jp) {
                 document.getElementById('join-code').value = jp.trim();
-                rejoindrePartieEnLigne(jp.trim()); // Skip modal, auto join!
+                // Le lien porte fb=1 quand l'hôte joue en liaison Firebase
+                rejoindrePartieEnLigne(urlParams.get('fb') === '1' ? jp.trim() + '?fb=1' : jp.trim());
+            } else if (getFbSession()) {
+                // Partie Firebase en cours sur cet appareil : on la reprend.
+                fbReprendreSession().then(ok => { if (!ok) updateUI_Game(); });
             } else if (hostSession && hostSession.gameName) {
                 demarrerHost(hostSession.gameName, { resume: true, players: hostSession.players || [], sessionPacks: hostSession.sessionPacks || [], teams: hostSession.teams, logs: hostSession.logs });
             } else if (getClientSession()) {
@@ -1755,7 +1777,10 @@
             showScreen('screen-result');
             garderEcranAllume();
 
-            if (estEnPartieClient()) {
+            if (enPartieFirebase() && !appState.isOrga) {
+                fbJournal(`${appState.playerName} · tirage : ${card.titre} [${card.gravite}] · ${lastDrawSrc}`,
+                          couleurEquipe(appState.playerTeamId));
+            } else if (estEnPartieClient()) {
                 try {
                     myConn.send({ type: 'DRAW_LOG', titre: card.titre, gravite: card.gravite, src: String(lastDrawSrc) });
                 } catch (e) { console.warn(e); }
@@ -2020,6 +2045,13 @@
                 saveState();
                 broadcastFullState();
                 hostRefreshHostPanels();
+            } else if (enPartieFirebase() && appState.isCoHost) {
+                // Co-admin en liaison Firebase : il écrit la configuration
+                // directement, ce sont les règles de la base qui l'autorisent.
+                if (modeRetourEditeur !== null && !modeChangeManuel) appState.mode = modeRetourEditeur;
+                modeRetourEditeur = null;
+                saveState();
+                fbPousserConfig(true);
             } else if (estEnPartieClient() && appState.isCoHost) {
                 // Co-admin : même logique que l'hôte (régler un paquet ne change pas le mode joué),
                 // puis la configuration est envoyée à l'hôte qui la redistribue à tous
@@ -2374,6 +2406,312 @@
         }
         function annulerEditionCarte() { editDeck(currentDeckId); }
 
+        /* =========================================================
+           MULTIJOUEUR — LIAISON FIREBASE
+           L'état de la partie vit dans la base, plus dans le téléphone de
+           l'organisateur. Il peut donc fermer sa page sans couper la partie,
+           et aucun relais TURN n'est nécessaire : chaque appareil parle au
+           serveur, jamais aux autres appareils.
+
+           Les autorisations ne sont plus vérifiées par le code de l'hôte
+           (contournable par un client modifié) mais par les règles de la base,
+           côté serveur : voir database.rules.json.
+           ========================================================= */
+        const FB_CONFIG = {
+            apiKey: "AIzaSyDMohnSPAJwkefm9q5hUrLdzLxriS9KyQE",
+            authDomain: "project-bsm-7d32c.firebaseapp.com",
+            databaseURL: "https://project-bsm-7d32c-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "project-bsm-7d32c",
+            storageBucket: "project-bsm-7d32c.firebasestorage.app",
+            messagingSenderId: "58420137411",
+            appId: "1:58420137411:web:acf601c05f7e6f97348176"
+        };
+
+        let transport = 'peer';        // liaison de la partie en cours : 'peer' | 'firebase'
+        let fbPret = false;
+        let fbUid = null;
+        let fbPartieRef = null;        // référence de la partie en cours
+        let fbEcoutes = [];            // abonnements à détacher en sortant
+        let fbPartieId = '';
+        let fbEcritureConfig = null;   // écriture de config différée
+
+        function enPartieFirebase() { return transport === 'firebase' && !!fbPartieRef; }
+
+        /* --- Reprise de session --- */
+        // La partie vit dans la base : il suffit de retenir laquelle. L'identité
+        // anonyme, elle, est conservée par Firebase d'un chargement à l'autre,
+        // donc l'organisateur est reconnu comme tel sans rien faire.
+        const FB_SESSION_KEY = 'medic_v32_fb_session';
+        function getFbSession() { try { return JSON.parse(localStorage.getItem(FB_SESSION_KEY) || 'null'); } catch (e) { return null; } }
+        function setFbSession(id) { try { localStorage.setItem(FB_SESSION_KEY, JSON.stringify({ partieId: id })); } catch (e) {} }
+        function clearFbSession() { localStorage.removeItem(FB_SESSION_KEY); }
+
+        // Les deux liaisons s'excluent : entrer en Firebase efface toute session
+        // pair-à-pair en attente, qui sinon se reprendrait au prochain démarrage.
+        function oublierSessionsPeer() {
+            localStorage.removeItem(HOST_SESSION_KEY);
+            localStorage.removeItem(CLIENT_SESSION_KEY);
+        }
+
+        async function fbReprendreSession() {
+            const s = getFbSession();
+            if (!s || !s.partieId || !fbDisponible()) return false;
+            try {
+                await fbConnexion();
+                const snap = await firebase.database().ref('parties/' + s.partieId).get();
+                const p = snap.val();
+                if (!p || !p.meta || p.meta.close === true) { clearFbSession(); return false; }
+
+                const moi = (p.joueurs || {})[fbUid];
+                const suisOrga = p.meta.hoteUid === fbUid;
+                if (!suisOrga && !moi) { clearFbSession(); return false; } // retiré de la partie entre-temps
+
+                fbPartieId = s.partieId;
+                fbPartieRef = firebase.database().ref('parties/' + fbPartieId);
+                transport = 'firebase';
+                appState.isOrga = suisOrga;
+                liveSession.gameName = p.meta.nom || fbPartieId;
+                clientSessionMeta.gameName = liveSession.gameName;
+                if (moi) {
+                    appState.isCoHost = !!moi.isCoHost;
+                    if (moi.teamId) appState.playerTeamId = moi.teamId;
+                }
+                fbInstallerPresence();
+                fbBrancherEcoutes();
+                document.getElementById('btn-multi-icon').classList.add('online');
+                updateUI_Game();
+                return true;
+            } catch (e) { console.warn('Reprise de la partie impossible', e); return false; }
+        }
+
+        function fbDisponible() { return typeof firebase !== 'undefined' && firebase.database && firebase.auth; }
+
+        // Connexion anonyme : donne à chaque appareil une identité stable que le
+        // serveur peut vérifier. C'est ce qui rend les règles de sécurité utiles.
+        async function fbConnexion() {
+            if (!fbDisponible()) throw new Error("Le multijoueur Firebase n'est pas disponible (bibliothèque absente).");
+            if (!fbPret) { firebase.initializeApp(FB_CONFIG); fbPret = true; }
+            if (fbUid) return fbUid;
+            const cred = await firebase.auth().signInAnonymously();
+            fbUid = cred.user.uid;
+            return fbUid;
+        }
+
+        function fbRef(chemin) { return firebase.database().ref('parties/' + fbPartieId + (chemin ? '/' + chemin : '')); }
+
+        // Config partagée : tout ce que l'organisateur impose aux joueurs
+        function fbConstruireConfig() {
+            return {
+                mode: appState.mode,
+                decks: appState.customDecks || [],
+                teams: appState.customTeams || [],
+                explosionEnabled: !!appState.explosionEnabled,
+                deathRisk: !!appState.deathRisk,
+                deathChance: nombreValide(appState.deathChance, 40, 0, 100),
+                deathMin: nombreValide(appState.deathMin, 30, 5, 600),
+                deathMax: nombreValide(appState.deathMax, 60, 5, 600),
+                deathOnGrave: !!appState.deathOnGrave,
+                materiel: appState.materiel || {},
+                quantites: appState.quantites || {},
+                sessionPacks: liveSession.sessionPacks || []
+            };
+        }
+        // Écriture différée : régler une quantité déclenche plusieurs rendus,
+        // inutile d'envoyer la configuration à chaque frappe.
+        function fbPousserConfig(immediat) {
+            if (!enPartieFirebase()) return;
+            clearTimeout(fbEcritureConfig);
+            const envoyer = () => fbRef('config').set(fbConstruireConfig()).catch(fbErreurEcriture);
+            if (immediat) envoyer(); else fbEcritureConfig = setTimeout(envoyer, 400);
+        }
+        function fbErreurEcriture(e) {
+            console.warn('Écriture refusée par la base', e);
+            if (e && String(e.message || '').includes('permission')) {
+                alert("Modification refusée : vous n'avez pas les droits d'organisateur sur cette partie.");
+            }
+        }
+
+        function fbAppliquerConfig(c) {
+            if (!c) return;
+            if (!appState.isOrga) {
+                backupLocalConfig();
+                if (c.mode) appState.mode = c.mode;
+                appState.customDecks = (c.decks || []).map(d => Object.assign({}, d, { fromHost: true }));
+                if (c.teams && c.teams.length) appState.customTeams = c.teams;
+                appState.explosionEnabled = !!c.explosionEnabled;
+                appState.deathRisk = !!c.deathRisk;
+                if (c.deathChance !== undefined) appState.deathChance = c.deathChance;
+                if (c.deathMin !== undefined) appState.deathMin = c.deathMin;
+                if (c.deathMax !== undefined) appState.deathMax = c.deathMax;
+                appState.deathOnGrave = !!c.deathOnGrave;
+                if (c.materiel) appState.materiel = c.materiel;
+                if (c.quantites) appState.quantites = c.quantites;
+            }
+            clientSessionMeta.sessionPacks = c.sessionPacks || [];
+            liveSession.sessionPacks = c.sessionPacks || [];
+            updateUI_Game();
+            if (document.getElementById('screen-host-dashboard').classList.contains('active')) hostRefreshHostPanels();
+        }
+
+        // Les joueurs de la base alimentent playersData, que tout le QG utilise déjà
+        function fbAppliquerJoueurs(snap) {
+            const val = snap.val() || {};
+            const moiAvant = playersData[fbUid];
+            playersData = {};
+            Object.keys(val).forEach(uid => {
+                const j = val[uid] || {};
+                playersData[uid] = { id: uid, name: j.nom || 'Joueur', teamId: j.teamId || 'blue',
+                    isCoHost: !!j.isCoHost, offline: j.enLigne === false };
+            });
+            const moi = playersData[fbUid];
+            if (!appState.isOrga) {
+                if (!moi) { fbEjecte(); return; }           // retiré de la partie par l'orga
+                if (moi.teamId !== appState.playerTeamId) { appState.playerTeamId = moi.teamId; updateUI_Game(); }
+                if (!!moi.isCoHost !== !!appState.isCoHost) {
+                    appState.isCoHost = !!moi.isCoHost;
+                    updateUI_Game();
+                    alert(appState.isCoHost
+                        ? 'Vous êtes co-organisateur : le QG est accessible via le bouton multijoueur, en haut à droite.'
+                        : 'Grade admin retiré.');
+                }
+            }
+            updateDashboard();
+            hostPopulatePackTeamPlayerSelects();
+        }
+
+        function fbEjecte() {
+            alert('Vous avez été retiré de la partie.');
+            fbQuitterPartie(true);
+        }
+
+        function fbAppliquerLogs(snap) {
+            const val = snap.val() || {};
+            hostLogs = Object.keys(val).map(k => {
+                const e = val[k]; const d = new Date(e.ts || Date.now());
+                return { time: d.toLocaleTimeString('fr-FR'), date: d.toLocaleDateString('fr-FR'),
+                         text: e.texte || '', color: e.couleur || null, ts: e.ts || 0 };
+            }).sort((a, b) => b.ts - a.ts).slice(0, 400);
+            renderHostLogs();
+        }
+
+        function fbJournal(texte, couleur) {
+            if (!enPartieFirebase()) return;
+            const e = { ts: Date.now(), texte: String(texte).slice(0, 300) };
+            if (couleur) e.couleur = String(couleur).slice(0, 24);
+            e.auteur = String(appState.playerName || '').slice(0, 32);
+            fbRef('logs').push(e).catch(() => {});
+        }
+
+        function fbBrancherEcoutes() {
+            fbDetacherEcoutes();
+            const abo = (chemin, cb) => { const r = fbRef(chemin); r.on('value', cb); fbEcoutes.push([r, cb]); };
+            abo('config', s => fbAppliquerConfig(s.val()));
+            abo('joueurs', fbAppliquerJoueurs);
+            abo('logs', fbAppliquerLogs);
+            abo('meta/close', s => { if (s.val() === true) { alert("L'organisateur a clôturé la partie."); fbQuitterPartie(true); } });
+        }
+        function fbDetacherEcoutes() {
+            fbEcoutes.forEach(([r, cb]) => { try { r.off('value', cb); } catch (e) {} });
+            fbEcoutes = [];
+        }
+
+        // Présence : la base marque le joueur hors ligne dès que son appareil se
+        // déconnecte, sans dépendre d'un message d'au revoir qui n'arrive jamais.
+        function fbInstallerPresence() {
+            const ref = fbRef('joueurs/' + fbUid + '/enLigne');
+            ref.onDisconnect().set(false);
+            ref.set(true).catch(() => {});
+            const vu = fbRef('joueurs/' + fbUid + '/vuLe');
+            vu.onDisconnect().set(Date.now());
+        }
+
+        async function fbCreerPartie(nomPartie, pseudo) {
+            await fbConnexion();
+            fbPartieId = 'TM32-' + normaliserNomPartie(nomPartie);
+            const ref = firebase.database().ref('parties/' + fbPartieId);
+            const dejaLa = (await ref.child('meta').get()).val();
+            if (dejaLa && dejaLa.hoteUid && dejaLa.hoteUid !== fbUid) {
+                throw new Error("Une partie porte déjà ce nom et appartient à quelqu'un d'autre. Choisissez un autre nom.");
+            }
+            appState.isOrga = true; appState.isCoHost = false; appState.playerTeamId = 'orga';
+            liveSession.gameName = nomPartie;
+            appState.lastGameName = nomPartie;
+            await ref.update({
+                meta: { nom: String(nomPartie).slice(0, 60), hoteUid: fbUid, creeLe: Date.now(), close: false },
+                config: fbConstruireConfig(),
+                ['joueurs/' + fbUid]: { nom: String(pseudo || 'Orga').slice(0, 32), teamId: 'orga', enLigne: true, isCoHost: false }
+            });
+            transport = 'firebase'; fbPartieRef = ref;
+            oublierSessionsPeer();
+            setFbSession(fbPartieId);
+            fbInstallerPresence();
+            fbBrancherEcoutes();
+            fbJournal('Partie ouverte : ' + fbPartieId);
+        }
+
+        async function fbRejoindrePartie(code, pseudo, teamId) {
+            await fbConnexion();
+            fbPartieId = normaliserCodePartie(code);
+            const ref = firebase.database().ref('parties/' + fbPartieId);
+            const meta = (await ref.child('meta').get()).val();
+            if (!meta) throw new Error("Partie introuvable. Vérifiez le nom auprès de l'organisateur.");
+            if (meta.close === true) throw new Error('Cette partie est clôturée.');
+            appState.isOrga = false;
+            appState.playerTeamId = teamId || appState.playerTeamId;
+            liveSession.gameName = meta.nom || fbPartieId;
+            clientSessionMeta.gameName = meta.nom || fbPartieId;
+            await ref.child('joueurs/' + fbUid).update({
+                nom: String(pseudo || appState.playerName || 'Joueur').slice(0, 32),
+                teamId: appState.playerTeamId, enLigne: true
+            });
+            transport = 'firebase'; fbPartieRef = ref;
+            oublierSessionsPeer();
+            setFbSession(fbPartieId);
+            fbInstallerPresence();
+            fbBrancherEcoutes();
+            fbJournal(appState.playerName + ' a rejoint', couleurEquipe(appState.playerTeamId));
+        }
+
+        function couleurEquipe(tid) {
+            const t = (appState.customTeams || []).find(x => x.id === tid);
+            return t ? t.color : null;
+        }
+
+        function fbQuitterPartie(silencieux) {
+            const etaitOrga = appState.isOrga;
+            fbDetacherEcoutes();
+            clearTimeout(fbEcritureConfig);
+            if (fbPartieRef && fbUid && !etaitOrga) {
+                try { fbRef('joueurs/' + fbUid + '/enLigne').set(false); } catch (e) {}
+            }
+            fbPartieRef = null; fbPartieId = ''; transport = 'peer';
+            appState.isOrga = false; appState.isCoHost = false;
+            playersData = {}; hostLogs = [];
+            clientSessionMeta = { gameName: '', sessionPacks: [] };
+            liveSession = { gameName: '', sessionPacks: [] };
+            clearClientSession();
+            clearFbSession();
+            restoreLocalConfig();
+            if (!appState.customTeams.some(t => t.id === appState.playerTeamId)) {
+                appState.playerTeamId = appState.customTeams[0].id;
+            }
+            document.getElementById('btn-multi-icon').classList.remove('online');
+            document.getElementById('btn-quitter-partie').style.display = 'none';
+            document.getElementById('confirmLeaveModal').style.display = 'none';
+            showScreen('screen-game');
+            saveState();
+            if (!silencieux) { /* départ volontaire : rien à signaler */ }
+        }
+
+        async function fbCloturerPartie() {
+            if (!enPartieFirebase()) return;
+            try {
+                await fbRef('meta/close').set(true);          // prévient tous les joueurs connectés
+                setTimeout(() => { fbRef('').remove().catch(() => {}); }, 1200);
+            } catch (e) { fbErreurEcriture(e); return; }
+            fbQuitterPartie(true);
+        }
+
         /* --- MULTIJOUEUR PEERJS --- */
         function hostSetTab(id) {
             document.querySelectorAll('.host-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-host-tab') === id));
@@ -2388,6 +2726,9 @@
         }
         let sauvegardeLogsTimer = null;
         function hostPushLog(text, color) {
+            // En liaison Firebase, le journal est partagé : on l'écrit dans la
+            // base, et l'abonnement le réaffiche pour tout le monde.
+            if (enPartieFirebase()) { fbJournal(text, color); return; }
             const d = new Date();
             // La date accompagne l'heure : sur un événement de plusieurs jours,
             // un journal horodaté à l'heure seule est inexploitable.
@@ -2489,7 +2830,7 @@
             if (!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(col)) col = '#888888';
             document.getElementById('host-new-team-name').value = '';
             document.getElementById('host-new-team-color').value = '';
-            if (!appState.isOrga) { envoyerAdminCmd({ action: 'addTeam', name: nm, color: col }); return; }
+            if (!appState.isOrga && !enPartieFirebase()) { envoyerAdminCmd({ action: 'addTeam', name: nm, color: col }); return; }
             ajouterEquipeDirect(nm, col);
         }
         function ajouterEquipeDirect(nm, col) {
@@ -2500,7 +2841,7 @@
             updateDashboard();
         }
         function hostSupprimerEquipe(tid) {
-            if (!appState.isOrga) { envoyerAdminCmd({ action: 'delTeam', teamId: tid }); return; }
+            if (!appState.isOrga && !enPartieFirebase()) { envoyerAdminCmd({ action: 'delTeam', teamId: tid }); return; }
             if (!appState.customTeams || appState.customTeams.length <= 2) { alert('Il faut au moins deux équipes.'); return; }
             const keep = appState.customTeams.filter(t => t.id !== tid);
             const fb = keep[0].id;
@@ -2508,6 +2849,7 @@
             Object.values(playersData).forEach(p => {
                 if (p.teamId === tid) {
                     p.teamId = fb;
+                    if (enPartieFirebase()) { fbRef('joueurs/' + p.id + '/teamId').set(fb).catch(() => {}); return; }
                     const c = hostConns[p.id];
                     if (c) { try { c.send({ type: 'CMD_TEAM', teamId: fb }); } catch (e) {} }
                 }
@@ -2525,7 +2867,7 @@
             const peerId = scope === 'player' ? document.getElementById('host-pack-player').value : null;
             if (scope === 'team' && !teamId) { alert('Choisissez une équipe.'); return; }
             if (scope === 'player' && !peerId) { alert('Choisissez un joueur (connecté).'); return; }
-            if (!appState.isOrga) { envoyerAdminCmd({ action: 'addPack', src, scope, teamId, peerId }); return; }
+            if (!appState.isOrga && !enPartieFirebase()) { envoyerAdminCmd({ action: 'addPack', src, scope, teamId, peerId }); return; }
             const refus = ajouterPaquetSessionDirect(src, scope, teamId, peerId);
             if (refus) alert(refus);
         }
@@ -2575,7 +2917,7 @@
             return 'Tout le monde';
         }
         function hostRetirerPaquetSession(pid) {
-            if (!appState.isOrga) { envoyerAdminCmd({ action: 'delPack', packId: pid }); return; }
+            if (!appState.isOrga && !enPartieFirebase()) { envoyerAdminCmd({ action: 'delPack', packId: pid }); return; }
             liveSession.sessionPacks = (liveSession.sessionPacks || []).filter(x => x.id !== pid);
             broadcastFullState();
             renderHostSessionPacksList();
@@ -2643,6 +2985,19 @@
         }
         function remplirEcranQG() {
             document.getElementById('host-game-title').innerText = liveSession.gameName || clientSessionMeta.gameName || 'Partie';
+            if (enPartieFirebase()) {
+                // En liaison Firebase, tout le monde lit la même partie : un
+                // co-admin dispose des mêmes informations que l'organisateur,
+                // sans avoir besoin qu'on les lui recopie.
+                document.getElementById('host-connection-id').innerText = fbPartieId;
+                const baseUrl = (location.href || '').split('?')[0].split('#')[0];
+                const lien = `${baseUrl}?join=${encodeURIComponent(fbPartieId)}&fb=1`;
+                const inp = document.getElementById('host-join-link');
+                if (inp && !inp.value) { inp.value = lien; genererQR(lien); }
+                hostRefreshHostPanels();
+                updateDashboard();
+                return;
+            }
             if (!appState.isOrga) {
                 document.getElementById('host-connection-id').innerText = adminHostId || '...';
                 const inp = document.getElementById('host-join-link');
@@ -2672,18 +3027,21 @@
             };
         }
         function broadcastFullState() {
+            if (enPartieFirebase()) { fbPousserConfig(); return; }
             const payload = buildSyncPayload();
             Object.values(hostConns).forEach(c => { try { c.send(payload); } catch (e) {} });
             sauvegarderSessionHote();
         }
 
         function ouvrirMenuMultijoueur() {
-            if ((appState.isOrga && peer) || (estEnPartieClient() && appState.isCoHost)) {
+            if ((appState.isOrga && (peer || enPartieFirebase())) || (estEnPartieClient() && appState.isCoHost)) {
                 // Hôte OU co-admin : accès au QG complet
                 showScreen('screen-host-dashboard');
                 remplirEcranQG();
             } else {
                 document.getElementById('multiplayerModal').style.display = 'block';
+                document.getElementById('multi-transport').value = appState.transportPrefere || 'firebase';
+                changerTransport(appState.transportPrefere || 'firebase');
                 document.getElementById('multi-pseudo').value = appState.playerName;
                 document.getElementById('multi-game-name').value = appState.lastGameName || liveSession.gameName || '';
                 const tc = appState.turnConfig || {};
@@ -2740,7 +3098,51 @@
             } catch (e) { echec(e); }
         }
 
+        function changerTransport(v) {
+            appState.transportPrefere = (v === 'peer') ? 'peer' : 'firebase';
+            const aide = document.getElementById('multi-transport-aide');
+            if (aide) aide.innerText = appState.transportPrefere === 'firebase'
+                ? "Passe par le serveur : fonctionne entre réseaux différents (4G / WiFi), et vous pouvez fermer votre page sans couper la partie."
+                : "Connexion directe entre appareils. Nécessite souvent un relais TURN, et votre page doit rester ouverte.";
+            saveState();
+        }
+
+        async function creerPartieFirebase(gameName, hostPseudo) {
+            const st = document.getElementById('multi-status');
+            st.style.display = 'block'; st.innerText = 'Ouverture de la partie...';
+            try {
+                await fbCreerPartie(gameName, hostPseudo || appState.playerName);
+                st.style.display = 'none';
+                document.getElementById('host-connection-id').innerText = fbPartieId;
+                document.getElementById('host-game-title').innerText = liveSession.gameName;
+                const baseUrl = (location.href || '').split('?')[0].split('#')[0];
+                const lien = `${baseUrl}?join=${encodeURIComponent(fbPartieId)}&fb=1`;
+                const inp = document.getElementById('host-join-link');
+                if (inp) inp.value = lien;
+                document.getElementById('btn-multi-icon').classList.add('online');
+                fermerMultiModal();
+                showScreen('screen-host-dashboard');
+                hostSetTab('join');
+                genererQR(lien);
+                hostRefreshHostPanels();
+                updateDashboard();
+                saveState();
+            } catch (e) {
+                st.style.display = 'block';
+                st.innerText = (e && e.message) ? e.message : 'Ouverture impossible.';
+                appState.isOrga = false;
+                console.error(e);
+            }
+        }
+
         function creerPartieEnLigne() {
+            if ((appState.transportPrefere || 'firebase') === 'firebase') {
+                const gameName = (document.getElementById('multi-game-name').value || '').trim() || 'Partie';
+                const hostPseudo = document.getElementById('multi-pseudo').value.trim();
+                if (hostPseudo) appState.playerName = hostPseudo;
+                creerPartieFirebase(gameName, hostPseudo);
+                return;
+            }
             if (typeof Peer === 'undefined') {
                 alert("Multijoueur indisponible (librairie PeerJS non chargée — vérifiez la connexion Internet).");
                 return;
@@ -2886,6 +3288,14 @@
 
             const rawInput = autoCode || document.getElementById('join-code').value.trim();
             if (!rawInput) { alert('Indiquez le nom de la partie ou scannez le QR code.'); return; }
+
+            // Liaison Firebase : soit choisie dans le menu, soit imposée par le
+            // lien d'invitation de l'hôte (paramètre fb=1).
+            const lienFirebase = /[?&]fb=1/.test(String(rawInput));
+            if (lienFirebase || (appState.transportPrefere || 'firebase') === 'firebase') {
+                rejoindreFirebase(rawInput);
+                return;
+            }
             appliquerRelayParam(rawInput); // récupère le relais TURN si le lien complet a été collé/scanné
 
             appState.isOrga = false;
@@ -2905,6 +3315,46 @@
         // Les accents sont translittérés AVANT le filtrage : sans cela « Été »
         // donnait « T » côté hôte et « » côté joueur, qui ne se rejoignaient
         // jamais. Hôte et joueur doivent appliquer exactement la même règle.
+        // Connexion Firebase : on lit d'abord la partie pour proposer ses vraies
+        // équipes, puis le joueur choisit la sienne avant d'être inscrit.
+        let fbCodeEnAttente = '';
+        async function rejoindreFirebase(rawInput) {
+            const st = document.getElementById('multi-status');
+            st.style.display = 'block'; st.innerText = 'Recherche de la partie...';
+            try {
+                await fbConnexion();
+                const id = normaliserCodePartie(rawInput);
+                const snap = await firebase.database().ref('parties/' + id).get();
+                const p = snap.val();
+                if (!p || !p.meta) throw new Error("Partie introuvable. Vérifiez le nom auprès de l'organisateur.");
+                if (p.meta.close === true) throw new Error('Cette partie est clôturée.');
+                fbCodeEnAttente = id;
+                const equipes = (p.config && p.config.teams && p.config.teams.length) ? p.config.teams : DEFAULT_TEAMS;
+                appState.customTeams = equipes;
+                st.style.display = 'none';
+                fermerMultiModal();
+                const select = document.getElementById('modal-join-team');
+                select.innerHTML = equipes.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
+                document.getElementById('teamSelectionModal').style.display = 'block';
+            } catch (e) {
+                st.style.display = 'block';
+                st.innerText = (e && e.message) ? e.message : 'Connexion impossible.';
+                console.error(e);
+            }
+        }
+        async function validerEquipeFirebase() {
+            const teamId = document.getElementById('modal-join-team').value;
+            document.getElementById('teamSelectionModal').style.display = 'none';
+            try {
+                await fbRejoindrePartie(fbCodeEnAttente, appState.playerName, teamId);
+                document.getElementById('btn-multi-icon').classList.add('online');
+                updateUI_Game();
+                saveState();
+            } catch (e) {
+                alert((e && e.message) ? e.message : 'Connexion impossible.');
+            }
+        }
+
         function normaliserNomPartie(nom) {
             return String(nom || '')
                 .normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -3084,6 +3534,7 @@
         }
 
         function validerEquipeRejoindre() {
+            if (fbCodeEnAttente) { validerEquipeFirebase(); fbCodeEnAttente = ''; return; }
             if (!myConn || !myConn.open) {
                 document.getElementById('teamSelectionModal').style.display = 'none';
                 isWaitingForTeamSelection = false;
@@ -3323,7 +3774,10 @@
         function updateDashboard() {
             const l = document.getElementById('host-player-list');
             if (!l) return;
-            const entries = Object.entries(playersData);
+            // En liaison Firebase, l'organisateur figure dans la liste des
+            // joueurs de la base : on le retire de SA propre vue, sinon il
+            // s'affiche avec des boutons « Kick » et « Admin » sur lui-même.
+            const entries = Object.entries(playersData).filter(([key]) => !(enPartieFirebase() && key === fbUid));
             document.getElementById('connected-count').innerText = entries.filter(([, p]) => !p.offline).length;
             l.innerHTML = entries.map(([key, p]) => {
                 const team = appState.customTeams.find(t => t.id === p.teamId) || appState.customTeams[0];
@@ -3357,6 +3811,12 @@
         }
 
         function cmdToggleCohost(pid) {
+            if (enPartieFirebase()) {
+                const j = playersData[pid]; if (!j) return;
+                fbRef('joueurs/' + pid + '/isCoHost').set(!j.isCoHost).catch(fbErreurEcriture);
+                hostPushLog(`${j.name} · co-admin : ${!j.isCoHost ? 'oui' : 'non'}`, couleurJoueur(j));
+                return;
+            }
             if (!appState.isOrga) { envoyerAdminCmd({ action: 'cohost', pid }); return; }
             const p = playersData[pid];
             const c = hostConns[pid];
@@ -3367,6 +3827,10 @@
             updateDashboard();
         }
         function cmdTeam(pid, tid) {
+            if (enPartieFirebase()) {
+                fbRef('joueurs/' + pid + '/teamId').set(tid).catch(fbErreurEcriture);
+                return;
+            }
             if (!appState.isOrga) { envoyerAdminCmd({ action: 'team', pid, teamId: tid }); return; }
             const p = playersData[pid]; const c = hostConns[pid];
             if (!p || !c) return;
@@ -3375,6 +3839,13 @@
             updateDashboard();
         }
         function cmdKick(pid) {
+            if (enPartieFirebase()) {
+                const j = playersData[pid];
+                fbRef('joueurs/' + pid).remove()
+                    .then(() => hostPushLog(`Retiré de la partie : ${(j && j.name) || pid}`, couleurJoueur(j)))
+                    .catch(fbErreurEcriture);
+                return;
+            }
             if (!appState.isOrga) { envoyerAdminCmd({ action: 'kick', pid }); return; }
             const c = hostConns[pid];
             const nom = (playersData[pid] && playersData[pid].name) || pid;
@@ -3391,6 +3862,11 @@
             hostPopulatePackTeamPlayerSelects();
         }
         function cloturerPartie() {
+            if (enPartieFirebase()) {
+                if (!confirm('Clôturer la partie ? Tous les joueurs seront avertis et déconnectés.')) return;
+                fbCloturerPartie();
+                return;
+            }
             if (!appState.isOrga) {
                 if (!estEnPartieClient() || !appState.isCoHost) return;
                 if (!confirm('Clôturer la partie pour tout le monde ?')) return;
@@ -3445,6 +3921,7 @@
             document.getElementById('confirmLeaveModal').style.display = 'block';
         }
         function executerQuitterPartie() {
+            if (enPartieFirebase()) { fbQuitterPartie(false); return; }
             clearTimeout(teamSelectFallback);
             clearTimeout(clientReconnect.timer);
             clearTimeout(pongTimer);
