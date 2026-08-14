@@ -9,15 +9,21 @@
         // exact de la partie pour tomber dessus.
         ".read": "auth != null",
 
-        // Ecriture a la racine de la partie : a la creation (la partie n'existe
-        // pas encore) ou pour un administrateur. Un droit accorde ici couvre
-        // tout le sous-arbre : c'est voulu, l'orga et ses co-admins gerent tout.
-        ".write": "auth != null && (!data.exists() || root.child('parties/' + $partie + '/joueurs/' + auth.uid + '/isCoHost').val() === true)",
+        // Ecriture a la racine : a la creation (la partie n'existe pas encore)
+        // ou pour un administrateur. Un droit accorde ici couvre tout le
+        // sous-arbre : c'est voulu, l'orga et ses co-admins gerent tout,
+        // cloture comprise.
+        //
+        // « Administrateur » = createur de la partie (meta/hoteUid) OU joueur
+        // promu co-admin. Passer par meta/hoteUid est indispensable : a la
+        // creation, la fiche du createur n'existe pas encore, donc aucune regle
+        // fondee sur isCoHost seul ne pourrait l'autoriser a se declarer orga.
+        ".write": "auth != null && (!data.exists() || root.child('parties/' + $partie + '/meta/hoteUid').val() === auth.uid || root.child('parties/' + $partie + '/joueurs/' + auth.uid + '/isCoHost').val() === true)",
 
         "meta": {
           ".validate": "newData.hasChildren(['nom', 'hoteUid'])",
-          "nom": { ".validate": "newData.isString() && newData.val().length <= 60" },
-          "hoteUid": { ".validate": "newData.isString()" },
+          "nom": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60" },
+          "hoteUid": { ".validate": "newData.isString() && newData.val().length <= 128" },
           "creeLe": { ".validate": "newData.isNumber()" },
           "close": { ".validate": "newData.isBoolean()" },
           "$autre": { ".validate": false }
@@ -26,8 +32,8 @@
         "joueurs": {
           "$uid": {
             // Chacun ecrit sa propre fiche ; un administrateur peut ecrire
-            // celle de n'importe qui (changement d'equipe, exclusion).
-            ".write": "auth != null && ($uid === auth.uid || root.child('parties/' + $partie + '/joueurs/' + auth.uid + '/isCoHost').val() === true)",
+            // celle de n'importe qui (equipe, grade, exclusion).
+            ".write": "auth != null && ($uid === auth.uid || root.child('parties/' + $partie + '/meta/hoteUid').val() === auth.uid || root.child('parties/' + $partie + '/joueurs/' + auth.uid + '/isCoHost').val() === true)",
             ".validate": "newData.hasChildren(['nom'])",
 
             "nom": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 32" },
@@ -36,10 +42,10 @@
             "vuLe": { ".validate": "newData.isNumber()" },
 
             // Le grade ne peut etre pose que par un administrateur. Un joueur
-            // qui ecrit sa propre fiche doit le laisser tel quel : c'est ce qui
-            // empeche l'auto-promotion.
+            // qui ecrit sa propre fiche doit le laisser tel quel — ou a false
+            // s'il n'existait pas. C'est ce qui interdit l'auto-promotion.
             "isCoHost": {
-              ".validate": "newData.isBoolean() && (root.child('parties/' + $partie + '/joueurs/' + auth.uid + '/isCoHost').val() === true || newData.val() === data.val() || (!data.exists() && newData.val() === false))"
+              ".validate": "newData.isBoolean() && (root.child('parties/' + $partie + '/meta/hoteUid').val() === auth.uid || root.child('parties/' + $partie + '/joueurs/' + auth.uid + '/isCoHost').val() === true || newData.val() === data.val() || (!data.exists() && newData.val() === false))"
             },
             "$autre": { ".validate": false }
           }
