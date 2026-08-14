@@ -10,7 +10,7 @@
    remplace ces fichiers sur les telephones deja equipes.
    ========================================================= */
 
-const CACHE_VERSION = 'bse-medic-v1';
+const CACHE_VERSION = 'bse-medic-v2';
 
 // Tout ce qui compose l'application. Chemins relatifs : l'application
 // fonctionne aussi bien a la racine d'un domaine que dans un sous-dossier.
@@ -21,6 +21,9 @@ const APP_SHELL = [
     './vendor/peerjs.min.js',
     './vendor/qrcode.min.js',
     './vendor/html5-qrcode.min.js',
+    './vendor/firebase-app-compat.js',
+    './vendor/firebase-auth-compat.js',
+    './vendor/firebase-database-compat.js',
     './fond-topo.png',
     './picto-blesse.png',
     './btn-explosion.png',

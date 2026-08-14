@@ -1,0 +1,71 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "parties": {
+      "$partie": {
+        // Lecture ouverte aux joueurs authentifies : il faut connaitre le nom
+        // exact de la partie pour tomber dessus.
+        ".read": "auth != null",
+
+        // Ecriture a la racine de la partie : a la creation (la partie n'existe
+        // pas encore) ou pour un administrateur. Un droit accorde ici couvre
+        // tout le sous-arbre : c'est voulu, l'orga et ses co-admins gerent tout.
+        ".write": "auth != null && (!data.exists() || root.child('parties/' + $partie + '/joueurs/' + auth.uid + '/isCoHost').val() === true)",
+
+        "meta": {
+          ".validate": "newData.hasChildren(['nom', 'hoteUid'])",
+          "nom": { ".validate": "newData.isString() && newData.val().length <= 60" },
+          "hoteUid": { ".validate": "newData.isString()" },
+          "creeLe": { ".validate": "newData.isNumber()" },
+          "close": { ".validate": "newData.isBoolean()" },
+          "$autre": { ".validate": false }
+        },
+
+        "joueurs": {
+          "$uid": {
+            // Chacun ecrit sa propre fiche ; un administrateur peut ecrire
+            // celle de n'importe qui (changement d'equipe, exclusion).
+            ".write": "auth != null && ($uid === auth.uid || root.child('parties/' + $partie + '/joueurs/' + auth.uid + '/isCoHost').val() === true)",
+            ".validate": "newData.hasChildren(['nom'])",
+
+            "nom": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 32" },
+            "teamId": { ".validate": "newData.isString() && newData.val().length <= 40" },
+            "enLigne": { ".validate": "newData.isBoolean()" },
+            "vuLe": { ".validate": "newData.isNumber()" },
+
+            // Le grade ne peut etre pose que par un administrateur. Un joueur
+            // qui ecrit sa propre fiche doit le laisser tel quel : c'est ce qui
+            // empeche l'auto-promotion.
+            "isCoHost": {
+              ".validate": "newData.isBoolean() && (root.child('parties/' + $partie + '/joueurs/' + auth.uid + '/isCoHost').val() === true || newData.val() === data.val() || (!data.exists() && newData.val() === false))"
+            },
+            "$autre": { ".validate": false }
+          }
+        },
+
+        // Configuration de la partie : lue par tous, ecrite par les seuls
+        // administrateurs (droit herite de la racine de la partie).
+        "config": {
+          ".validate": "newData.hasChildren()"
+        },
+
+        // Journal : chaque joueur de la partie peut AJOUTER une ligne, mais
+        // personne ne peut modifier ni supprimer une ligne existante — seul un
+        // administrateur le peut, via le droit herite de la racine.
+        "logs": {
+          "$log": {
+            ".write": "auth != null && !data.exists() && root.child('parties/' + $partie + '/joueurs/' + auth.uid).exists()",
+            ".validate": "newData.hasChildren(['ts', 'texte'])",
+            "ts": { ".validate": "newData.isNumber()" },
+            "texte": { ".validate": "newData.isString() && newData.val().length <= 300" },
+            "couleur": { ".validate": "newData.isString() && newData.val().length <= 24" },
+            "auteur": { ".validate": "newData.isString() && newData.val().length <= 32" },
+            "$autre": { ".validate": false }
+          }
+        }
+      }
+    }
+  }
+}
