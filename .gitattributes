@@ -1,0 +1,9 @@
+# Fichiers binaires : aucune conversion de fins de ligne.
+# Sans cette declaration, git peut remplacer les LF par des CRLF a la
+# recuperation sur Windows et corrompre irremediablement le fichier.
+*.pdf  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.ico  binary
