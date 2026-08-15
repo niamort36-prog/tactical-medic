@@ -7,7 +7,7 @@
     "ignore": [
       "firebase.json",
       "database.rules.json",
-      "tools-*.js",
+      "tools-*",
       "**/.*",
       "**/node_modules/**",
       "README.md"
