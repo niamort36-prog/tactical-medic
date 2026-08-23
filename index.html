@@ -4017,23 +4017,27 @@
 
         /* --- UI & GAME --- */
         function updateUI_Game() {
-            const team = appState.customTeams.find(t => t.id === appState.playerTeamId);
-            const borderCol = team ? team.color : '#888';
+            const inPartie = estEnPartieClient();
+            // Hors partie, l'équipe n'a aucun sens : ni couleur ni nom. En solo,
+            // afficher « Bleu » laissait croire à une appartenance inexistante.
+            const rattache = inPartie || appState.isOrga || clientReconnect.active;
+            const team = rattache ? appState.customTeams.find(t => t.id === appState.playerTeamId) : null;
             const teamLabel = team ? team.name : (appState.playerTeamId === 'orga' ? 'Organisateur' : '—');
+            const borderCol = rattache ? (team ? team.color : '#888') : '#333';
             document.getElementById('main-header').style.borderBottomColor = borderCol;
             // Le voyant du bandeau d'état reprend la couleur de l'équipe
             const dot = document.getElementById('status-dot');
-            if (dot) dot.style.background = borderCol;
+            if (dot) dot.style.background = rattache ? borderCol : 'var(--bse-muted)';
 
-            const inPartie = estEnPartieClient();
             const qbtn = document.getElementById('btn-quitter-partie');
             if (qbtn) qbtn.style.display = (inPartie || clientReconnect.active) ? 'inline-flex' : 'none';
             if (clientReconnect.active) {
                 document.getElementById('top-indicator').innerText = `${appState.playerName} · Reconnexion à la partie…`;
             } else {
+                const eq = rattache ? (' · ' + teamLabel) : '';
                 const gn = (inPartie && clientSessionMeta.gameName) ? (' · ' + clientSessionMeta.gameName) : '';
                 const co = appState.isCoHost ? ' · Co-admin' : '';
-                document.getElementById('top-indicator').innerText = `${appState.playerName} · ${teamLabel}${gn}${co}`;
+                document.getElementById('top-indicator').innerText = `${appState.playerName}${eq}${gn}${co}`;
             }
 
             const infoDeck = document.getElementById('info-deck');

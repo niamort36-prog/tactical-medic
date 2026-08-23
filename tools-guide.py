@@ -257,8 +257,9 @@ h.append(etapes([
 h.append(Spacer(1, 2*mm))
 h.append(encadre("Le mat&eacute;riel reste bien r&eacute;el",
     "L'application ne remplace pas votre trousse. Elle vous dit <b>quoi faire</b>&nbsp;; c'est &agrave; vous "
-    "de poser le vrai garrot factice et le vrai bandage. Si vous n'avez plus de morphine dans votre sac, "
-    "vous pouvez le dire &agrave; l'application&nbsp;: elle cessera alors de tirer les blessures qui en demandent."))
+    "de poser le vrai garrot factice et le vrai bandage. Si un type de soin n'est pas disponible sur "
+    "l'&eacute;v&eacute;nement &mdash; personne n'a de pansement 3 c&ocirc;t&eacute;s, par exemple &mdash; "
+    "l'organisateur le retire du jeu <b>avant</b> la partie, et les blessures qui l'exigent ne sortent plus."))
 h.append(PageBreak())
 
 # --- Ch 2
@@ -465,12 +466,19 @@ h.append(tableau([
 h.append(PageBreak())
 
 h.append(P("Mat&eacute;riel requis", "h2"))
-h.append(P("La liste de ce que vous avez dans votre trousse. <b>D&eacute;cochez ce que vous n'avez plus</b>&nbsp;: "
-           "l'application retire imm&eacute;diatement toutes les blessures qui l'exigent."))
-h.append(encadre("L'usage le plus malin de l'application",
-    "Vous partez avec deux garrots seulement&nbsp;? D&eacute;cochez le garrot quand ils sont pos&eacute;s. "
-    "Vous ne tirerez plus de blessures n&eacute;cessitant un garrot, et le jeu reste jouable au lieu de vous "
-    "bloquer sur un protocole impossible &agrave; appliquer."))
+h.append(P("Cette liste ne suit pas le contenu de votre trousse au fil de la partie. Elle d&eacute;finit "
+           "<b>quels types de soins sont en jeu</b>&nbsp;: on d&eacute;coche le mat&eacute;riel dont on ne dispose "
+           "pas, et l'application cesse de tirer les blessures qui l'exigent."))
+h.append(P("C'est un r&eacute;glage de <b>pr&eacute;paration</b>, pas un r&eacute;glage de terrain&nbsp;: il se fait "
+           "avant la partie, et normalement par l'organisateur."))
+h.append(encadre("Un joueur ne retire pas de cartes du jeu",
+    ["En partie, vos r&eacute;glages sont <b>verrouill&eacute;s</b>&nbsp;: c'est l'organisateur qui d&eacute;cide du "
+     "mat&eacute;riel et des quantit&eacute;s, pour que tous les m&eacute;dics jouent le m&ecirc;me paquet. "
+     "Vous ne pouvez donc pas &eacute;carter une blessure parce qu'elle vous arrange mal.",
+     "En solo, en revanche, vous configurez librement votre propre jeu.",
+     "<b>Exemple.</b> Aucun m&eacute;dic de l'&eacute;v&eacute;nement n'a de pansement 3 c&ocirc;t&eacute;s&nbsp;? "
+     "L'organisateur d&eacute;coche ce mat&eacute;riel avant la partie&nbsp;: la plaie soufflante et le "
+     "pneumothorax disparaissent du paquet pour tout le monde."]))
 h.append(Spacer(1, 3*mm))
 h.append(P("Cartes actives", "h2"))
 h.append(P("La liste compl&egrave;te des blessures du mode, <b>tri&eacute;es par gravit&eacute;</b>&nbsp;: "
@@ -646,7 +654,8 @@ h.append(puces([
 h.append(P("Pendant la partie", "h2"))
 h.append(puces([
     "gardez le QG ouvert sur l'onglet <b>Logs</b> pour suivre l'activit&eacute; en direct&nbsp;;",
-    "si un m&eacute;dic &eacute;puise son mat&eacute;riel, rappelez-lui de <b>d&eacute;cocher</b> ce qui lui manque&nbsp;;",
+    "si un type de soin s'av&egrave;re introuvable sur le terrain, retirez son mat&eacute;riel depuis l'onglet "
+    "<b>&Eacute;diteur</b>&nbsp;: le changement s'applique aussit&ocirc;t &agrave; tous les joueurs&nbsp;;",
     "pour durcir en cours de partie, augmentez la probabilit&eacute; du risque de mort&nbsp;: "
     "le changement est imm&eacute;diat chez tous les joueurs&nbsp;;",
     "d&eacute;signez un <b>co-organisateur</b> si le terrain est grand.",
@@ -673,7 +682,7 @@ h.append(tableau([
     [Paragraph("<b>&laquo;&nbsp;Partie introuvable&nbsp;&raquo;</b>", S["cell"]),
      Paragraph("V&eacute;rifiez l'orthographe exacte du nom aupr&egrave;s de l'organisateur. Les accents et les espaces n'ont pas d'importance, mais les lettres si. Le plus s&ucirc;r reste le QR code.", S["cell"])],
     [Paragraph("<b>&laquo;&nbsp;Aucune carte disponible&nbsp;&raquo;</b>", S["cell"]),
-     Paragraph("Toutes les cartes sont soit &agrave; z&eacute;ro, soit bloqu&eacute;es par du mat&eacute;riel manquant. Ouvrez les R&eacute;glages et recochez du mat&eacute;riel, ou remontez des quantit&eacute;s.", S["cell"])],
+     Paragraph("Toutes les cartes sont soit &agrave; z&eacute;ro, soit bloqu&eacute;es par du mat&eacute;riel manquant. En solo, ouvrez les R&eacute;glages et recochez du mat&eacute;riel. En partie, signalez-le &agrave; l'organisateur&nbsp;: lui seul peut y toucher.", S["cell"])],
     [Paragraph("<b>Un joueur appara&icirc;t en double</b>", S["cell"]),
      Paragraph("Deux joueurs ont le m&ecirc;me pseudo&nbsp;: le second devient automatiquement &laquo;&nbsp;Nom (2)&nbsp;&raquo;. Demandez-lui de changer de pseudo, ou laissez comme &ccedil;a.", S["cell"])],
     [Paragraph("<b>Un joueur reste &laquo;&nbsp;hors ligne&nbsp;&raquo;</b>", S["cell"]),
