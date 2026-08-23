@@ -4066,7 +4066,15 @@
             } else {
                 // Aucun paquet attribué : on joue le mode en cours — celui de
                 // l'hôte pour un joueur en partie, le sien en solo.
-                html = drawBtn('bille', 'Balistique', 'pulse-ring', imgArt('picto-blesse.png', 'icon-wounded'));
+                // Le bouton principal tire dans ce mode : il doit donc en porter
+                // le nom. Un paquet perso choisi comme mode s'annonçait
+                // « Balistique » avec le pictogramme du blessé.
+                const deckDuMode = appState.mode.startsWith('d_')
+                    ? appState.customDecks.find(d => d.id === appState.mode) : null;
+                html = deckDuMode
+                    ? drawBtn('bille', deckDuMode.name, 'pulse-ring-custom', ico('cards', 'icon-custom'))
+                    : drawBtn('bille', 'Balistique', 'pulse-ring', imgArt('picto-blesse.png', 'icon-wounded'));
+                // L'explosion ne se propose qu'en mode Avancé ou Extrême
                 if (modeAvecExplosion() && appState.explosionEnabled) {
                     html += drawBtn('explosion', 'Explosion', 'pulse-ring-blast', imgArt('btn-explosion.png', 'icon-blast'));
                 }
@@ -4076,6 +4084,7 @@
                     // sa bibliothèque apparaissait sur l'accueil du joueur dès
                     // que la liaison était coupée.
                     appState.customDecks.forEach(d => {
+                        if (d.id === appState.mode) return; // déjà proposé comme mode : pas de doublon
                         if (d.showOnHome && !d.fromHost) html += drawBtn(d.id, d.name, 'pulse-ring-custom', ico('cards', 'icon-custom'));
                     });
                 }
