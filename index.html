@@ -817,10 +817,13 @@
     <!-- MODAL POUR LE CHOIX D'ÉQUIPE (Auto-Join) -->
     <div id="teamSelectionModal" class="modal" style="z-index: 220;">
         <div class="modal-content">
-            <h3 class="modal-title">Choix de l'équipe</h3>
-            <p style="text-align:center; font-size:0.88rem; color:var(--bse-muted);">Connexion établie.<br>Choisissez votre rôle :</p>
-            <div class="form-group" style="margin-top:16px;">
-                <select id="modal-join-team" class="form-input"></select>
+            <h3 class="modal-title">Rejoindre la partie</h3>
+            <p id="modal-join-partie" style="text-align:center; font-size:0.88rem; color:var(--bse-muted);">Connexion établie.</p>
+            <div class="form-group" style="margin-top:14px;">
+                <label class="form-label">Votre pseudo</label>
+                <input type="text" id="modal-join-pseudo" class="form-input" placeholder="Ex : Doc" maxlength="32" autocomplete="nickname">
+                <label class="form-label">Votre équipe</label>
+                <select id="modal-join-team" class="form-input" style="margin-bottom:0;"></select>
             </div>
             <button type="button" class="btn-action btn-create" style="margin-top:14px;" onclick="validerEquipeRejoindre()">Rejoindre la partie</button>
         </div>
@@ -1537,8 +1540,10 @@
             const hostSession = getHostSession();
             if (jp) {
                 document.getElementById('join-code').value = jp.trim();
-                // Le lien porte fb=1 quand l'hôte joue en liaison Firebase
-                rejoindrePartieEnLigne(urlParams.get('fb') === '1' ? jp.trim() + '?fb=1' : jp.trim());
+                // Le lien porte fb=1 quand l'hôte joue en liaison Firebase.
+                // Le transport est passé en argument : le concaténer au code le
+                // corrompait (« TM32-ALPHA?fb=1 » devenait « TM32-ALPHAFB1 »).
+                rejoindrePartieEnLigne(jp.trim(), urlParams.get('fb') === '1');
             } else if (getFbSession()) {
                 // Partie Firebase en cours sur cet appareil : on la reprend.
                 fbReprendreSession().then(ok => { if (!ok) updateUI_Game(); });
@@ -3477,7 +3482,7 @@
             });
         }
 
-        function rejoindrePartieEnLigne(autoCode = null) {
+        function rejoindrePartieEnLigne(autoCode = null, forcerFirebase = false) {
             if (appState.isOrga) {
                 alert("Vous hébergez déjà une partie sur cet appareil. Quittez l'ancienne partie via l'interface Hôte pour pouvoir en rejoindre une autre en tant que joueur.");
                 return;
@@ -3492,7 +3497,7 @@
 
             // Liaison Firebase : soit choisie dans le menu, soit imposée par le
             // lien d'invitation de l'hôte (paramètre fb=1).
-            const lienFirebase = /[?&]fb=1/.test(String(rawInput));
+            const lienFirebase = forcerFirebase || /[?&]fb=1/.test(String(rawInput));
             if (lienFirebase || (appState.transportPrefere || 'firebase') === 'firebase') {
                 rejoindreFirebase(rawInput);
                 return;
@@ -3536,6 +3541,7 @@
                 fermerMultiModal();
                 const select = document.getElementById('modal-join-team');
                 select.innerHTML = equipes.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
+                preparerModalRejoindre(p.meta.nom);
                 document.getElementById('teamSelectionModal').style.display = 'block';
             } catch (e) {
                 st.style.display = 'block';
@@ -3544,11 +3550,14 @@
             }
         }
         async function validerEquipeFirebase() {
+            if (!lirePseudoModal()) return;
             const teamId = document.getElementById('modal-join-team').value;
             document.getElementById('teamSelectionModal').style.display = 'none';
             try {
                 await fbRejoindrePartie(fbCodeEnAttente, appState.playerName, teamId);
+                fbCodeEnAttente = '';   // libéré seulement après succès : le pseudo peut être resaisi
                 document.getElementById('btn-multi-icon').classList.add('online');
+                nettoyerUrlInvitation();
                 updateUI_Game();
                 saveState();
             } catch (e) {
@@ -3723,6 +3732,33 @@
             });
         }
 
+        // Pseudo saisi au moment de rejoindre. Indispensable quand on arrive par
+        // un lien collé dans un navigateur : l'appareil n'a alors aucun pseudo.
+        function preparerModalRejoindre(nomPartie) {
+            const p = document.getElementById('modal-join-pseudo');
+            if (p) p.value = (appState.playerName && appState.playerName !== 'Joueur') ? appState.playerName : '';
+            const t = document.getElementById('modal-join-partie');
+            if (t) t.innerText = nomPartie ? 'Partie « ' + nomPartie +' »' : 'Connexion établie.';
+        }
+        function lirePseudoModal() {
+            const el = document.getElementById('modal-join-pseudo');
+            const v = ((el && el.value) || '').trim().slice(0, 32);
+            if (!v) {
+                alert("Indiquez un pseudo : c'est le nom sous lequel l'organisateur vous verra dans la partie.");
+                if (el) el.focus();
+                return null;
+            }
+            appState.playerName = v;
+            saveState();
+            return v;
+        }
+        // Une fois entré dans la partie, on retire le code de l'adresse : un
+        // rafraîchissement ne doit pas relancer la procédure de connexion.
+        function nettoyerUrlInvitation() {
+            if (!/[?&]join=/.test(location.search)) return;
+            try { history.replaceState(null, '', location.pathname); } catch (e) {}
+        }
+
         function afficherModalChoixEquipe() {
             clearTimeout(teamSelectFallback);
             fermerMultiModal();
@@ -3731,17 +3767,19 @@
             const select = document.getElementById('modal-join-team');
             select.innerHTML = (appState.customTeams || DEFAULT_TEAMS).map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
 
+            preparerModalRejoindre(clientSessionMeta.gameName);
             document.getElementById('teamSelectionModal').style.display = 'block';
         }
 
         function validerEquipeRejoindre() {
-            if (fbCodeEnAttente) { validerEquipeFirebase(); fbCodeEnAttente = ''; return; }
+            if (fbCodeEnAttente) { validerEquipeFirebase(); return; }
             if (!myConn || !myConn.open) {
                 document.getElementById('teamSelectionModal').style.display = 'none';
                 isWaitingForTeamSelection = false;
                 alert('Connexion perdue. Réessayez de rejoindre la partie.');
                 return;
             }
+            if (!lirePseudoModal()) return;
             const teamId = document.getElementById('modal-join-team').value;
             appState.playerTeamId = teamId;
             isWaitingForTeamSelection = false;
@@ -3755,6 +3793,7 @@
 
             document.getElementById('teamSelectionModal').style.display = 'none';
             document.getElementById('btn-multi-icon').classList.add('online');
+            nettoyerUrlInvitation();
             updateUI_Game();
             alert('Connecté à la partie !');
         }

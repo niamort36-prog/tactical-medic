@@ -587,13 +587,20 @@ h.append(PageBreak())
 # --- Ch 11
 h.append(chapitre(11, "Jouer &agrave; plusieurs : le joueur"))
 h.append(P("Beaucoup plus simple&nbsp;: vous n'avez presque rien &agrave; faire."))
+h.append(P("La fa&ccedil;on la plus simple&nbsp;: <b>ouvrir le lien d'invitation</b> de l'organisateur.", "h2"))
 h.append(etapes([
-    ("R&eacute;glez votre pseudo", "Dans les R&eacute;glages, avant de rejoindre. L'organisateur vous reconna&icirc;tra."),
+    ("Ouvrez le lien re&ccedil;u", "Par SMS, messagerie, ou en scannant le QR code. Il s'ouvre dans votre navigateur, "
+     "ou directement dans l'application si elle est install&eacute;e."),
+    ("Indiquez votre pseudo et votre &eacute;quipe", "L'application est d&eacute;j&agrave; rattach&eacute;e &agrave; la "
+     "partie&nbsp;: elle vous demande seulement sous quel nom vous jouez et dans quelle &eacute;quipe."),
+    ("C'est tout", "Votre accueil se met &agrave; jour avec les paquets qu'on vous a attribu&eacute;s."),
+]))
+h.append(P("Sans le lien", "h2"))
+h.append(etapes([
     ("Ouvrez le menu multijoueur", "Le bouton avec les deux silhouettes, en haut &agrave; droite."),
     ("Appuyez sur REJOINDRE UNE PARTIE", "La section se d&eacute;plie&nbsp;: scannez le QR code de l'organisateur, "
      "ou tapez le code de la partie. Un nouvel appui la replie."),
-    ("Choisissez votre &eacute;quipe", "La liste propos&eacute;e est celle cr&eacute;&eacute;e par l'organisateur."),
-    ("C'est tout", "Votre accueil se met &agrave; jour avec les paquets qu'on vous a attribu&eacute;s. Jouez normalement."),
+    ("Indiquez votre pseudo et votre &eacute;quipe", "La liste des &eacute;quipes est celle cr&eacute;&eacute;e par l'organisateur."),
 ]))
 h.append(Spacer(1, 2*mm))
 h.append(P("Ce qui change une fois en partie", "h2"))
