@@ -286,7 +286,7 @@ h.append(encadre("&Agrave; faire au briefing, pas sur le terrain",
     coul=ROUGE, fond=colors.HexColor("#fdf1ef")))
 h.append(Spacer(1, 3*mm))
 h.append(P("Ce que vous voyez en arrivant", "h2"))
-h.append(P("L'&eacute;cran d'accueil s'appelle <b>DIAGNOSTIC TERRAIN</b>. On y trouve&nbsp;:"))
+h.append(P("L'&eacute;cran d'accueil s'appelle <b>DIAGNOSTIC M&Eacute;DICAL</b>. On y trouve&nbsp;:"))
 h.append(puces([
     "un ou plusieurs <b>gros boutons ronds</b> au centre&nbsp;: ce sont vos tirages disponibles&nbsp;;",
     "un bandeau <b>PAQUET ACTIF</b> en bas, qui indique combien de cartes sont en jeu&nbsp;;",
