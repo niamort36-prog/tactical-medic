@@ -505,6 +505,9 @@ h.append(etapes([
     ("Ajouter des cartes", "Pour chacune&nbsp;: une gravit&eacute;, un titre, une zone, un protocole de soin."),
     ("Choisir le mat&eacute;riel requis", "Touchez les puces correspondantes. Vous pouvez cr&eacute;er du mat&eacute;riel "
      "qui n'existe pas dans la liste de base &mdash; &laquo;&nbsp;Anti-rad&nbsp;&raquo;, &laquo;&nbsp;S&eacute;rum&nbsp;&raquo;..."),
+    ("Choisir l'ic&ocirc;ne du bouton", "Une trentaine de pictogrammes au choix&nbsp;: balle, grenade, explosion, "
+     "biohazard, radiation, zombie, cr&eacute;ature, robot, seringue, cachets, perfusion... Elle identifie le paquet "
+     "sur l'accueil, et suit le paquet quand vous le partagez ou l'attribuez en partie."),
     ("Enregistrer", "Le paquet appara&icirc;t sur votre accueil, pr&ecirc;t &agrave; l'emploi."),
 ]))
 h.append(Spacer(1, 2*mm))
