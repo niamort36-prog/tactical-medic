@@ -154,6 +154,10 @@
         }
         @keyframes pulseSlow { 0% { opacity: 1; } 50% { opacity: 0.25; } 100% { opacity: 1; } }
 
+        /* Chevron des sections repliables : il pivote quand la section est ouverte */
+        .chevron { transition: transform 0.2s; }
+        .btn-action.ouvert .chevron { transform: rotate(180deg); }
+
         /* Bandeau d'état : opérateur, équipe, partie en cours */
         .status-row {
             display: flex; align-items: center; gap: 8px;
@@ -544,8 +548,11 @@
             <button type="button" class="host-tab" data-host-tab="logs" onclick="hostSetTab('logs')">Logs</button>
         </div>
         <div id="host-panel-join" class="host-panel active box" style="border-color:var(--bse-gold);">
-            <p style="margin:0; color:#aaa; font-size:0.85em;">Nom de la partie / ID PeerJS</p>
-            <div id="host-connection-id">...</div>
+            <p style="margin:0 0 6px; color:var(--bse-muted); font-size:0.85em;">Code de la partie — à dicter aux joueurs</p>
+            <div class="join-link-row" style="margin:0 0 10px;">
+                <div id="host-connection-id" style="flex:1; margin:0;">...</div>
+                <button type="button" class="btn-mini" style="width:auto;padding:0 12px;gap:6px;" onclick="copierCodePartie()"><svg class="ico"><use href="#i-copie"></use></svg>Copier</button>
+            </div>
             <p style="font-size:0.8em; color:#666;">Lien de connexion (partage ou QR)</p>
             <div class="join-link-row">
                 <input type="text" id="host-join-link" class="form-input" readonly style="margin:0;">
@@ -761,7 +768,7 @@
 
             <hr style="border:none; border-top:1px solid var(--bse-border); margin:18px 0;">
 
-            <button type="button" class="btn-action btn-join" onclick="document.getElementById('join-input-area').style.display='block'">Rejoindre une partie</button>
+            <button type="button" id="btn-bascule-rejoindre" class="btn-action btn-join" onclick="basculerZoneRejoindre()"><svg class="ico chevron"><use href="#i-chevron"></use></svg>Rejoindre une partie</button>
 
             <div id="join-input-area" style="display:none; margin-top:10px; border-top:1px solid var(--bse-border); padding-top:10px;">
                 <div id="qr-reader" style="width:100%; display:none; margin-bottom:10px; background:white; color:black; border-radius:var(--radius-s); overflow:hidden;"></div>
@@ -863,6 +870,8 @@
         <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20v-1a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v1"/></symbol>
         <symbol id="i-cards" viewBox="0 0 24 24"><rect x="9" y="3.5" width="11" height="15" rx="1.2"/><path d="M6 6.5v12a2 2 0 0 0 2 2h8"/></symbol>
         <symbol id="i-kit" viewBox="0 0 24 24"><rect x="3" y="7.5" width="18" height="12" rx="1.2"/><path d="M9 7.5V5.5h6v2"/><path d="M12 11v5M9.5 13.5h5"/></symbol>
+        <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></symbol>
+        <symbol id="i-copie" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="1.4"/><path d="M5.5 15H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v.5"/></symbol>
         <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="9.5" rx="1.2"/><path d="M8 10.5V7.6a4 4 0 0 1 8 0v2.9"/></symbol>
     </svg>
 
@@ -3009,14 +3018,50 @@
             }).join('');
             el.innerHTML = `<div class="separator" style="margin-top:4px;">${packs.length} paquet${packs.length > 1 ? 's' : ''} distribué${packs.length > 1 ? 's' : ''}</div>` + lignes;
         }
+        // Copie mutualisée : le presse-papiers moderne quand il est disponible,
+        // sinon un champ temporaire — nécessaire sur les navigateurs anciens et
+        // sur les pages non sécurisées, où navigator.clipboard n'existe pas.
+        function copierTexte(texte, message) {
+            const fini = () => alert(message);
+            const repli = () => {
+                const ta = document.createElement('textarea');
+                ta.value = texte;
+                ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); } catch (e) {}
+                ta.remove();
+                fini();
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(texte).then(fini).catch(repli);
+            } else repli();
+        }
         function copierLienInvitation() {
             const el = document.getElementById('host-join-link');
-            const t = el && el.value;
-            if (!t) return;
-            const fallbackCopy = () => { el.select(); document.execCommand('copy'); alert('Lien copié.'); };
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(t).then(() => alert('Lien copié.')).catch(fallbackCopy);
-            } else fallbackCopy();
+            if (!el || !el.value) return;
+            copierTexte(el.value, "Lien d'invitation copié.");
+        }
+        // Le code seul, pour le dicter ou l'envoyer sans le lien complet
+        function copierCodePartie() {
+            const code = (document.getElementById('host-connection-id').innerText || '').trim();
+            if (!code || code === '...') { alert("La partie n'est pas encore ouverte."); return; }
+            copierTexte(code, "Code de la partie copié :" + String.fromCharCode(10, 10) + code);
+        }
+
+        // Section « Rejoindre » : repliable, pour ne pas encombrer le menu
+        function basculerZoneRejoindre() {
+            const zone = document.getElementById('join-input-area');
+            const bouton = document.getElementById('btn-bascule-rejoindre');
+            const ouvert = zone.style.display === 'block';
+            zone.style.display = ouvert ? 'none' : 'block';
+            if (bouton) bouton.classList.toggle('ouvert', !ouvert);
+            // En repliant, on coupe le scanner : il garderait la caméra allumée
+            if (ouvert && html5QrcodeScanner) {
+                try { html5QrcodeScanner.clear(); } catch (e) {}
+                html5QrcodeScanner = null;
+                document.getElementById('qr-reader').style.display = 'none';
+            }
         }
 
         /* --- QG À DISTANCE (co-admins) --- */
@@ -3100,6 +3145,9 @@
                 remplirEcranQG();
             } else {
                 document.getElementById('multiplayerModal').style.display = 'block';
+                // Toujours repliée à l'ouverture : le menu reste court
+                document.getElementById('join-input-area').style.display = 'none';
+                document.getElementById('btn-bascule-rejoindre').classList.remove('ouvert');
                 document.getElementById('multi-transport').value = appState.transportPrefere || 'firebase';
                 changerTransport(appState.transportPrefere || 'firebase');
                 document.getElementById('multi-pseudo').value = appState.playerName;

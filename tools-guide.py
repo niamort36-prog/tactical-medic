@@ -542,8 +542,10 @@ h.append(P("L'onglet <b>Invitation</b> affiche un <b>QR code</b> et un lien. Tro
            "vos joueurs, de la plus simple &agrave; la plus manuelle&nbsp;:"))
 h.append(puces([
     "ils <b>scannent le QR code</b> depuis leur application&nbsp;: c'est imm&eacute;diat&nbsp;;",
-    "vous leur envoyez le <b>lien</b> par messagerie&nbsp;;",
-    "ils <b>tapent le nom de la partie</b> dans leur menu Rejoindre.",
+    "vous leur envoyez le <b>lien</b> par messagerie, avec le bouton <b>Copier</b> de la ligne du lien&nbsp;;",
+    "vous leur donnez le <b>code de la partie</b> seul &mdash; le bouton <b>Copier</b> plac&eacute; &agrave; c&ocirc;t&eacute; "
+    "le met dans le presse-papiers, pratique pour le dicter ou l'envoyer sans le lien complet&nbsp;;",
+    "ils <b>tapent le code</b> dans leur menu Rejoindre.",
 ]))
 h.append(Spacer(1, 2*mm))
 h.append(encadre("Vous pouvez fermer votre t&eacute;l&eacute;phone",
@@ -585,7 +587,8 @@ h.append(P("Beaucoup plus simple&nbsp;: vous n'avez presque rien &agrave; faire.
 h.append(etapes([
     ("R&eacute;glez votre pseudo", "Dans les R&eacute;glages, avant de rejoindre. L'organisateur vous reconna&icirc;tra."),
     ("Ouvrez le menu multijoueur", "Le bouton avec les deux silhouettes, en haut &agrave; droite."),
-    ("Appuyez sur REJOINDRE UNE PARTIE", "Puis scannez le QR code de l'organisateur, ou tapez le nom de la partie."),
+    ("Appuyez sur REJOINDRE UNE PARTIE", "La section se d&eacute;plie&nbsp;: scannez le QR code de l'organisateur, "
+     "ou tapez le code de la partie. Un nouvel appui la replie."),
     ("Choisissez votre &eacute;quipe", "La liste propos&eacute;e est celle cr&eacute;&eacute;e par l'organisateur."),
     ("C'est tout", "Votre accueil se met &agrave; jour avec les paquets qu'on vous a attribu&eacute;s. Jouez normalement."),
 ]))
