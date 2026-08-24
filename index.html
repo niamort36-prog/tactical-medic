@@ -8,6 +8,9 @@
 
     <!-- Application installable, utilisable sans reseau -->
     <link rel="manifest" href="manifest.webmanifest">
+    <!-- Le .ico est declare ET present a la racine : sans lui, le navigateur
+         le reclame de lui-meme et la console affiche un 404 permanent. -->
+    <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
     <meta name="mobile-web-app-capable" content="yes">
@@ -123,11 +126,6 @@
         .app-title {
             font-family: var(--font-display); font-size: 1.02rem; font-weight: 800;
             text-transform: uppercase; letter-spacing: 0.13em; line-height: 1.1;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .app-tagline {
-            margin-top: 3px; font-family: var(--font-display); font-size: 0.55rem; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.19em; color: var(--bse-muted);
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         /* Logo de l'en-tête. Le lettrage est très allongé (7,4:1) : il est borné
@@ -460,8 +458,7 @@
                          onerror="this.remove(); var t=document.getElementById('titre-secours'); if(t) t.style.display='block';">
                 </picture>
                 <div id="titre-secours" style="display:none;">
-                    <div class="app-title">BSE Medical System</div>
-                    <div class="app-tagline">Frontline // Field application</div>
+                    <div class="app-title">BSE Medical</div>
                 </div>
             </div>
             <div class="header-actions">
