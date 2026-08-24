@@ -242,6 +242,26 @@
         }
         .deck-status-value { color: var(--bse-gold-light); }
 
+        /* En paysage, la hauteur est comptée : empiler les boutons obligeait à
+           faire défiler pour atteindre le deuxième paquet. Ils passent donc en
+           rangée, et se réduisent pour tenir avec leur libellé. */
+        @media (orientation: landscape) and (max-height: 520px) {
+            /* La colonne de contenu est plafonnée à 620 px : en paysage cette
+               limite forçait un retour à la ligne dès le cinquième paquet,
+               alors que la largeur d'écran le permettait. */
+            #screen-game { max-width: 100%; padding: 6px 12px; }
+            .buttons-wrapper { flex-direction: row; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: 6px 16px; padding: 4px; }
+            .btn-bloc { width: 122px; }
+            .btn-container-shared { width: 122px; height: 122px; margin: 0; }
+            .btn-container-shared::before { inset: 6px; }
+            .btn-core-shared { width: 100px; height: 100px; box-shadow: inset 0 0 0 4px #090909; }
+            .icon-custom { width: 40px; height: 40px; }
+            .btn-label { font-size: 0.62rem; letter-spacing: 0.1em; max-width: 122px; }
+            .screen-head { margin-bottom: 2px; }
+            .screen-head-sub { margin-top: 4px; font-size: 0.7rem; }
+            .deck-status { margin-top: 4px; padding: 5px 12px; }
+        }
+
         /* --- SÉQUENCE MARCH --- */
         .march-list { list-style: none; padding: 0; margin: 0; text-align: left; width: 100%; max-width: 320px; }
         .march-list li {
@@ -292,6 +312,17 @@
             color: var(--text-main); background: var(--bse-panel-light);
         }
 
+        /* En paysage, l'en-tete occupait 96 px sur 360 : chaque bande est
+           resserree pour rendre cette hauteur au contenu. */
+        @media (orientation: landscape) and (max-height: 560px) {
+            .brand-strip { padding: 2px 12px; font-size: 0.5rem; letter-spacing: 0.2em; }
+            .header-row { padding: 4px 12px; }
+            .header-btn { width: 30px; height: 30px; }
+            .header-btn.wide { padding: 0 8px; font-size: 0.6rem; }
+            .status-row { padding: 2px 12px; }
+            .status-text { font-size: 0.56rem; }
+        }
+
         /* --- ÉCRAN DE DÉCÈS --- */
         #death-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -305,6 +336,46 @@
         #danger-zone-container { display: none; margin: 2px 0 14px; background: rgba(212,56,56,0.09); border: 1px solid var(--accent-red); border-radius: var(--radius-s); padding: 12px; text-align: center; }
         .invisible-timer-warning { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--accent-red); font-family: var(--font-display); font-weight: 800; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.1em; animation: blinkFast 0.9s infinite; }
         @keyframes blinkFast { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        /* En paysage, la fiche empilee depassait la hauteur d'ecran et le bouton
+           d'action tombait sous la ligne de flottaison. Elle passe sur deux
+           colonnes : la largeur disponible sert enfin a quelque chose. */
+        @media (orientation: landscape) and (max-height: 560px) {
+            /* Comme l'accueil, l'ecran resultat est plafonne a 620 px : en
+               paysage cette limite retrecit les deux colonnes et rallonge
+               inutilement les textes. */
+            #screen-result { max-width: 100%; }
+            .result-wrapper { padding: 4px 12px; }
+            .tac-card { max-width: 780px; }
+            .card-head { padding: 4px 14px; }
+            .card-label { margin-bottom: 4px; }
+            .card-body {
+                padding: 10px 14px;
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                grid-template-areas:
+                    "titre  titre"
+                    "zone   prot"
+                    "bilan  soin"
+                    "danger danger"
+                    "action action";
+                column-gap: 16px;
+            }
+            .card-title      { grid-area: titre;  font-size: 1.02rem; margin-bottom: 6px; }
+            #bloc-zone       { grid-area: zone;   margin-bottom: 6px; }
+            #protection-indicator { grid-area: prot; margin: 0 0 6px !important; padding: 5px 8px !important; font-size: 0.72rem !important; align-self: end; }
+            #bloc-bilan      { grid-area: bilan;  margin-bottom: 6px; }
+            #bloc-protocole  { grid-area: soin;   margin-bottom: 8px; }
+            /* Le bandeau d'urgence coutait 57 px a lui seul : resserre, il tient
+               sur une ligne sans perdre en lisibilite. */
+            #danger-zone-container { grid-area: danger; margin: 0 0 6px; padding: 5px 10px; }
+            .invisible-timer-warning { font-size: 0.68rem; letter-spacing: 0.06em; }
+            #btn-card        { grid-area: action; padding: 9px; }
+            .card-desc       { font-size: 0.95rem; }
+            .card-box        { padding: 10px; font-size: 0.92rem; }
+            #txt-bilan       { font-size: 0.88rem !important; line-height: 1.4 !important; }
+        }
+
 
         /* --- ÉLÉMENTS D'INTERFACE --- */
         h2 { font-family: var(--font-display); font-size: 1.02rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.16em; margin: 4px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--bse-gold); }
@@ -542,7 +613,7 @@
                 </div>
                 <div class="card-body">
                     <div class="card-title" id="txt-titre">Titre</div>
-                    <div class="card-field">
+                    <div id="bloc-zone" class="card-field">
                         <span class="card-label">Zone touchée</span>
                         <div class="card-desc" id="txt-zone">Bras</div>
                     </div>
@@ -551,7 +622,7 @@
                         <span class="card-label">Bilan</span>
                         <div id="txt-bilan" style="font-size:0.95rem; line-height:1.5; color:#ddd;"></div>
                     </div>
-                    <div class="card-field">
+                    <div id="bloc-protocole" class="card-field">
                         <span class="card-label">Protocole de soin</span>
                         <div id="txt-soins" class="card-box">Soins...</div>
                     </div>
