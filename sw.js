@@ -10,7 +10,7 @@
    remplace ces fichiers sur les telephones deja equipes.
    ========================================================= */
 
-const CACHE_VERSION = 'bse-medic-v3';
+const CACHE_VERSION = 'bse-medic-v4';
 
 // Tout ce qui compose l'application. Chemins relatifs : l'application
 // fonctionne aussi bien a la racine d'un domaine que dans un sous-dossier.
@@ -33,6 +33,10 @@ const APP_SHELL = [
     './icons/apple-touch-icon.png',
     './icons/favicon-32.png',
     './icons/logo-bse.png',
+    './icons/logo-bse-medical.png',
+    './icons/logo-bse-medical@2x.png',
+    './icons/logo-bse-court.png',
+    './icons/logo-bse-court@2x.png',
     './icons/logo-bse@2x.png'
 ];
 

@@ -130,6 +130,13 @@
             text-transform: uppercase; letter-spacing: 0.19em; color: var(--bse-muted);
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
+        /* Logo de l'en-tête. Le lettrage est très allongé (7,4:1) : il est borné
+           en hauteur ET en largeur, sinon il vient heurter les boutons d'action
+           sur un écran étroit. Le navigateur conserve les proportions. */
+        #logo-titre { max-height: 26px; max-width: 100%; width: auto; height: auto; display: block; }
+        @media (min-width: 620px) { #logo-titre { max-height: 34px; } }
+        @media (max-height: 420px) { #logo-titre { max-height: 22px; } }
+
         .header-actions { display: flex; flex-direction: row; gap: 6px; justify-content: flex-end; }
         .header-btn {
             position: relative;
@@ -440,8 +447,22 @@
         </div>
         <div class="header-row">
             <div class="app-title-container">
-                <div class="app-title">BSE Medical System</div>
-                <div class="app-tagline">Frontline // Field application</div>
+                <!-- Le titre texte reste en secours : si le logo est absent ou
+                     ne se charge pas, l'en-tête ne se retrouve jamais vide. -->
+                <picture>
+                    <!-- Sur un écran étroit, le lettrage complet (7,4:1) devient
+                         illisible une fois la place des boutons retirée : on bascule
+                         sur le bloc « BSE » seul, bien plus compact (3,1:1). -->
+                    <source media="(max-width: 430px)" srcset="icons/logo-bse-court.png 1x, icons/logo-bse-court@2x.png 2x">
+                    <img id="logo-titre" src="icons/logo-bse-medical.png"
+                         srcset="icons/logo-bse-medical.png 1x, icons/logo-bse-medical@2x.png 2x"
+                         alt="BSE Medical"
+                         onerror="this.remove(); var t=document.getElementById('titre-secours'); if(t) t.style.display='block';">
+                </picture>
+                <div id="titre-secours" style="display:none;">
+                    <div class="app-title">BSE Medical System</div>
+                    <div class="app-tagline">Frontline // Field application</div>
+                </div>
             </div>
             <div class="header-actions">
                 <button type="button" id="btn-multi-icon" class="header-btn multi" title="Multijoueur" onclick="ouvrirMenuMultijoueur()"><svg class="ico"><use href="#i-team"></use></svg></button>
