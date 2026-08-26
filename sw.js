@@ -10,7 +10,7 @@
    remplace ces fichiers sur les telephones deja equipes.
    ========================================================= */
 
-const CACHE_VERSION = 'bse-medic-v4';
+const CACHE_VERSION = 'bse-medic-v5';
 
 // Tout ce qui compose l'application. Chemins relatifs : l'application
 // fonctionne aussi bien a la racine d'un domaine que dans un sous-dossier.

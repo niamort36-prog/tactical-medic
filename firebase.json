@@ -8,7 +8,7 @@
       "firebase.json",
       "database.rules.json",
       "tools-*",
-      "BSE MEDICAL.png",
+      "BSE*.png",
       "**/.*",
       "**/node_modules/**",
       "README.md"
