@@ -122,18 +122,43 @@
         }
 
         .header-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
-        .app-title-container { flex: 1; min-width: 0; }
+        .app-title-container { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; }
         .app-title {
             font-family: var(--font-display); font-size: 1.02rem; font-weight: 800;
             text-transform: uppercase; letter-spacing: 0.13em; line-height: 1.1;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        /* Logo de l'en-tête. Le lettrage est très allongé (7,4:1) : il est borné
-           en hauteur ET en largeur, sinon il vient heurter les boutons d'action
-           sur un écran étroit. Le navigateur conserve les proportions. */
-        #logo-titre { max-height: 26px; max-width: 100%; width: auto; height: auto; display: block; }
-        @media (min-width: 620px) { #logo-titre { max-height: 34px; } }
-        @media (max-height: 420px) { #logo-titre { max-height: 22px; } }
+        /* Logo de l'en-tête, toujours en version complète « BSE MEDICAL ».
+           Le lettrage est très allongé (291x40, soit 7,3:1) : plutôt que de le
+           dimensionner sur la largeur de l'écran, on le laisse occuper toute la
+           place que les boutons d'action laissent dans le bandeau (width: 100%).
+           La hauteur suit donc toute seule. Attention : borner la HAUTEUR d'une
+           image dont la largeur est définie l'écrase (le ratio n'est plus
+           conservé) ; la borne se met donc sur la largeur. 247 px = 34 px de
+           haut, 175 px = 24 px de haut. Le lettrage reste entier et net, du
+           plus petit téléphone au grand écran. */
+        #logo-titre {
+            display: block;
+            width: 100%; max-width: 247px; height: auto;
+        }
+        /* Paysage sur téléphone : le bandeau est écrasé, on réduit la borne. */
+        @media (max-height: 420px) { #logo-titre { max-width: 175px; } }
+
+        /* Bandeau d'état : opérateur, équipe, partie en cours */
+        .status-row {
+            display: flex; align-items: center; gap: 8px;
+            padding: 5px 12px; background: #0c0c0c;
+            border-top: 1px solid var(--bse-border-soft);
+        }
+        .status-dot {
+            width: 7px; height: 7px; flex: none; border-radius: 50%;
+            background: var(--bse-muted); transition: background 0.3s;
+        }
+        .status-text {
+            font-family: var(--font-display); font-size: 0.62rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.13em; color: var(--bse-muted);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
 
         .header-actions { display: flex; flex-direction: row; gap: 6px; justify-content: flex-end; }
         .header-btn {
@@ -159,25 +184,20 @@
         }
         @keyframes pulseSlow { 0% { opacity: 1; } 50% { opacity: 0.25; } 100% { opacity: 1; } }
 
+        /* Sous 460 px, l'en-tête rend de la place au logo : boutons plus petits
+           et « Sortir » réduit à son pictogramme. */
+        @media (max-width: 460px) {
+            .header-row { gap: 6px; padding: 8px 10px; }
+            .header-btn { width: 32px; height: 32px; }
+            .header-actions { gap: 4px; }
+            .header-btn.wide { width: 32px; padding: 0; }
+            .header-btn.wide .texte-bouton { display: none; }
+        }
+
+
         /* Chevron des sections repliables : il pivote quand la section est ouverte */
         .chevron { transition: transform 0.2s; }
         .btn-action.ouvert .chevron { transform: rotate(180deg); }
-
-        /* Bandeau d'état : opérateur, équipe, partie en cours */
-        .status-row {
-            display: flex; align-items: center; gap: 8px;
-            padding: 5px 12px; background: #0c0c0c;
-            border-top: 1px solid var(--bse-border-soft);
-        }
-        .status-dot {
-            width: 7px; height: 7px; flex: none; border-radius: 50%;
-            background: var(--bse-muted); transition: background 0.3s;
-        }
-        .status-text {
-            font-family: var(--font-display); font-size: 0.62rem; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.13em; color: var(--bse-muted);
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
 
         /* --- ÉCRANS --- */
         .screen { display: none; padding: 18px 16px 100px; flex-grow: 1; overflow-y: auto; z-index: 5; width: 100%; max-width: 620px; margin: 0 auto; }
@@ -518,23 +538,17 @@
             <div class="app-title-container">
                 <!-- Le titre texte reste en secours : si le logo est absent ou
                      ne se charge pas, l'en-tête ne se retrouve jamais vide. -->
-                <picture>
-                    <!-- Sur un écran étroit, le lettrage complet (7,4:1) devient
-                         illisible une fois la place des boutons retirée : on bascule
-                         sur le bloc « BSE » seul, bien plus compact (3,1:1). -->
-                    <source media="(max-width: 430px)" srcset="icons/logo-bse-court.png 1x, icons/logo-bse-court@2x.png 2x">
-                    <img id="logo-titre" src="icons/logo-bse-medical.png"
-                         srcset="icons/logo-bse-medical.png 1x, icons/logo-bse-medical@2x.png 2x"
-                         alt="BSE Medical"
-                         onerror="this.remove(); var t=document.getElementById('titre-secours'); if(t) t.style.display='block';">
-                </picture>
+                <img id="logo-titre" src="icons/logo-bse-medical.png"
+                     srcset="icons/logo-bse-medical.png 1x, icons/logo-bse-medical@2x.png 2x"
+                     alt="BSE Medical"
+                     onerror="this.remove(); var t=document.getElementById('titre-secours'); if(t) t.style.display='block';">
                 <div id="titre-secours" style="display:none;">
                     <div class="app-title">BSE Medical</div>
                 </div>
             </div>
             <div class="header-actions">
                 <button type="button" id="btn-multi-icon" class="header-btn multi" title="Multijoueur" onclick="ouvrirMenuMultijoueur()"><svg class="ico"><use href="#i-team"></use></svg></button>
-                <button type="button" id="btn-quitter-partie" class="header-btn wide" style="display:none;" onclick="confirmerQuitterPartie()"><svg class="ico"><use href="#i-exit"></use></svg>Sortir</button>
+                <button type="button" id="btn-quitter-partie" class="header-btn wide" style="display:none;" onclick="confirmerQuitterPartie()" title="Quitter la partie"><svg class="ico"><use href="#i-exit"></use></svg><span class="texte-bouton">Sortir</span></button>
                 <button type="button" class="header-btn" title="Mes paquets" onclick="ouvrirBuilder()"><svg class="ico"><use href="#i-edit"></use></svg></button>
                 <button type="button" class="header-btn" title="Réglages" onclick="ouvrirReglages()"><svg class="ico"><use href="#i-settings"></use></svg></button>
             </div>
