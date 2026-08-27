@@ -915,7 +915,11 @@
             <label class="form-label" data-i18n="ce.titre">Titre</label>
             <input type="text" id="card-title" class="form-input" data-i18n-ph="ce.titrePh" placeholder="Ex : Fracture">
             <label class="form-label" data-i18n="ce.zone">Zone touchée</label>
-            <input type="text" id="card-zone" class="form-input" data-i18n-ph="ce.zonePh" placeholder="Ex : Bras">
+            <select id="card-zone-choix" class="form-input" style="margin-bottom:6px;" onchange="majSaisieZone()"></select>
+            <!-- Saisie libre : montrée uniquement quand « zone personnalisée »
+                 est choisie, pour garder la possibilité d'écrire n'importe quoi. -->
+            <input type="text" id="card-zone" class="form-input" data-i18n-ph="ce.zonePh" placeholder="Ex : Bras" style="display:none;">
+            <p id="card-zone-aide" style="font-size:0.75rem; color:var(--bse-muted); margin:-4px 0 10px;"></p>
             <label class="form-label" data-i18n="ce.protocole">Protocole / effet</label>
             <textarea id="card-effect" class="form-input" rows="3" data-i18n-ph="ce.protocolePh" placeholder="Ex : Attelle + Morphine"></textarea>
         </div>
@@ -1214,6 +1218,29 @@
         const DB_MATERIEL_BASE = ["Garrot", "Bandage", "Poche de transfusion", "Attelle", "Morphine", "Épinéphrine", "Pansement 3 côtés"];
         const MEMBRES = ["Bras Gauche", "Bras Droit", "Jambe Gauche", "Jambe Droite"];
 
+        /* Zones proposees a la creation d'une carte personnalisee.
+           `zones` liste les libelles possibles : hors mode Extreme, l'un
+           d'eux est tire au sort. C'est ce qui permet d'ecrire UNE carte
+           « eraflure aux quatre membres » au lieu de quatre cartes.
+           `cibles` dit sur quelles parties de la silhouette la carte peut
+           sortir en mode Extreme ; la zone affichee est alors celle qui a
+           ete reellement touchee.
+           Les libelles stockes restent en francais : ce sont les cles des
+           tables de traduction et de la logique de tirage. */
+        const ZONES_CARTE = [
+            { id: 'tete',      zone: 'Tête',          cibles: ['tete'] },
+            { id: 'torse',     zone: 'Torse',         cibles: ['torse'] },
+            { id: 'teteTorse', zone: 'Tête ou Torse', zones: ['Tête', 'Torse'], cibles: ['tete', 'torse'] },
+            { id: 'brasD',     zone: 'Bras Droit',    zones: ['Bras Droit'],  cibles: ['bras'] },
+            { id: 'brasG',     zone: 'Bras Gauche',   zones: ['Bras Gauche'], cibles: ['bras'] },
+            { id: 'bras',      zone: 'Bras',          zones: ['Bras Gauche', 'Bras Droit'], cibles: ['bras'] },
+            { id: 'jambeD',    zone: 'Jambe Droite',  zones: ['Jambe Droite'],  cibles: ['jambe'] },
+            { id: 'jambeG',    zone: 'Jambe Gauche',  zones: ['Jambe Gauche'], cibles: ['jambe'] },
+            { id: 'jambes',    zone: 'Jambes',        zones: ['Jambe Gauche', 'Jambe Droite'], cibles: ['jambe'] },
+            { id: 'membres',   zone: 'Membres',       zones: MEMBRES.slice(), cibles: ['bras', 'jambe'] },
+            { id: 'libre',     zone: null }
+        ];
+
         const DB_REGLES = {
             classique: [
                 { id: "c1", titre: "DCD", zone: "Tête ou Torse", gravite: "DÉCÈS", effet: "Respawn direct", matos: [] },
@@ -1451,6 +1478,9 @@
            catalogue : elle ressort telle qu'il l'a saisie. */
         function txTitre(v) { return window.I18N ? I18N.titre(v) : v; }
         function txZone(v)  { return window.I18N ? I18N.zone(v)  : v; }
+        // Une zone de carte peut etre un membre precis (« Bras Droit ») :
+        // il faut alors chercher dans la table des membres, pas des zones.
+        function txZoneOuMembre(v) { return MEMBRES.includes(v) ? txMembre(v) : txZone(v); }
         function txGrav(v)  { return window.I18N ? I18N.grav(v)  : v; }
         function txMat(v)   { return window.I18N ? I18N.mat(v)   : v; }
         function txMembre(v){ return window.I18N ? I18N.membre(v): v; }
@@ -1557,7 +1587,7 @@
                 // Condition de protection : indique à l'orga quand la carte peut sortir
                 const cond = r.protection === true ? `<span class="deck-badge" style="border-color:var(--accent-green);color:#a8d3ae;">${escapeHtml(tr('cat.protPortee'))}</span>`
                            : r.protection === false ? `<span class="deck-badge" style="border-color:var(--accent-red);color:#e8a0a0;">${escapeHtml(tr('cat.sansProt'))}</span>` : '';
-                html += `<p><strong>${escapeHtml(txTitre(r.titre))}</strong>${r.zone ? ` <span style="font-size:0.8em;color:#888;">· ${escapeHtml(txZone(r.zone))}</span>` : ''} ${cond}</p>`;
+                html += `<p><strong>${escapeHtml(txTitre(r.titre))}</strong>${r.zone ? ` <span style="font-size:0.8em;color:#888;">· ${escapeHtml(txZoneOuMembre(r.zone))}</span>` : ''} ${cond}</p>`;
                 if (r.description) html += `<p style="font-size:0.82em;color:#bbb;font-style:italic;">${escapeHtml(txBilan(r.description))}</p>`;
                 html += `<p style="font-size:0.85em;">${escapeHtml(effetPourAffichage(r.effet))}</p>`;
                 html += `<p style="font-size:0.75em;color:#888;">${escapeHtml(tr('cat.matos'))} ${mats.length ? escapeHtml(mats.map(txMat).join(', ')) : '—'}</p>`;
@@ -2045,6 +2075,14 @@
         // « Jambe Gauche »...). Il permet de distinguer bras et jambes, que la
         // silhouette renvoie toutes deux comme la zone « membre ».
         function carteCorrespondZone(r, zone, membre) {
+            // Membres precis : « les deux bras », « bras droit »... La silhouette
+            // ne distingue que bras et jambe, mais le clic donne le membre exact.
+            // Une carte qui ne vise que le bras droit ne doit pas sortir sur le
+            // gauche, sinon la fiche annoncerait l'inverse de son titre.
+            if (zone === 'membre' && membre && Array.isArray(r.zones)) {
+                const vises = r.zones.filter(z => MEMBRES.includes(z));
+                if (vises.length && !vises.includes(membre)) return false;
+            }
             // Ciblage explicite (paquet Extrême) : prioritaire et sans ambiguïté
             if (Array.isArray(r.cibles) && r.cibles.length) {
                 const cible = zone === 'membre'
@@ -2139,7 +2177,7 @@
             else if (Array.isArray(card.zones) && card.zones.length) z = card.zones[Math.floor(Math.random()*card.zones.length)];
             // z reste la valeur CANONIQUE (francais) : elle sert de cle a
             // card.effets[z] juste apres. Seul l'affichage est traduit.
-            document.getElementById('txt-zone').innerText = MEMBRES.includes(z) ? txMembre(z) : txZone(z);
+            document.getElementById('txt-zone').innerText = txZoneOuMembre(z);
 
             const protEl = document.getElementById('protection-indicator');
             if (ctxExtreme && ctxExtreme.protection !== null && ctxExtreme.protection !== undefined) {
@@ -2542,6 +2580,32 @@
         }
         function choisirIcone(id) { tempIcone = id; renderChoixIcone(); }
 
+        /* --- ZONE D'UNE CARTE PERSONNALISEE --- */
+        function renderChoixZone(idChoisi) {
+            const sel = document.getElementById('card-zone-choix');
+            if (!sel) return;
+            sel.innerHTML = ZONES_CARTE.map(z =>
+                `<option value="${z.id}">${escapeHtml(tr('zoneOpt.' + z.id))}</option>`).join('');
+            sel.value = ZONES_CARTE.some(z => z.id === idChoisi) ? idChoisi : 'libre';
+            majSaisieZone();
+        }
+        function majSaisieZone() {
+            const sel = document.getElementById('card-zone-choix');
+            const champ = document.getElementById('card-zone');
+            const aide = document.getElementById('card-zone-aide');
+            if (!sel || !champ) return;
+            const libre = sel.value === 'libre';
+            champ.style.display = libre ? 'block' : 'none';
+            if (aide) aide.innerText = tr(libre ? 'zoneOpt.aideLibre' : 'zoneOpt.aideGroupe');
+        }
+        // Retrouve l'option qui correspond a une carte deja enregistree.
+        function zoneIdDeLaCarte(c) {
+            if (!c) return 'tete';
+            if (c.zoneId && ZONES_CARTE.some(z => z.id === c.zoneId)) return c.zoneId;
+            const trouve = ZONES_CARTE.find(z => z.zone && z.zone === c.zone);
+            return trouve ? trouve.id : 'libre';
+        }
+
         function ouvrirBuilder() { showScreen('screen-builder'); renderDecksList(); }
 
         function retourApresEditionDeck() {
@@ -2661,7 +2725,7 @@
             }
             l.innerHTML = cards.map((c, i) => {
                 const mats = cardMatos(c);
-                const sub = [txZone(c.zone), effetPourAffichage(c.effet)].filter(Boolean).join(' · ');
+                const sub = [txZoneOuMembre(c.zone), effetPourAffichage(c.effet)].filter(Boolean).join(' · ');
                 return `<div class="card-row" style="border-left-color:${getColorTexte(c.gravite)}">
                     <div class="card-row-main" onclick="editCard(${i})">
                         <div class="card-row-title" style="color:${getColorTexte(c.gravite)}">${escapeHtml(txTitre(c.titre) || tr('bld.sansTitre'))}</div>
@@ -2779,6 +2843,7 @@
             currentCardIndex = -1;
             document.getElementById('card-title').value = "";
             document.getElementById('card-zone').value = "";
+            renderChoixZone('tete');
             document.getElementById('card-effect').value = "";
             tempMatos = [];
             renderMatosCheck();
@@ -2792,7 +2857,8 @@
             const c = d.cards[i];
             document.getElementById('card-title').value = c.titre;
             document.getElementById('card-gravity').value = c.gravite;
-            document.getElementById('card-zone').value = c.zone;
+            document.getElementById('card-zone').value = c.zone || '';
+            renderChoixZone(zoneIdDeLaCarte(c));
             document.getElementById('card-effect').value = c.effet;
             tempMatos = [...cardMatos(c)];
             renderMatosCheck();
@@ -2853,15 +2919,23 @@
         function validerCarte() {
             const d = appState.customDecks.find(x => x.id === currentDeckId);
             if (!d) { retourApresEditionDeck(); return; }
-            if (!document.getElementById('card-title').value.trim()) { alert('Donnez un titre à la carte.'); return; }
+            if (!document.getElementById('card-title').value.trim()) { alert(tr('ce.donnezTitre')); return; }
+            const choix = document.getElementById('card-zone-choix').value;
+            const opt = ZONES_CARTE.find(z => z.id === choix) || ZONES_CARTE[ZONES_CARTE.length - 1];
             const nc = {
                 titre: document.getElementById('card-title').value.trim(),
                 gravite: document.getElementById('card-gravity').value,
-                zone: document.getElementById('card-zone').value,
+                zone: opt.zone || document.getElementById('card-zone').value,
                 effet: document.getElementById('card-effect').value,
                 matos: tempMatos,
-                typeZone: 'custom'
+                typeZone: 'custom',
+                zoneId: opt.id
             };
+            // Une zone groupee porte la liste des libelles possibles et les
+            // parties de silhouette concernees ; une zone libre n'a ni l'un ni
+            // l'autre et retombe sur la reconnaissance par le texte.
+            if (opt.zones) nc.zones = opt.zones.slice();
+            if (opt.cibles) nc.cibles = opt.cibles.slice();
             if (currentCardIndex === -1) d.cards.push(nc); else d.cards[currentCardIndex] = nc;
             editDeck(currentDeckId);
         }

@@ -500,9 +500,11 @@ def generer(code, REGULIER, GRAS):
         (T["g185"], T["g186"]),
         (T["g187"], T["g188"]),
         (T["g189"], T["g190"]),
-        ("Enregistrer", T["g191"]),
+        (T["m08"], T["g191"]),
     ]))
     h.append(Spacer(1, 2*mm))
+    h.append(encadre(T["m09"], T["m10"]))
+    h.append(Spacer(1, 3*mm))
     h.append(P(T["g192"], "h2"))
     h.append(P(T["g193"]))
     h.append(Spacer(1, 2*mm))

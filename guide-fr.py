@@ -6,6 +6,9 @@
    Le balisage accepte <b>, <br/> et les entites HTML (&eacute;...).
 """
 TEXTES = {
+    "m08": "Enregistrer",
+    "m09": "Une seule carte pour plusieurs membres",
+    "m10": "La zone se choisit dans une liste&nbsp;: t&ecirc;te, torse, bras droit, bras gauche, jambe droite, jambe gauche &mdash; mais aussi <b>les deux bras</b>, <b>les deux jambes</b> ou <b>les quatre membres</b>. Une &eacute;raflure aux quatre membres tient alors en <b>une seule carte</b> au lieu de quatre&nbsp;: la zone exacte est tir&eacute;e au sort au moment du diagnostic, et en mode Extr&ecirc;me c'est celle que vous avez touch&eacute;e sur la silhouette. &laquo;&nbsp;Zone personnalis&eacute;e&nbsp;&raquo; reste l&agrave; pour &eacute;crire ce que vous voulez.",
     "m07": "tout en bas&nbsp;: &agrave; gauche le <b>choix de la langue</b>, &agrave; droite les liens vers <b>Bravo Sierra Events</b> &mdash; site, Discord, Instagram, YouTube et Facebook.",
     "m01": "Torse",
     "m02": "PROTECTION",

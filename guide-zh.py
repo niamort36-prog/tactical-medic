@@ -6,6 +6,9 @@
    rend pas toujours. On ecrit les caracteres directement.
 """
 TEXTES = {
+    "m08": "保存",
+    "m09": "一张牌覆盖多个肢体",
+    "m10": "部位从列表中选择：头部、躯干、右臂、左臂、右腿、左腿 &mdash; 还有<b>双臂</b>、<b>双腿</b>或<b>四肢</b>。这样，「四肢擦伤」只需<b>一张牌</b>而不是四张：具体部位在判定时随机抽取；在极限模式下，则是你在人形图上点中的部位。「自定义部位」依然保留，可以随意填写。",
     "m07": "最下方：左边是<b>语言选择</b>，右边是通往 <b>Bravo Sierra Events</b> 的链接：官网、Discord、Instagram、YouTube 和 Facebook。",
     "m01": "躯干",
     "m02": "防护",

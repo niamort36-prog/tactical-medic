@@ -5,6 +5,9 @@
    Le balisage <b>, <br/> et <font> doit etre conserve tel quel.
 """
 TEXTES = {
+    "m08": "Guardar",
+    "m09": "Una sola carta para varios miembros",
+    "m10": "La zona se elige en una lista: cabeza, torso, brazo derecho, brazo izquierdo, pierna derecha, pierna izquierda &mdash; pero tambi&eacute;n <b>los dos brazos</b>, <b>las dos piernas</b> o <b>los cuatro miembros</b>. Un rasgu&ntilde;o en los cuatro miembros cabe entonces en <b>una sola carta</b> en vez de cuatro: la zona exacta se saca al azar en el momento del diagn&oacute;stico y, en modo Extremo, es la que has se&ntilde;alado en la silueta. “Zona personalizada” sigue ah&iacute; para escribir lo que quieras.",
     "m07": "abajo del todo: a la izquierda la <b>elecci&oacute;n del idioma</b>, a la derecha los enlaces a <b>Bravo Sierra Events</b> &mdash; web, Discord, Instagram, YouTube y Facebook.",
     "m01": "Torso",
     "m02": "PROTECCIÓN",

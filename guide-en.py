@@ -5,6 +5,9 @@
    Le balisage <b>, <br/> et <font> doit etre conserve tel quel.
 """
 TEXTES = {
+    "m08": "Save",
+    "m09": "One card for several limbs",
+    "m10": "The area is picked from a list: head, torso, right arm, left arm, right leg, left leg &mdash; but also <b>both arms</b>, <b>both legs</b> or <b>all four limbs</b>. A graze to all four limbs then fits in <b>a single card</b> instead of four: the exact area is drawn at random at assessment time, and in Extreme mode it is the one you tapped on the silhouette. “Custom area” is still there to write whatever you like.",
     "m07": "right at the bottom: on the left the <b>language picker</b>, on the right the links to <b>Bravo Sierra Events</b> &mdash; website, Discord, Instagram, YouTube and Facebook.",
     "m01": "Torso",
     "m02": "BODY ARMOUR",

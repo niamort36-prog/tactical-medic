@@ -5,6 +5,9 @@
    Le balisage <b>, <br/> et <font> doit etre conserve tel quel.
 """
 TEXTES = {
+    "m08": "Speichern",
+    "m09": "Eine Karte f&uuml;r mehrere Gliedma&szlig;en",
+    "m10": "Der Bereich wird aus einer Liste gew&auml;hlt: Kopf, Rumpf, rechter Arm, linker Arm, rechtes Bein, linkes Bein &mdash; aber auch <b>beide Arme</b>, <b>beide Beine</b> oder <b>alle vier Gliedma&szlig;en</b>. Eine Sch&uuml;rfwunde an allen vier Gliedma&szlig;en passt dann in <b>eine einzige Karte</b> statt in vier: der genaue Bereich wird bei der Beurteilung ausgelost, im Extrem-Modus ist es der auf der Silhouette angetippte. „Eigener Bereich“ bleibt, um zu schreiben, was Sie wollen.",
     "m07": "ganz unten: links die <b>Sprachauswahl</b>, rechts die Links zu <b>Bravo Sierra Events</b> &mdash; Website, Discord, Instagram, YouTube und Facebook.",
     "m01": "Rumpf",
     "m02": "SCHUTZ",
