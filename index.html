@@ -839,7 +839,7 @@
         <div class="box">
             <h3 data-i18n="reg.aide">Aide</h3>
             <p style="font-size:0.78rem; color:var(--bse-muted); margin:0 0 10px 0;" data-i18n="reg.aideTexte">Le guide d'utilisation complet, à lire au briefing. Il reste consultable hors ligne une fois ouvert.</p>
-            <a class="btn-action" href="guide-bse-medical-system.pdf" target="_blank" rel="noopener" style="text-decoration:none;">
+            <a id="lien-guide" class="btn-action" href="guide-bse-medical-system-fr.pdf" target="_blank" rel="noopener" style="text-decoration:none;">
                 <svg class="ico"><use href="#i-import"></use></svg><span data-i18n="reg.guide">Guide d'utilisation (PDF)</span>
             </a>
         </div>
@@ -1761,6 +1761,7 @@
                 demarrerReconnexionClient({ maxAttempts: 20, silentFail: true });
             }
             construireMenuLangue();
+            majLienGuide();
             updateUI_Game();
         };
 
@@ -4528,8 +4529,14 @@
         /* Appele par I18N.definir(). Les ecrans construits en JS ne portent pas
            de data-i18n : il faut les redessiner a la main. Les autres (reglages,
            editeur, QG) se reconstruisent a leur prochaine ouverture. */
+        // Le guide existe en un PDF par langue : le lien suit le menu.
+        function majLienGuide() {
+            const a = document.getElementById('lien-guide');
+            if (a && window.I18N) a.href = 'guide-bse-medical-system-' + I18N.langue() + '.pdf';
+        }
         window.onLangueChangee = function () {
             construireMenuLangue();
+            majLienGuide();
             try { updateUI_Game(); } catch (e) { console.warn('rafraichissement accueil', e); }
         };
 

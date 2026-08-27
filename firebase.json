@@ -8,6 +8,7 @@
       "firebase.json",
       "database.rules.json",
       "tools-*",
+      "guide-??.py",
       "BSE*.png",
       "**/.*",
       "**/node_modules/**",
