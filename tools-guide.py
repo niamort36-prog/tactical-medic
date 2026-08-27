@@ -322,6 +322,7 @@ def generer(code, REGULIER, GRAS):
         T["g060"],
         T["g061"],
         T["g062"],
+        T["m07"],
     ]))
     h.append(PageBreak())
 

@@ -5,6 +5,7 @@
    Le balisage <b>, <br/> et <font> doit etre conserve tel quel.
 """
 TEXTES = {
+    "m07": "in fondo: a sinistra la <b>scelta della lingua</b>, a destra i collegamenti a <b>Bravo Sierra Events</b> &mdash; sito, Discord, Instagram, YouTube e Facebook.",
     "m01": "Torso",
     "m02": "PROTEZIONE",
     "m03": "QUADRO CLINICO",
@@ -285,7 +286,7 @@ TEXTES = {
     "g270": "<b>Editor</b>",
     "g271": "Regolare ogni mazzo <b>prima</b> di distribuirlo: quantità, materiale, rischio di morte. La modalità segnata <b>IN GIOCO</b> è quella dei giocatori senza assegnazione.",
     "g272": "Assegnare un mazzo a tutti, a una squadra o a un giocatore. L'elenco in basso mostra ciò che è stato distribuito, con un cestino per togliere.",
-    "g273": "Il registro in tempo reale: chi si è unito, chi ha pescato quale ferita, a che ora. Scaricabile come file di testo.",
+    "g273": "Il registro in tempo reale: chi si &egrave; unito, chi ha pescato quale ferita, a che ora e in quale <b>squadra</b>. Scaricabile come file di testo.",
     "g274": "Il co-organizzatore",
     "g275": "Rendere un giocatore <b>Admin</b> gli dà accesso al tuo stesso QG. Può spostare giocatori, distribuire mazzi, creare squadre. Molto comodo su un campo grande dove non puoi essere ovunque.",
     "g276": "Nessuno può promuoversi da solo",

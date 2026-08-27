@@ -5,6 +5,7 @@
    Le balisage <b>, <br/> et <font> doit etre conserve tel quel.
 """
 TEXTES = {
+    "m07": "right at the bottom: on the left the <b>language picker</b>, on the right the links to <b>Bravo Sierra Events</b> &mdash; website, Discord, Instagram, YouTube and Facebook.",
     "m01": "Torso",
     "m02": "BODY ARMOUR",
     "m03": "ASSESSMENT",
@@ -285,7 +286,7 @@ TEXTES = {
     "g270": "<b>Editor</b>",
     "g271": "Set up each deck <b>before</b> handing it out: quantities, equipment, risk of death. The mode marked <b>IN PLAY</b> is the one used by players with no assignment.",
     "g272": "Assign a deck to everyone, to a team or to a player. The list at the bottom shows what has been handed out, with a bin icon to remove.",
-    "g273": "The live log: who joined, who drew which injury, at what time. Downloadable as a text file.",
+    "g273": "The live log: who joined, who drew which injury, at what time and in which <b>team</b>. Downloadable as a text file.",
     "g274": "The co-organiser",
     "g275": "Making a player <b>Admin</b> gives them access to the same HQ as you. They can move players around, hand out decks, create teams. Very handy on a large site where you cannot be everywhere.",
     "g276": "Nobody can promote themselves",

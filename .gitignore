@@ -15,3 +15,7 @@ node_modules/
 .agents/
 .claude/
 skills-lock.json
+
+# Cache Python : genere en relancant tools-guide.py, sans interet ici.
+__pycache__/
+*.pyc

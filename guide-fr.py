@@ -6,6 +6,7 @@
    Le balisage accepte <b>, <br/> et les entites HTML (&eacute;...).
 """
 TEXTES = {
+    "m07": "tout en bas&nbsp;: &agrave; gauche le <b>choix de la langue</b>, &agrave; droite les liens vers <b>Bravo Sierra Events</b> &mdash; site, Discord, Instagram, YouTube et Facebook.",
     "m01": "Torse",
     "m02": "PROTECTION",
     "m03": "BILAN",
@@ -286,7 +287,7 @@ TEXTES = {
     "g270": "<b>&Eacute;diteur</b>",
     "g271": "R&eacute;gler chaque paquet <b>avant</b> de le distribuer&nbsp;: quantit&eacute;s, mat&eacute;riel, risque de mort. Le mode marqu&eacute; <b>JOU&Eacute;</b> est celui des joueurs sans attribution.",
     "g272": "Attribuer un paquet &agrave; tout le monde, &agrave; une &eacute;quipe ou &agrave; un joueur. La liste du bas montre ce qui est distribu&eacute;, avec une corbeille pour retirer.",
-    "g273": "Le journal en temps r&eacute;el&nbsp;: qui a rejoint, qui a tir&eacute; quelle blessure, &agrave; quelle heure. T&eacute;l&eacute;chargeable en fichier texte.",
+    "g273": "Le journal en temps r&eacute;el&nbsp;: qui a rejoint, qui a tir&eacute; quelle blessure, &agrave; quelle heure et dans quelle <b>&eacute;quipe</b>. T&eacute;l&eacute;chargeable en fichier texte.",
     "g274": "Le co-organisateur",
     "g275": "Passer un joueur <b>Admin</b> lui donne acc&egrave;s au m&ecirc;me QG que vous. Il peut d&eacute;placer des joueurs, distribuer des paquets, cr&eacute;er des &eacute;quipes. Tr&egrave;s pratique sur un grand terrain o&ugrave; vous ne pouvez pas &ecirc;tre partout.",
     "g276": "Personne ne peut se promouvoir tout seul",

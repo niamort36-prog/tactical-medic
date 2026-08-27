@@ -5,6 +5,7 @@
    Le balisage <b>, <br/> et <font> doit etre conserve tel quel.
 """
 TEXTES = {
+    "m07": "ganz unten: links die <b>Sprachauswahl</b>, rechts die Links zu <b>Bravo Sierra Events</b> &mdash; Website, Discord, Instagram, YouTube und Facebook.",
     "m01": "Rumpf",
     "m02": "SCHUTZ",
     "m03": "BEFUND",
@@ -285,7 +286,7 @@ TEXTES = {
     "g270": "<b>Editor</b>",
     "g271": "Jedes Deck <b>vor</b> dem Verteilen einstellen: Mengen, Material, Todesrisiko. Der mit <b>IM SPIEL</b> markierte Modus ist der für Spieler ohne Zuweisung.",
     "g272": "Ein Deck allen, einem Team oder einem Spieler zuweisen. Die Liste unten zeigt, was verteilt ist, mit einem Papierkorb zum Entfernen.",
-    "g273": "Das Protokoll in Echtzeit: wer beigetreten ist, wer welche Verletzung gezogen hat, um welche Uhrzeit. Als Textdatei herunterladbar.",
+    "g273": "Das Protokoll in Echtzeit: wer beigetreten ist, wer welche Verletzung gezogen hat, um welche Uhrzeit und in welchem <b>Team</b>. Als Textdatei herunterladbar.",
     "g274": "Der Co-Organisator",
     "g275": "Einen Spieler auf <b>Admin</b> zu setzen gibt ihm Zugang zum selben HQ wie Ihnen. Er kann Spieler verschieben, Decks verteilen, Teams anlegen. Sehr praktisch auf einem großen Gelände, wo Sie nicht überall sein können.",
     "g276": "Niemand kann sich selbst befördern",

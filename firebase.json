@@ -9,6 +9,7 @@
       "database.rules.json",
       "tools-*",
       "guide-??.py",
+      "__pycache__",
       "BSE*.png",
       "**/.*",
       "**/node_modules/**",

@@ -5,6 +5,7 @@
    Le balisage <b>, <br/> et <font> doit etre conserve tel quel.
 """
 TEXTES = {
+    "m07": "abajo del todo: a la izquierda la <b>elecci&oacute;n del idioma</b>, a la derecha los enlaces a <b>Bravo Sierra Events</b> &mdash; web, Discord, Instagram, YouTube y Facebook.",
     "m01": "Torso",
     "m02": "PROTECCIÓN",
     "m03": "EVALUACIÓN",
@@ -285,7 +286,7 @@ TEXTES = {
     "g270": "<b>Editor</b>",
     "g271": "Ajustar cada mazo <b>antes</b> de repartirlo: cantidades, material, riesgo de muerte. El modo marcado <b>EN JUEGO</b> es el de los jugadores sin asignación.",
     "g272": "Asignar un mazo a todo el mundo, a un equipo o a un jugador. La lista de abajo muestra lo repartido, con una papelera para quitarlo.",
-    "g273": "El registro en tiempo real: quién se ha unido, quién ha robado qué herida y a qué hora. Descargable en archivo de texto.",
+    "g273": "El registro en tiempo real: qui&eacute;n se ha unido, qui&eacute;n ha robado qu&eacute; herida, a qu&eacute; hora y en qu&eacute; <b>equipo</b>. Descargable en archivo de texto.",
     "g274": "El coorganizador",
     "g275": "Hacer <b>Admin</b> a un jugador le da acceso al mismo CG que a ti. Puede mover jugadores, repartir mazos, crear equipos. Muy práctico en un terreno grande donde no puedes estar en todas partes.",
     "g276": "Nadie puede ascenderse solo",

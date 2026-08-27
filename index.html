@@ -495,9 +495,26 @@
            pendant une séquence de soin. On ne risque pas d'envoyer le médic sur
            un site externe alors qu'il est en train de traiter un blessé, et elle
            ne passe pas sous le pied de page fixe des réglages. */
-        #lien-bse {
+        /* Coin bas droit : les reseaux sociaux puis le logo de l'organisateur.
+           Comme le selecteur de langue, ce bloc n'apparait que sur l'accueil,
+           le seul ecran qui ne defile pas jusqu'au bord bas. */
+        #liens-bas {
             display: none;
             position: fixed; right: 10px; bottom: 10px; z-index: 15;
+            align-items: center; gap: 7px;
+        }
+        #screen-game.active ~ #liens-bas { display: flex; }
+        .lien-social {
+            display: block; line-height: 0; padding: 2px;
+            opacity: 0.8; transition: opacity 0.15s, transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .lien-social:hover, .lien-social:focus-visible { opacity: 1; }
+        .lien-social:active { transform: scale(0.92); }
+        /* Marques : couleurs propres, donc pas de .ico */
+        .ico-social { width: 26px; height: 26px; display: block; }
+        #lien-bse {
+            display: block;
             padding: 4px; line-height: 0;
             opacity: 0.72; transition: opacity 0.15s, transform 0.1s;
             -webkit-tap-highlight-color: transparent;
@@ -505,13 +522,19 @@
         #lien-bse:hover, #lien-bse:focus-visible { opacity: 1; }
         #lien-bse:active { opacity: 1; transform: scale(0.95); }
         #lien-bse img { height: 34px; width: auto; display: block; }
-        /* Uniquement sur l'accueil : c'est le seul écran qui ne défile pas
-           jusqu'au bord bas. Ailleurs, un bouton d'action finit par arriver
-           dans le coin et le logo le recouvrirait. */
-        #screen-game.active ~ #lien-bse { display: block; }
-        @media (min-width: 620px) { #lien-bse img { height: 42px; } }
+        @media (min-width: 620px) { #lien-bse img { height: 42px; } .ico-social { width: 30px; height: 30px; } }
+        /* Petit ecran : quatre icones plus le logo doivent tenir a cote du
+           selecteur de langue sans jamais deborder. */
+        @media (max-width: 460px) {
+            #liens-bas { gap: 4px; }
+            .lien-social { padding: 1px; }
+            .ico-social { width: 22px; height: 22px; }
+        }
         /* En paysage la hauteur est comptée : on réduit pour ne rien gêner */
-        @media (max-height: 420px) { #lien-bse img { height: 26px; } }
+        @media (max-height: 420px) {
+            #lien-bse img { height: 26px; }
+            .ico-social { width: 20px; height: 20px; }
+        }
 
         /* --- SELECTEUR DE LANGUE ---
            Symetrique du logo Bravo Sierra Events : coin bas GAUCHE, et
@@ -1025,20 +1048,39 @@
         </button>
     </div>
 
-    <!-- Signature de l'organisateur : renvoie vers le site Bravo Sierra Events.
-         Placée en fin de <body> pour que les sélecteurs « écran actif ~ lien »
-         du bloc de style puissent la montrer ou la masquer selon l'écran. -->
-    <a id="lien-bse" href="https://bravosierraevents.com" target="_blank" rel="noopener noreferrer"
-       data-i18n-title="hdr.bseLien" title="Bravo Sierra Events — ouvrir le site"
-       data-i18n-aria="hdr.bseAria" aria-label="Ouvrir le site de Bravo Sierra Events">
-        <img src="icons/logo-bse.png" srcset="icons/logo-bse.png 1x, icons/logo-bse@2x.png 2x"
-             alt="Bravo Sierra Events">
-    </a>
+    <!-- Reseaux sociaux et signature de l'organisateur. Freres de
+         #screen-game, comme le selecteur de langue, pour que le selecteur
+         « ecran actif ~ element » puisse les montrer. -->
+    <div id="liens-bas">
+        <a class="lien-social" href="https://discord.gg/Fgh28MbmXf" target="_blank" rel="noopener noreferrer"
+           data-i18n-title="social.discord" data-i18n-aria="social.discord">
+            <svg class="ico-social" aria-hidden="true"><use href="#r-discord"></use></svg></a>
+        <a class="lien-social" href="https://www.instagram.com/bravosierraevents/" target="_blank" rel="noopener noreferrer"
+           data-i18n-title="social.instagram" data-i18n-aria="social.instagram">
+            <svg class="ico-social" aria-hidden="true"><use href="#r-instagram"></use></svg></a>
+        <a class="lien-social" href="https://www.youtube.com/@BattleSquad-Events" target="_blank" rel="noopener noreferrer"
+           data-i18n-title="social.youtube" data-i18n-aria="social.youtube">
+            <svg class="ico-social" aria-hidden="true"><use href="#r-youtube"></use></svg></a>
+        <a class="lien-social" href="https://www.facebook.com/profile.php?id=61559566045813" target="_blank" rel="noopener noreferrer"
+           data-i18n-title="social.facebook" data-i18n-aria="social.facebook">
+            <svg class="ico-social" aria-hidden="true"><use href="#r-facebook"></use></svg></a>
+        <a id="lien-bse" href="https://bravosierraevents.com/" target="_blank" rel="noopener noreferrer"
+           data-i18n-title="hdr.bseLien" title="Bravo Sierra Events — ouvrir le site"
+           data-i18n-aria="hdr.bseAria" aria-label="Ouvrir le site de Bravo Sierra Events">
+            <img src="icons/logo-bse.png" srcset="icons/logo-bse.png 1x, icons/logo-bse@2x.png 2x"
+                 alt="Bravo Sierra Events">
+        </a>
+    </div>
 
     <!-- ================= PICTOGRAMMES MONOCHROMES =================
          Un seul jeu de symboles au trait, appelé par <svg class="ico"><use href="#i-xxx">.
          Ils héritent de la couleur du texte : aucune icône colorée, aucun émoji. -->
-    <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+    <!-- Le sprite est masque par une taille nulle, PAS par display:none :
+         un degrade declare dans un sous-arbre en display:none ne peint
+         rien quand on le reference depuis ailleurs (verifie : meme un
+         rect de test hors sprite ressortait vide). -->
+    <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
+         style="position:absolute; width:0; height:0; overflow:hidden;">
         <symbol id="i-team" viewBox="0 0 24 24"><path d="M16 19v-1.4a3.6 3.6 0 0 0-3.6-3.6h-4.8A3.6 3.6 0 0 0 4 17.6V19"/><circle cx="10" cy="7.6" r="3.1"/><path d="M20 19v-1.4a3.6 3.6 0 0 0-2.7-3.5M15.4 4.9a3.1 3.1 0 0 1 0 5.4"/></symbol>
         <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M14.5 7.5l3 3"/></symbol>
         <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h9M19 7h1M4 12h3M13 12h7M4 17h8M18 17h2"/><circle cx="16" cy="7" r="2.1"/><circle cx="10" cy="12" r="2.1"/><circle cx="15" cy="17" r="2.1"/></symbol>
@@ -1089,6 +1131,43 @@
              (« FR », « GB »). Ils portent leurs couleurs en attributs de
              presentation et n'utilisent donc PAS la classe .ico, qui
              imposerait fill:none / stroke:currentColor. -->
+        <!-- ============ RESEAUX SOCIAUX ============
+             Marques deposees : elles gardent leurs couleurs officielles et
+             n'utilisent donc PAS la classe .ico, qui imposerait
+             fill:none / stroke:currentColor. Dessinees ici plutot que
+             chargees en images : rien a telecharger, net a toute taille,
+             et disponibles hors ligne comme le reste de l'application. -->
+        <symbol id="r-discord" viewBox="0 0 32 32">
+            <rect width="32" height="32" rx="7" fill="#5865F2"/>
+            <path fill="#fff" transform="translate(5.8 5.6) scale(0.85)" d="M20.317 4.369a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.891.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.331c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+        </symbol>
+        <!-- Le degrade est declare ICI, hors du <symbol> : depuis l'arbre
+             clone par <use>, une reference url(#...) ne se resout pas
+             toujours. Au niveau du sprite, elle se resout partout. -->
+        <defs>
+            <radialGradient id="r-ig-degrade" cx="0.3" cy="1.05" r="1.25">
+                <stop offset="0" stop-color="#FDD35C"/>
+                <stop offset="0.28" stop-color="#F9793F"/>
+                <stop offset="0.55" stop-color="#E9314C"/>
+                <stop offset="0.78" stop-color="#C42C8E"/>
+                <stop offset="1" stop-color="#6A34C4"/>
+            </radialGradient>
+        </defs>
+        <symbol id="r-instagram" viewBox="0 0 32 32">
+            <rect width="32" height="32" rx="7" fill="url(#r-ig-degrade)"/>
+            <rect x="8.6" y="8.6" width="14.8" height="14.8" rx="4.6" fill="none" stroke="#fff" stroke-width="2.1"/>
+            <circle cx="16" cy="16" r="3.9" fill="none" stroke="#fff" stroke-width="2.1"/>
+            <circle cx="21.4" cy="10.6" r="1.35" fill="#fff"/>
+        </symbol>
+        <symbol id="r-youtube" viewBox="0 0 32 32">
+            <rect width="32" height="32" rx="7" fill="#FF0000"/>
+            <path fill="#fff" d="M13.1 10.6 22.6 16l-9.5 5.4z"/>
+        </symbol>
+        <symbol id="r-facebook" viewBox="0 0 32 32">
+            <rect width="32" height="32" rx="7" fill="#1877F2"/>
+            <path fill="#fff" d="M17.6 27v-9.5h3.2l.6-3.8h-3.8v-2.4c0-1.1.4-1.9 1.9-1.9h2V5.9c-.4-.05-1.6-.15-3-.15
+                                  -2.9 0-4.9 1.8-4.9 5.05v2.9h-3.2v3.8h3.2V27z"/>
+        </symbol>
         <symbol id="f-fr" viewBox="0 0 24 16"><rect width="8" height="16" fill="#0055A4"/><rect x="8" width="8" height="16" fill="#F5F5F5"/><rect x="16" width="8" height="16" fill="#EF4135"/></symbol>
         <symbol id="f-gb" viewBox="0 0 24 16"><rect width="24" height="16" fill="#012169"/><path d="M0,0 L24,16 M24,0 L0,16" stroke="#F5F5F5" stroke-width="3.4"/><path d="M0,0 L24,16 M24,0 L0,16" stroke="#C8102E" stroke-width="1.8"/><path d="M12,0 V16 M0,8 H24" stroke="#F5F5F5" stroke-width="5.4"/><path d="M12,0 V16 M0,8 H24" stroke="#C8102E" stroke-width="3.2"/></symbol>
         <symbol id="f-de" viewBox="0 0 24 16"><rect width="24" height="5.34" fill="#111"/><rect y="5.33" width="24" height="5.34" fill="#DD0000"/><rect y="10.66" width="24" height="5.34" fill="#FFCE00"/></symbol>
@@ -2093,8 +2172,9 @@
             garderEcranAllume();
 
             if (enPartieFirebase() && !appState.isOrga) {
-                fbJournal(`${appState.playerName} · tirage : ${card.titre} [${card.gravite}] · ${lastDrawSrc}`,
-                          couleurEquipe(appState.playerTeamId));
+                fbJournal(tr('log.tirage', { nom: appState.playerName, carte: txTitre(card.titre),
+                                             gravite: txGrav(card.gravite), source: lastDrawSrc }),
+                          couleurEquipe(appState.playerTeamId), nomEquipe(appState.playerTeamId));
             } else if (estEnPartieClient()) {
                 try {
                     myConn.send({ type: 'DRAW_LOG', titre: card.titre, gravite: card.gravite, src: String(lastDrawSrc) });
@@ -2973,9 +3053,9 @@
             renderHostLogs();
         }
 
-        function fbJournal(texte, couleur) {
+        function fbJournal(texte, couleur, equipe) {
             if (!enPartieFirebase()) return;
-            const e = { ts: Date.now(), texte: String(texte).slice(0, 300) };
+            const e = { ts: Date.now(), texte: (prefixeEquipe(equipe) + String(texte)).slice(0, 300) };
             if (couleur) e.couleur = String(couleur).slice(0, 24);
             e.auteur = String(appState.playerName || '').slice(0, 32);
             fbRef('logs').push(e).catch(() => {});
@@ -3048,7 +3128,7 @@
             setFbSession(fbPartieId);
             fbInstallerPresence();
             fbBrancherEcoutes();
-            fbJournal(tr('log.aRejoint', { nom: appState.playerName }), couleurEquipe(appState.playerTeamId));
+            fbJournal(tr('log.aRejoint', { nom: appState.playerName }), couleurEquipe(appState.playerTeamId), nomEquipe(appState.playerTeamId));
         }
 
         function couleurEquipe(tid) {
@@ -3103,15 +3183,25 @@
             const t = appState.customTeams.find(x => x.id === p.teamId);
             return t ? t.color : null;
         }
+        /* Le nom de l'equipe accompagne la couleur dans le journal. La couleur
+           seule ne survit pas a l'export .txt, deux equipes peuvent avoir des
+           teintes proches, et elle ne dit rien a un daltonien. */
+        function nomEquipe(tid) {
+            const t = (appState.customTeams || []).find(x => x.id === tid);
+            return t ? t.name : null;
+        }
+        function equipeJoueur(p) { return p ? nomEquipe(p.teamId) : null; }
+        function prefixeEquipe(equipe) { return equipe ? '[' + equipe + '] ' : ''; }
         let sauvegardeLogsTimer = null;
-        function hostPushLog(text, color) {
+        function hostPushLog(text, color, equipe) {
             // En liaison Firebase, le journal est partagé : on l'écrit dans la
             // base, et l'abonnement le réaffiche pour tout le monde.
-            if (enPartieFirebase()) { fbJournal(text, color); return; }
+            if (enPartieFirebase()) { fbJournal(text, color, equipe); return; }
             const d = new Date();
             // La date accompagne l'heure : sur un événement de plusieurs jours,
             // un journal horodaté à l'heure seule est inexploitable.
-            hostLogs.unshift({ time: d.toLocaleTimeString('fr-FR'), date: d.toLocaleDateString('fr-FR'), text: String(text), color: color || null });
+            hostLogs.unshift({ time: d.toLocaleTimeString(I18N.langue()), date: d.toLocaleDateString(I18N.langue()),
+                               text: prefixeEquipe(equipe) + String(text), color: color || null });
             if (hostLogs.length > 400) hostLogs.length = 400;
             renderHostLogs();
             broadcastAdminState(); // tient les QG des co-admins à jour
@@ -3683,7 +3773,7 @@
                     if (p) {
                         // On garde le joueur dans la partie : il repassera "en ligne" à sa reconnexion
                         p.offline = true;
-                        hostPushLog(tr('log.joueurDeconnecte', { nom: p.name }), couleurJoueur(p));
+                        hostPushLog(tr('log.joueurDeconnecte', { nom: p.name }), couleurJoueur(p), equipeJoueur(p));
                     }
                     updateDashboard();
                     hostPopulatePackTeamPlayerSelects();
@@ -4065,10 +4155,10 @@
                     isCoHost: !!(ancien && ancien.isCoHost),
                     token: jeton
                 };
-                hostPushLog(tr(ancien ? 'log.sEstReconnecte' : 'log.aRejoint', { nom: nom }), couleurJoueur(playersData[conn.peer]));
+                hostPushLog(tr(ancien ? 'log.sEstReconnecte' : 'log.aRejoint', { nom: nom }), couleurJoueur(playersData[conn.peer]), equipeJoueur(playersData[conn.peer]));
                 if (nom !== nomDemande) {
                     try { conn.send({ type: 'CMD_NAME', name: nom }); } catch (e) {}
-                    hostPushLog(tr('log.pseudoDejaPris', { demande: nomDemande, retenu: nom }), couleurJoueur(playersData[conn.peer]));
+                    hostPushLog(tr('log.pseudoDejaPris', { demande: nomDemande, retenu: nom }), couleurJoueur(playersData[conn.peer]), equipeJoueur(playersData[conn.peer]));
                 }
                 if (ancien && ancien.isCoHost) { try { conn.send({ type: 'CMD_ROLE', isCoHost: true }); } catch (e) {} }
                 broadcastFullState();
@@ -4094,7 +4184,7 @@
                 if (data.materiel) appState.materiel = data.materiel;
                 if (data.quantites) appState.quantites = data.quantites;
                 saveState();
-                hostPushLog(tr('log.configModifiee', { nom: p.name }), couleurJoueur(p));
+                hostPushLog(tr('log.configModifiee', { nom: p.name }), couleurJoueur(p), equipeJoueur(p));
                 broadcastFullState();
                 hostRefreshHostPanels();
                 return;
@@ -4112,7 +4202,7 @@
                 else if (a === 'delTeam' && data.teamId) hostSupprimerEquipe(data.teamId);
                 else if (a === 'addPack' && data.src) {
                     const refus = ajouterPaquetSessionDirect(data.src, data.scope, data.teamId, data.peerId);
-                    if (refus) hostPushLog(tr('log.ajoutRefuse', { nom: admin.name, raison: refus }), couleurJoueur(admin));
+                    if (refus) hostPushLog(tr('log.ajoutRefuse', { nom: admin.name, raison: refus }), couleurJoueur(admin), equipeJoueur(admin));
                 }
                 else if (a === 'delPack' && data.packId) hostRetirerPaquetSession(data.packId);
                 else if (a === 'close') executerCloture(admin.name);
@@ -4121,12 +4211,12 @@
             if (data.type === 'DRAW_LOG') {
                 const p = playersData[conn.peer];
                 const n = p ? p.name : conn.peer;
-                hostPushLog(tr('log.tirage', { nom: n, carte: txTitre(data.titre) || '?', gravite: txGrav(data.gravite) || '', source: data.src || '' }), couleurJoueur(p));
+                hostPushLog(tr('log.tirage', { nom: n, carte: txTitre(data.titre) || '?', gravite: txGrav(data.gravite) || '', source: data.src || '' }), couleurJoueur(p), equipeJoueur(p));
                 return;
             }
             if (data.type === 'LEAVE') {
                 // Départ volontaire : on retire le joueur (pas d'attente de reconnexion)
-                hostPushLog(tr('log.quitteLaPartie', { nom: data.name || tr('multi.joueur') }), couleurJoueur(playersData[conn.peer]));
+                hostPushLog(tr('log.quitteLaPartie', { nom: data.name || tr('multi.joueur') }), couleurJoueur(playersData[conn.peer]), equipeJoueur(playersData[conn.peer]));
                 delete hostConns[conn.peer];
                 delete playersData[conn.peer];
                 updateDashboard();
@@ -4264,7 +4354,7 @@
             if (enPartieFirebase()) {
                 const j = playersData[pid]; if (!j) return;
                 fbRef('joueurs/' + pid + '/isCoHost').set(!j.isCoHost).catch(fbErreurEcriture);
-                hostPushLog(tr('log.coadmin', { nom: j.name, valeur: tr(!j.isCoHost ? 'btn.oui' : 'btn.non').toLowerCase() }), couleurJoueur(j));
+                hostPushLog(tr('log.coadmin', { nom: j.name, valeur: tr(!j.isCoHost ? 'btn.oui' : 'btn.non').toLowerCase() }), couleurJoueur(j), equipeJoueur(j));
                 return;
             }
             if (!appState.isOrga) { envoyerAdminCmd({ action: 'cohost', pid }); return; }
@@ -4273,7 +4363,7 @@
             if (!p || !c) return;
             p.isCoHost = !p.isCoHost;
             try { c.send({ type: 'CMD_ROLE', isCoHost: p.isCoHost }); } catch (e) {}
-            hostPushLog(tr('log.coadmin', { nom: p.name, valeur: tr(p.isCoHost ? 'btn.oui' : 'btn.non').toLowerCase() }), couleurJoueur(p));
+            hostPushLog(tr('log.coadmin', { nom: p.name, valeur: tr(p.isCoHost ? 'btn.oui' : 'btn.non').toLowerCase() }), couleurJoueur(p), equipeJoueur(p));
             updateDashboard();
         }
         function cmdTeam(pid, tid) {
@@ -4292,7 +4382,7 @@
             if (enPartieFirebase()) {
                 const j = playersData[pid];
                 fbRef('joueurs/' + pid).remove()
-                    .then(() => hostPushLog(tr('log.retireDeLaPartie', { nom: (j && j.name) || pid }), couleurJoueur(j)))
+                    .then(() => hostPushLog(tr('log.retireDeLaPartie', { nom: (j && j.name) || pid }), couleurJoueur(j), equipeJoueur(j)))
                     .catch(fbErreurEcriture);
                 return;
             }
@@ -4300,6 +4390,7 @@
             const c = hostConns[pid];
             const nom = (playersData[pid] && playersData[pid].name) || pid;
             const coul = couleurJoueur(playersData[pid]);
+            const eqNom = equipeJoueur(playersData[pid]);
             if (c) {
                 try { c.send({ type: 'CLOSE_SESSION', reason: tr('msg.exclu') }); } catch (e) {}
                 // Laisse le temps au message de partir avant de couper la connexion
@@ -4307,7 +4398,7 @@
             }
             delete hostConns[pid];
             delete playersData[pid];
-            hostPushLog(tr('log.retireDeLaPartie', { nom: nom }), coul);
+            hostPushLog(tr('log.retireDeLaPartie', { nom: nom }), coul, eqNom);
             updateDashboard();
             hostPopulatePackTeamPlayerSelects();
         }
