@@ -10,7 +10,7 @@
    remplace ces fichiers sur les telephones deja equipes.
    ========================================================= */
 
-const CACHE_VERSION = 'bse-medic-v6';
+const CACHE_VERSION = 'bse-medic-v7';
 
 // Tout ce qui compose l'application. Chemins relatifs : l'application
 // fonctionne aussi bien a la racine d'un domaine que dans un sous-dossier.
@@ -18,6 +18,13 @@ const APP_SHELL = [
     './',
     './index.html',
     './manifest.webmanifest',
+    './i18n.js',
+    './lang-en.js',
+    './lang-de.js',
+    './lang-es.js',
+    './lang-it.js',
+    './lang-zh.js',
+    './lang-ja.js',
     './vendor/peerjs.min.js',
     './vendor/qrcode.min.js',
     './vendor/html5-qrcode.min.js',
@@ -71,15 +78,17 @@ self.addEventListener('fetch', (event) => {
 
     // La page elle-meme : reseau d'abord, pour recuperer une mise a jour
     // des qu'il y a du reseau ; le cache prend le relais hors ligne.
-    if (req.mode === 'navigate' || url.pathname.endsWith('/index.html')) {
+    const estCatalogue = /\/(i18n|lang-[a-z]{2})\.js$/.test(url.pathname);
+    if (req.mode === 'navigate' || url.pathname.endsWith('/index.html') || estCatalogue) {
         event.respondWith((async () => {
             try {
                 const reponse = await fetch(req);
                 const cache = await caches.open(CACHE_VERSION);
-                cache.put('./index.html', reponse.clone());
+                cache.put(estCatalogue ? req : './index.html', reponse.clone());
                 return reponse;
             } catch (e) {
                 const cache = await caches.open(CACHE_VERSION);
+                if (estCatalogue) return (await cache.match(req)) || new Response('', { status: 504 });
                 return (await cache.match('./index.html')) || (await cache.match('./')) ||
                        new Response('Application indisponible hors ligne.', { status: 503 });
             }

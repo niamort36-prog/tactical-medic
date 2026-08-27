@@ -513,6 +513,58 @@
         /* En paysage la hauteur est comptée : on réduit pour ne rien gêner */
         @media (max-height: 420px) { #lien-bse img { height: 26px; } }
 
+        /* --- SELECTEUR DE LANGUE ---
+           Symetrique du logo Bravo Sierra Events : coin bas GAUCHE, et
+           visible seulement sur l'accueil, ou rien d'autre n'occupe le bas
+           de l'ecran. Le menu s'ouvre vers le HAUT (bottom: 100%) : vers le
+           bas il sortirait de la fenetre. */
+        #bloc-langue {
+            display: none;
+            position: fixed; left: 10px; bottom: 10px; z-index: 16;
+        }
+        #screen-game.active ~ #bloc-langue { display: block; }
+        #btn-langue {
+            display: flex; align-items: center; gap: 5px;
+            background: var(--bse-panel); border: 1px solid var(--bse-border);
+            border-radius: var(--radius); padding: 5px 7px; cursor: pointer;
+            color: var(--bse-muted); opacity: 0.85;
+            transition: opacity 0.15s, border-color 0.15s, transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #btn-langue:hover, #btn-langue:focus-visible { opacity: 1; border-color: var(--bse-gold); }
+        #btn-langue:active { transform: scale(0.95); }
+        /* Les drapeaux portent leurs couleurs : surtout pas de .ico ici. */
+        .drapeau {
+            width: 24px; height: 16px; display: block; flex: none;
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.55);
+        }
+        .chevron-langue { width: 13px; height: 13px; transition: transform 0.2s; }
+        #bloc-langue.ouvert .chevron-langue { transform: rotate(180deg); }
+        #langue-menu {
+            display: none;
+            position: absolute; left: 0; bottom: 100%; margin-bottom: 6px;
+            background: var(--bse-panel); border: 1px solid var(--bse-gold);
+            border-radius: var(--radius); padding: 4px; min-width: 156px;
+            max-height: 52vh; overflow-y: auto;
+            box-shadow: 0 6px 22px rgba(0,0,0,0.65);
+        }
+        #bloc-langue.ouvert #langue-menu { display: block; }
+        .langue-item {
+            display: flex; align-items: center; gap: 9px; width: 100%;
+            background: none; border: none; cursor: pointer;
+            padding: 7px 8px; border-radius: var(--radius-s);
+            color: var(--text-main); font-family: var(--font-display);
+            font-size: 0.72rem; font-weight: 700; letter-spacing: 0.07em;
+            text-align: left; white-space: nowrap;
+        }
+        .langue-item:hover, .langue-item:focus-visible { background: #201b06; }
+        .langue-item.actif { color: var(--bse-gold-light); background: #1a1608; }
+        @media (max-height: 420px) {
+            .drapeau { width: 20px; height: 13px; }
+            #langue-menu { max-height: 66vh; min-width: 140px; }
+            .langue-item { padding: 5px 7px; font-size: 0.66rem; }
+        }
+
         /* --- MODALES --- */
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(4,4,4,0.9); backdrop-filter: blur(4px); }
         /* Marges en vh, pas en % : un pourcentage se calcule sur la LARGEUR du
@@ -547,49 +599,49 @@
                 </div>
             </div>
             <div class="header-actions">
-                <button type="button" id="btn-multi-icon" class="header-btn multi" title="Multijoueur" onclick="ouvrirMenuMultijoueur()"><svg class="ico"><use href="#i-team"></use></svg></button>
-                <button type="button" id="btn-quitter-partie" class="header-btn wide" style="display:none;" onclick="confirmerQuitterPartie()" title="Quitter la partie"><svg class="ico"><use href="#i-exit"></use></svg><span class="texte-bouton">Sortir</span></button>
-                <button type="button" class="header-btn" title="Mes paquets" onclick="ouvrirBuilder()"><svg class="ico"><use href="#i-edit"></use></svg></button>
-                <button type="button" class="header-btn" title="Réglages" onclick="ouvrirReglages()"><svg class="ico"><use href="#i-settings"></use></svg></button>
+                <button type="button" id="btn-multi-icon" class="header-btn multi" data-i18n-title="hdr.multijoueur" onclick="ouvrirMenuMultijoueur()"><svg class="ico"><use href="#i-team"></use></svg></button>
+                <button type="button" id="btn-quitter-partie" class="header-btn wide" style="display:none;" onclick="confirmerQuitterPartie()" data-i18n-title="hdr.quitter"><svg class="ico"><use href="#i-exit"></use></svg><span class="texte-bouton" data-i18n="hdr.sortir">Sortir</span></button>
+                <button type="button" class="header-btn" data-i18n-title="hdr.paquets" onclick="ouvrirBuilder()"><svg class="ico"><use href="#i-edit"></use></svg></button>
+                <button type="button" class="header-btn" data-i18n-title="hdr.reglages" onclick="ouvrirReglages()"><svg class="ico"><use href="#i-settings"></use></svg></button>
             </div>
         </div>
         <div class="status-row">
             <span id="status-dot" class="status-dot"></span>
-            <span id="top-indicator" class="status-text">Solo</span>
+            <span id="top-indicator" class="status-text" data-i18n="statut.solo">Solo</span>
         </div>
     </header>
 
     <div id="screen-game" class="flex-center active">
         <div class="screen-head">
-            <div class="screen-head-title">Diagnostic médical</div>
-            <div class="screen-head-sub">Cliquez pour lancer le diagnostic</div>
+            <div class="screen-head-title" data-i18n="jeu.titre">Diagnostic médical</div>
+            <div class="screen-head-sub" data-i18n="jeu.sous">Cliquez pour lancer le diagnostic</div>
         </div>
         <div id="dynamic-buttons-container" class="buttons-wrapper"></div>
         <div class="deck-status">
             <svg class="ico"><use href="#i-cards"></use></svg>
-            <span>Paquet actif</span>
-            <span id="info-deck" class="deck-status-value">Chargement...</span>
+            <span data-i18n="jeu.paquetActif">Paquet actif</span>
+            <span id="info-deck" class="deck-status-value" data-i18n="jeu.chargement">Chargement...</span>
         </div>
     </div>
 
     <div id="screen-march" class="flex-center">
         <div class="screen-head">
-            <div class="screen-head-title">Bilan MARCH</div>
+            <div class="screen-head-title" data-i18n="march.titre">Bilan MARCH</div>
         </div>
         <ul class="march-list">
-            <li><span class="march-key">M</span><span class="march-word">Massive bleeding</span></li>
-            <li><span class="march-key">A</span><span class="march-word">Airways</span></li>
-            <li><span class="march-key">R</span><span class="march-word">Respiration</span></li>
-            <li><span class="march-key">C</span><span class="march-word">Circulation</span></li>
-            <li><span class="march-key">H</span><span class="march-word">Head / Hypothermia</span></li>
+            <li><span class="march-key">M</span><span class="march-word" data-i18n="march.m">Massive bleeding</span></li>
+            <li><span class="march-key">A</span><span class="march-word" data-i18n="march.a">Airways</span></li>
+            <li><span class="march-key">R</span><span class="march-word" data-i18n="march.r">Respiration</span></li>
+            <li><span class="march-key">C</span><span class="march-word" data-i18n="march.c">Circulation</span></li>
+            <li><span class="march-key">H</span><span class="march-word" data-i18n="march.h">Head / Hypothermia</span></li>
         </ul>
-        <div class="deck-status" style="margin-top:26px;">Analyse en cours…</div>
+        <div class="deck-status" style="margin-top:26px;" data-i18n="march.analyse">Analyse en cours…</div>
     </div>
 
     <div id="screen-silhouette" class="flex-center">
         <div class="screen-head" style="margin-bottom:12px;">
-            <div class="screen-head-title" style="border-bottom-color:var(--accent-red);">Zone touchée ?</div>
-            <div class="screen-head-sub">Touchez la partie du corps atteinte<br><span style="font-size:0.9em;">(vue en miroir : son bras droit est à votre gauche)</span></div>
+            <div class="screen-head-title" style="border-bottom-color:var(--accent-red);" data-i18n="sil.titre">Zone touchée ?</div>
+            <div class="screen-head-sub"><span data-i18n="sil.sous">Touchez la partie du corps atteinte</span><br><span style="font-size:0.9em;" data-i18n="sil.miroir">(vue en miroir : son bras droit est à votre gauche)</span></div>
         </div>
         <!-- Image anatomique + zones cliquables en surimpression (effet miroir : gauche écran = côté droit du blessé) -->
         <div id="sil-wrap" style="position:relative; width:min(225px, 56vw); aspect-ratio: 474 / 800;">
@@ -599,15 +651,15 @@
                  onload="if(this.naturalWidth) document.getElementById('sil-wrap').style.aspectRatio = this.naturalWidth + ' / ' + this.naturalHeight;"
                  onerror="this.style.display='none'; document.getElementById('sil-svg').classList.add('sil-nophoto');">
             <svg id="sil-svg" viewBox="0 0 474 800" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%;" xmlns="http://www.w3.org/2000/svg">
-                <polygon class="sil-zone" points="165,112 309,112 346,155 336,300 318,432 156,432 138,300 128,155" onclick="zoneChoisie('torse')"><title>Torse</title></polygon>
-                <circle class="sil-zone" cx="237" cy="60" r="56" onclick="zoneChoisie('tete')"><title>Tête</title></circle>
-                <polygon class="sil-zone" points="150,148 110,166 82,278 40,390 24,452 86,486 126,420 146,300 154,184" onclick="zoneChoisie('membre','Bras Droit')"><title>Bras Droit</title></polygon>
-                <polygon class="sil-zone" points="324,148 364,166 392,278 434,390 450,452 388,486 348,420 328,300 320,184" onclick="zoneChoisie('membre','Bras Gauche')"><title>Bras Gauche</title></polygon>
-                <polygon class="sil-zone" points="152,432 237,432 237,796 150,796 142,600" onclick="zoneChoisie('membre','Jambe Droite')"><title>Jambe Droite</title></polygon>
-                <polygon class="sil-zone" points="237,432 322,432 332,600 324,796 237,796" onclick="zoneChoisie('membre','Jambe Gauche')"><title>Jambe Gauche</title></polygon>
+                <polygon class="sil-zone" points="165,112 309,112 346,155 336,300 318,432 156,432 138,300 128,155" onclick="zoneChoisie('torse')"><title data-i18n="zone.Torse">Torse</title></polygon>
+                <circle class="sil-zone" cx="237" cy="60" r="56" onclick="zoneChoisie('tete')"><title data-i18n="zone.Tête">Tête</title></circle>
+                <polygon class="sil-zone" points="150,148 110,166 82,278 40,390 24,452 86,486 126,420 146,300 154,184" onclick="zoneChoisie('membre','Bras Droit')"><title data-i18n="membre.Bras Droit">Bras Droit</title></polygon>
+                <polygon class="sil-zone" points="324,148 364,166 392,278 434,390 450,452 388,486 348,420 328,300 320,184" onclick="zoneChoisie('membre','Bras Gauche')"><title data-i18n="membre.Bras Gauche">Bras Gauche</title></polygon>
+                <polygon class="sil-zone" points="152,432 237,432 237,796 150,796 142,600" onclick="zoneChoisie('membre','Jambe Droite')"><title data-i18n="membre.Jambe Droite">Jambe Droite</title></polygon>
+                <polygon class="sil-zone" points="237,432 322,432 332,600 324,796 237,796" onclick="zoneChoisie('membre','Jambe Gauche')"><title data-i18n="membre.Jambe Gauche">Jambe Gauche</title></polygon>
             </svg>
         </div>
-        <button class="btn-action" style="max-width:225px;" onclick="annulerTirageExtreme()">Annuler</button>
+        <button class="btn-action" style="max-width:225px;" onclick="annulerTirageExtreme()" data-i18n="btn.annuler">Annuler</button>
     </div>
 
     <!-- overflow-y:auto — en paysage la fiche dépasse la hauteur de l'écran ;
@@ -617,33 +669,33 @@
             <div id="ui-card" class="tac-card">
                 <div id="death-overlay">
                     <div class="skull-icon"><svg class="ico"><use href="#i-skull"></use></svg></div>
-                    <div class="death-text">Mort au combat</div>
-                    <div style="color:var(--bse-muted); margin-top:10px; font-size:0.85rem;">Temps écoulé — hémorragie fatale</div>
-                    <button class="btn-card-action" style="margin-top:26px; max-width:240px;" onclick="retourAccueil()">Fermer le dossier</button>
+                    <div class="death-text" data-i18n="fiche.mort">Mort au combat</div>
+                    <div style="color:var(--bse-muted); margin-top:10px; font-size:0.85rem;" data-i18n="fiche.mortSous">Temps écoulé — hémorragie fatale</div>
+                    <button class="btn-card-action" style="margin-top:26px; max-width:240px;" onclick="retourAccueil()" data-i18n="fiche.fermer">Fermer le dossier</button>
                 </div>
                 <div class="card-head">
-                    <span class="card-head-label">Fiche de triage</span>
+                    <span class="card-head-label" data-i18n="fiche.label">Fiche de triage</span>
                     <div id="badge-gravite" class="card-badge">GRAVE</div>
                 </div>
                 <div class="card-body">
                     <div class="card-title" id="txt-titre">Titre</div>
                     <div id="bloc-zone" class="card-field">
-                        <span class="card-label">Zone touchée</span>
+                        <span class="card-label" data-i18n="fiche.zone">Zone touchée</span>
                         <div class="card-desc" id="txt-zone">Bras</div>
                     </div>
                     <div id="protection-indicator" style="display:none; align-items:center; gap:7px; margin:-6px 0 14px; padding:7px 10px; font-size:0.8rem; font-weight:600; color:var(--bse-gold-light); border:1px solid var(--bse-gold); border-radius:var(--radius-s);"></div>
                     <div id="bloc-bilan" class="card-field" style="display:none;">
-                        <span class="card-label">Bilan</span>
+                        <span class="card-label" data-i18n="fiche.bilan">Bilan</span>
                         <div id="txt-bilan" style="font-size:0.95rem; line-height:1.5; color:#ddd;"></div>
                     </div>
                     <div id="bloc-protocole" class="card-field">
-                        <span class="card-label">Protocole de soin</span>
+                        <span class="card-label" data-i18n="fiche.protocole">Protocole de soin</span>
                         <div id="txt-soins" class="card-box">Soins...</div>
                     </div>
                     <div id="danger-zone-container">
-                        <div class="invisible-timer-warning"><svg class="ico"><use href="#i-alert"></use></svg>Hémorragie active — urgence vitale</div>
+                        <div class="invisible-timer-warning"><svg class="ico"><use href="#i-alert"></use></svg><span data-i18n="fiche.hemorragie">Hémorragie active — urgence vitale</span></div>
                     </div>
-                    <button id="btn-card" class="btn-card-action" onclick="actionPrincipale()">Nouveau diagnostic</button>
+                    <button id="btn-card" class="btn-card-action" onclick="actionPrincipale()" data-i18n="fiche.nouveau">Nouveau diagnostic</button>
                 </div>
             </div>
         </div>
@@ -651,101 +703,101 @@
 
     <div id="screen-host-dashboard" class="screen">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid var(--bse-gold);">
-            <h2 style="margin:0; padding:0; border:none;">QG — <span id="host-game-title">Partie</span></h2>
-            <div class="status-online">En ligne</div>
+            <h2 style="margin:0; padding:0; border:none;"><span data-i18n="qg.titre">QG</span> — <span id="host-game-title">Partie</span></h2>
+            <div class="status-online" data-i18n="qg.enLigne">En ligne</div>
         </div>
         <div class="host-tabs">
-            <button type="button" class="host-tab active" data-host-tab="join" onclick="hostSetTab('join')">Invitation</button>
-            <button type="button" class="host-tab" data-host-tab="players" onclick="hostSetTab('players')">Joueurs</button>
-            <button type="button" class="host-tab" data-host-tab="teams" onclick="hostSetTab('teams')">Équipes</button>
-            <button type="button" class="host-tab" data-host-tab="builder" onclick="hostSetTab('builder')">Éditeur</button>
-            <button type="button" class="host-tab" data-host-tab="packs" onclick="hostSetTab('packs')">Paquets</button>
-            <button type="button" class="host-tab" data-host-tab="logs" onclick="hostSetTab('logs')">Logs</button>
+            <button type="button" class="host-tab active" data-host-tab="join" onclick="hostSetTab('join')" data-i18n="qg.ongletInvitation">Invitation</button>
+            <button type="button" class="host-tab" data-host-tab="players" onclick="hostSetTab('players')" data-i18n="qg.ongletJoueurs">Joueurs</button>
+            <button type="button" class="host-tab" data-host-tab="teams" onclick="hostSetTab('teams')" data-i18n="qg.ongletEquipes">Équipes</button>
+            <button type="button" class="host-tab" data-host-tab="builder" onclick="hostSetTab('builder')" data-i18n="qg.ongletEditeur">Éditeur</button>
+            <button type="button" class="host-tab" data-host-tab="packs" onclick="hostSetTab('packs')" data-i18n="qg.ongletPaquets">Paquets</button>
+            <button type="button" class="host-tab" data-host-tab="logs" onclick="hostSetTab('logs')" data-i18n="qg.ongletLogs">Logs</button>
         </div>
         <div id="host-panel-join" class="host-panel active box" style="border-color:var(--bse-gold);">
-            <p style="margin:0 0 6px; color:var(--bse-muted); font-size:0.85em;">Code de la partie — à dicter aux joueurs</p>
+            <p style="margin:0 0 6px; color:var(--bse-muted); font-size:0.85em;" data-i18n="qg.codeAide">Code de la partie — à dicter aux joueurs</p>
             <div class="join-link-row" style="margin:0 0 10px;">
                 <div id="host-connection-id" style="flex:1; margin:0;">...</div>
-                <button type="button" class="btn-mini" style="width:auto;padding:0 12px;gap:6px;" onclick="copierCodePartie()"><svg class="ico"><use href="#i-copie"></use></svg>Copier</button>
+                <button type="button" class="btn-mini" style="width:auto;padding:0 12px;gap:6px;" onclick="copierCodePartie()"><svg class="ico"><use href="#i-copie"></use></svg><span data-i18n="btn.copier">Copier</span></button>
             </div>
-            <p style="font-size:0.8em; color:#666;">Lien de connexion (partage ou QR)</p>
+            <p style="font-size:0.8em; color:#666;" data-i18n="qg.lienAide">Lien de connexion (partage ou QR)</p>
             <div class="join-link-row">
                 <input type="text" id="host-join-link" class="form-input" readonly style="margin:0;">
-                <button type="button" class="btn-mini" style="width:auto;padding:0 14px;" onclick="copierLienInvitation()">Copier</button>
-                <button type="button" class="btn-mini" style="width:auto;padding:0 14px;background:var(--accent-blue);" onclick="window.open(document.getElementById('host-join-link').value, '_blank')">Ouvrir</button>
+                <button type="button" class="btn-mini" style="width:auto;padding:0 14px;" onclick="copierLienInvitation()" data-i18n="btn.copier">Copier</button>
+                <button type="button" class="btn-mini" style="width:auto;padding:0 14px;background:var(--accent-blue);" onclick="window.open(document.getElementById('host-join-link').value, '_blank')" data-i18n="btn.ouvrir">Ouvrir</button>
             </div>
             <div id="host-qr-wrap" style="text-align:center; padding:10px; background:#fff; border:1px solid var(--bse-gold); border-radius:var(--radius-s); margin:10px auto; max-width:210px; min-height:180px; display:flex; align-items:center; justify-content:center;">
-                <span style="color:#777;font-size:0.8em;">Génération...</span>
+                <span style="color:#777;font-size:0.8em;" data-i18n="qg.qrGeneration">Génération...</span>
             </div>
-            <p style="font-size:0.75em; color:#888; margin-top:15px;">Les joueurs scannent le QR code ou tapent le nom de la partie dans le menu Rejoindre.</p>
+            <p style="font-size:0.75em; color:#888; margin-top:15px;" data-i18n="qg.qrAide">Les joueurs scannent le QR code ou tapent le nom de la partie dans le menu Rejoindre.</p>
         </div>
         <div id="host-panel-players" class="host-panel box">
-            <h3>JOUEURS (<span id="connected-count">0</span>)</h3>
+            <h3><span data-i18n="qg.joueurs">JOUEURS</span> (<span id="connected-count">0</span>)</h3>
             <div id="host-player-list"></div>
         </div>
         <div id="host-panel-teams" class="host-panel box">
-            <h3>ÉQUIPES DE LA PARTIE</h3>
+            <h3 data-i18n="qg.equipes">ÉQUIPES DE LA PARTIE</h3>
             <div id="host-teams-editor"></div>
             <div class="host-inline-form">
-                <input type="text" id="host-new-team-name" class="form-input" placeholder="Nom équipe">
-                <input type="text" id="host-new-team-color" class="form-input" placeholder="#hex couleur" style="max-width:120px;">
-                <button type="button" class="btn-action btn-create" style="margin:0;padding:12px;width:auto;" onclick="hostAjouterEquipe()">+ ÉQUIPE</button>
+                <input type="text" id="host-new-team-name" class="form-input" data-i18n-ph="qg.nomEquipePh" placeholder="Nom équipe">
+                <input type="text" id="host-new-team-color" class="form-input" data-i18n-ph="qg.couleurEquipePh" placeholder="#hex couleur" style="max-width:120px;">
+                <button type="button" class="btn-action btn-create" style="margin:0;padding:12px;width:auto;" onclick="hostAjouterEquipe()" data-i18n="qg.ajouterEquipe">+ ÉQUIPE</button>
             </div>
         </div>
         <div id="host-panel-builder" class="host-panel box">
-            <h3>ÉDITEUR DE PAQUETS</h3>
-            <p style="font-size:0.8em; color:#888; margin-top:0;">Ajustez les quantités, le matériel et le risque de mort pour tous vos paquets avant de les distribuer.</p>
+            <h3 data-i18n="qg.editeur">ÉDITEUR DE PAQUETS</h3>
+            <p style="font-size:0.8em; color:#888; margin-top:0;" data-i18n="qg.editeurAide">Ajustez les quantités, le matériel et le risque de mort pour tous vos paquets avant de les distribuer.</p>
             <div id="host-decks-list"></div>
         </div>
         <div id="host-panel-packs" class="host-panel box">
-            <h3>PAQUETS ATTRIBUÉS</h3>
-            <p style="font-size:0.8em; color:var(--bse-muted); margin-top:0;">Choisissez ce que chaque joueur va tirer : Classique, Avancé, Extrême, Explosion ou l'un de vos paquets perso. Le paquet attribué <b>remplace</b> le tirage du mode chez le destinataire — il ne verra que celui-là, avec les quantités réglées dans l'Éditeur.</p>
-            <p style="font-size:0.8em; color:var(--bse-muted); margin-top:0;">Un joueur sans aucune attribution joue le <b>mode en cours</b> défini dans l'Éditeur.</p>
+            <h3 data-i18n="qg.paquetsAttribues">PAQUETS ATTRIBUÉS</h3>
+            <p style="font-size:0.8em; color:var(--bse-muted); margin-top:0;" data-i18n-html="qg.paquetsAide1"></p>
+            <p style="font-size:0.8em; color:var(--bse-muted); margin-top:0;" data-i18n-html="qg.paquetsAide2"></p>
             <div class="host-inline-form" style="flex-direction:column; align-items:stretch;">
                 <select id="host-pack-source" class="form-input" style="margin:0;"></select>
                 <select id="host-pack-scope" class="form-input" style="margin:0;" onchange="hostPackScopeUI()">
-                    <option value="all">Tout le monde</option>
-                    <option value="team">Une équipe seulement</option>
-                    <option value="player">Un joueur seulement</option>
+                    <option value="all" data-i18n="qg.toutLeMonde">Tout le monde</option>
+                    <option value="team" data-i18n="qg.uneEquipe">Une équipe seulement</option>
+                    <option value="player" data-i18n="qg.unJoueur">Un joueur seulement</option>
                 </select>
                 <select id="host-pack-team" class="form-input" style="margin:0; display:none;"></select>
                 <select id="host-pack-player" class="form-input" style="margin:0; display:none;"></select>
-                <button type="button" class="btn-action btn-create" style="margin:0;" onclick="hostAjouterPaquetSession()">Ajouter ce paquet</button>
+                <button type="button" class="btn-action btn-create" style="margin:0;" onclick="hostAjouterPaquetSession()" data-i18n="qg.ajouterPaquet">Ajouter ce paquet</button>
             </div>
             <div id="host-session-packs-list" style="margin-top:12px;"></div>
         </div>
         <div id="host-panel-logs" class="host-panel box">
-            <h3>JOURNAL TEMPS RÉEL</h3>
-            <p style="font-size:0.75em; color:#888; margin-top:0;">Les événements d'un joueur s'affichent dans la couleur de son équipe.</p>
+            <h3 data-i18n="qg.journal">JOURNAL TEMPS RÉEL</h3>
+            <p style="font-size:0.75em; color:#888; margin-top:0;" data-i18n="qg.journalAide">Les événements d'un joueur s'affichent dans la couleur de son équipe.</p>
             <div id="host-log-box" class="log-box"></div>
-            <button type="button" class="btn-action btn-create" style="margin-top:10px;" onclick="telechargerLogs()"><svg class="ico"><use href="#i-download"></use></svg>Télécharger les logs (.txt)</button>
-            <button type="button" class="btn-action" style="margin-top:8px;" onclick="hostLogs=[]; renderHostLogs();">Effacer l’affichage</button>
+            <button type="button" class="btn-action btn-create" style="margin-top:10px;" onclick="telechargerLogs()"><svg class="ico"><use href="#i-download"></use></svg><span data-i18n="qg.telechargerLogs">Télécharger les logs (.txt)</span></button>
+            <button type="button" class="btn-action" style="margin-top:8px;" onclick="hostLogs=[]; renderHostLogs();" data-i18n="qg.effacerAffichage">Effacer l’affichage</button>
         </div>
-        <button type="button" class="btn-action" style="background:#5c1414; border-color:var(--accent-red); margin-top:12px;" onclick="cloturerPartie()">Clôturer la partie (éjecter les joueurs)</button>
-        <button type="button" class="btn-action" style="margin-top:8px;" onclick="retourAccueilDepuisHost()">Retour accueil (garder la session)</button>
+        <button type="button" class="btn-action" style="background:#5c1414; border-color:var(--accent-red); margin-top:12px;" onclick="cloturerPartie()" data-i18n="qg.cloturer">Clôturer la partie (éjecter les joueurs)</button>
+        <button type="button" class="btn-action" style="margin-top:8px;" onclick="retourAccueilDepuisHost()" data-i18n="qg.retourSession">Retour accueil (garder la session)</button>
     </div>
 
     <div id="screen-settings" class="screen">
-        <h2>Réglages système</h2>
+        <h2 data-i18n="reg.titre">Réglages système</h2>
 
         <div class="box">
-            <h3><svg class="ico"><use href="#i-user"></use></svg>Profil multijoueur</h3>
+            <h3><svg class="ico"><use href="#i-user"></use></svg><span data-i18n="reg.profil">Profil multijoueur</span></h3>
             <div class="form-group">
-                <label class="form-label">Votre pseudo de joueur</label>
-                <input type="text" id="settings-pseudo" class="form-input" placeholder="Ex : Doc" onchange="changerPseudoSettings(this.value)" style="margin-bottom:0;">
+                <label class="form-label" data-i18n="reg.pseudo">Votre pseudo de joueur</label>
+                <input type="text" id="settings-pseudo" class="form-input" data-i18n-ph="reg.pseudoPh" placeholder="Ex : Doc" onchange="changerPseudoSettings(this.value)" style="margin-bottom:0;">
             </div>
         </div>
 
         <div class="box">
-            <h3>Mode de jeu</h3>
+            <h3 data-i18n="reg.mode">Mode de jeu</h3>
             <select id="select-mode" class="form-input" style="margin-bottom:0;" onchange="changerModeMenu(this.value)"></select>
         </div>
         <div class="box" style="border-color:var(--accent-red)">
-            <h3 style="color:var(--accent-red)"><svg class="ico"><use href="#i-skull"></use></svg>Option hardcore</h3>
-            <div class="check-item"><span>Activer le risque de mort</span><input type="checkbox" id="chk-death" onchange="toggleDeathRisk()" style="transform:scale(1.4);"></div>
+            <h3 style="color:var(--accent-red)"><svg class="ico"><use href="#i-skull"></use></svg><span data-i18n="reg.hardcore">Option hardcore</span></h3>
+            <div class="check-item"><span data-i18n="reg.activerMort">Activer le risque de mort</span><input type="checkbox" id="chk-death" onchange="toggleDeathRisk()" style="transform:scale(1.4);"></div>
             <div id="death-options" style="display:none;">
                 <div class="check-item">
-                    <span style="flex:1 1 auto; min-width:0;">Probabilité<br><span style="font-size:0.72em;color:var(--bse-muted);">sur une blessure éligible</span></span>
+                    <span style="flex:1 1 auto; min-width:0;"><span data-i18n="reg.proba">Probabilité</span><br><span style="font-size:0.72em;color:var(--bse-muted);" data-i18n="reg.probaSous">sur une blessure éligible</span></span>
                     <div style="display:flex; align-items:center; gap:5px; flex:none;">
                         <button type="button" class="btn-mini" onclick="changeDeathOpt('deathChance',-5)">-</button>
                         <span id="val-death-chance" style="min-width:46px;text-align:center;">40 %</span>
@@ -753,7 +805,7 @@
                     </div>
                 </div>
                 <div class="check-item">
-                    <span style="flex:1 1 auto; min-width:0;">Délai mini<br><span style="font-size:0.72em;color:var(--bse-muted);">avant le décès</span></span>
+                    <span style="flex:1 1 auto; min-width:0;"><span data-i18n="reg.delaiMin">Délai mini</span><br><span style="font-size:0.72em;color:var(--bse-muted);" data-i18n="reg.delaiMinSous">avant le décès</span></span>
                     <div style="display:flex; align-items:center; gap:5px; flex:none;">
                         <button type="button" class="btn-mini" onclick="changeDeathOpt('deathMin',-5)">-</button>
                         <span id="val-death-min" style="min-width:46px;text-align:center;">30 s</span>
@@ -761,211 +813,224 @@
                     </div>
                 </div>
                 <div class="check-item">
-                    <span style="flex:1 1 auto; min-width:0;">Délai maxi</span>
+                    <span style="flex:1 1 auto; min-width:0;" data-i18n="reg.delaiMax">Délai maxi</span>
                     <div style="display:flex; align-items:center; gap:5px; flex:none;">
                         <button type="button" class="btn-mini" onclick="changeDeathOpt('deathMax',-5)">-</button>
                         <span id="val-death-max" style="min-width:46px;text-align:center;">60 s</span>
                         <button type="button" class="btn-mini" onclick="changeDeathOpt('deathMax',5)">+</button>
                     </div>
                 </div>
-                <div class="check-item"><span>Étendre aux blessures Graves</span><input type="checkbox" id="chk-death-grave" onchange="toggleDeathGrave()" style="transform:scale(1.4);"></div>
+                <div class="check-item"><span data-i18n="reg.etendreGraves">Étendre aux blessures Graves</span><input type="checkbox" id="chk-death-grave" onchange="toggleDeathGrave()" style="transform:scale(1.4);"></div>
             </div>
         </div>
         <div id="box-explosion-opt" class="box" style="display:none; border-color:var(--accent-orange)">
-            <h3 style="color:var(--accent-orange)"><svg class="ico"><use href="#i-blast"></use></svg>Explosion</h3>
-            <div class="check-item"><span>Activer les cartes explosion</span><input type="checkbox" id="chk-explosion" onchange="toggleExplosion()" style="transform:scale(1.4);"></div>
+            <h3 style="color:var(--accent-orange)"><svg class="ico"><use href="#i-blast"></use></svg><span data-i18n="reg.explosion">Explosion</span></h3>
+            <div class="check-item"><span data-i18n="reg.activerExplosion">Activer les cartes explosion</span><input type="checkbox" id="chk-explosion" onchange="toggleExplosion()" style="transform:scale(1.4);"></div>
         </div>
-        <div class="box"><h3>Matériel requis</h3><div id="liste-materiel"></div></div>
+        <div class="box"><h3 data-i18n="reg.materiel">Matériel requis</h3><div id="liste-materiel"></div></div>
         <div class="box">
             <div class="settings-row-head">
-                <h3 style="border:none;padding:0;margin:0;">Cartes actives</h3>
-                <button type="button" class="btn-catalog" onclick="voirCatalogueComplet()"><svg class="ico"><use href="#i-eye"></use></svg>Catalogue</button>
+                <h3 style="border:none;padding:0;margin:0;" data-i18n="reg.cartesActives">Cartes actives</h3>
+                <button type="button" class="btn-catalog" onclick="voirCatalogueComplet()"><svg class="ico"><use href="#i-eye"></use></svg><span data-i18n="reg.catalogue">Catalogue</span></button>
             </div>
-            <p style="font-size:0.75rem; color:var(--bse-muted); margin:0 0 8px 0;">L'œil de chaque ligne ouvre le catalogue du mode à la carte concernée.</p>
+            <p style="font-size:0.75rem; color:var(--bse-muted); margin:0 0 8px 0;" data-i18n="reg.oeilAide">L'œil de chaque ligne ouvre le catalogue du mode à la carte concernée.</p>
             <div id="liste-regles"></div>
         </div>
         <div class="box">
-            <h3>Aide</h3>
-            <p style="font-size:0.78rem; color:var(--bse-muted); margin:0 0 10px 0;">Le guide d'utilisation complet, à lire au briefing. Il reste consultable hors ligne une fois ouvert.</p>
+            <h3 data-i18n="reg.aide">Aide</h3>
+            <p style="font-size:0.78rem; color:var(--bse-muted); margin:0 0 10px 0;" data-i18n="reg.aideTexte">Le guide d'utilisation complet, à lire au briefing. Il reste consultable hors ligne une fois ouvert.</p>
             <a class="btn-action" href="guide-bse-medical-system.pdf" target="_blank" rel="noopener" style="text-decoration:none;">
-                <svg class="ico"><use href="#i-import"></use></svg>Guide d'utilisation (PDF)
+                <svg class="ico"><use href="#i-import"></use></svg><span data-i18n="reg.guide">Guide d'utilisation (PDF)</span>
             </a>
         </div>
         <div style="height:50px"></div>
-        <div class="settings-footer"><button class="footer-btn" onclick="annulerReglages()">Annuler</button><button class="footer-btn save" onclick="sauvegarderEtQuitter()">Valider</button></div>
+        <div class="settings-footer"><button class="footer-btn" onclick="annulerReglages()" data-i18n="btn.annuler">Annuler</button><button class="footer-btn save" onclick="sauvegarderEtQuitter()" data-i18n="btn.valider">Valider</button></div>
     </div>
 
     <div id="screen-builder" class="screen">
-        <h2>Mes paquets</h2>
-        <p style="font-size:0.8rem; color:var(--bse-muted); margin-top:-6px;">Créez vos propres paquets de cartes et affichez-les sur l'accueil.</p>
-        <button class="btn-action btn-create" onclick="creerNouveauPaquet()">+ Créer un paquet</button>
-        <button class="btn-action" onclick="importerPaquetUI()"><svg class="ico"><use href="#i-import"></use></svg>Importer un paquet</button>
+        <h2 data-i18n="bld.titre">Mes paquets</h2>
+        <p style="font-size:0.8rem; color:var(--bse-muted); margin-top:-6px;" data-i18n="bld.sous">Créez vos propres paquets de cartes et affichez-les sur l'accueil.</p>
+        <button class="btn-action btn-create" onclick="creerNouveauPaquet()" data-i18n="bld.creer">+ Créer un paquet</button>
+        <button class="btn-action" onclick="importerPaquetUI()"><svg class="ico"><use href="#i-import"></use></svg><span data-i18n="bld.importer">Importer un paquet</span></button>
         <div id="custom-decks-list" style="margin-top:20px;"></div>
-        <button class="btn-action" onclick="retourAccueil()">Retour</button>
+        <button class="btn-action" onclick="retourAccueil()" data-i18n="btn.retour">Retour</button>
     </div>
 
     <div id="screen-deck-edit" class="screen">
-        <h2>Édition du paquet</h2>
+        <h2 data-i18n="bld.edition">Édition du paquet</h2>
         <div class="box">
-            <label class="form-label">Nom du paquet</label>
-            <input type="text" id="deck-name" class="form-input" placeholder="Ex : Blessures chimiques">
-            <div class="check-item"><span>Afficher sur l'accueil</span><input type="checkbox" id="deck-show-home" style="transform:scale(1.3);"></div>
-            <div class="check-item"><span>Mode extrême <span style="color:var(--bse-muted); font-size:0.8em;">(silhouette : zone touchée + protection)</span></span><input type="checkbox" id="deck-extreme" style="transform:scale(1.3);"></div>
+            <label class="form-label" data-i18n="bld.nom">Nom du paquet</label>
+            <input type="text" id="deck-name" class="form-input" data-i18n-ph="bld.nomPh" placeholder="Ex : Blessures chimiques">
+            <div class="check-item"><span data-i18n="bld.afficherAccueil">Afficher sur l'accueil</span><input type="checkbox" id="deck-show-home" style="transform:scale(1.3);"></div>
+            <div class="check-item"><span><span data-i18n="bld.modeExtreme">Mode extrême</span> <span style="color:var(--bse-muted); font-size:0.8em;" data-i18n="bld.modeExtremeSous">(silhouette : zone touchée + protection)</span></span><input type="checkbox" id="deck-extreme" style="transform:scale(1.3);"></div>
         </div>
         <div class="box">
-            <h3>Icône du bouton</h3>
-            <p style="font-size:0.78rem; color:var(--bse-muted); margin:0 0 10px 0;">Elle identifie le paquet sur l'écran d'accueil et chez les joueurs à qui vous l'attribuez.</p>
+            <h3 data-i18n="bld.icone">Icône du bouton</h3>
+            <p style="font-size:0.78rem; color:var(--bse-muted); margin:0 0 10px 0;" data-i18n="bld.iconeAide">Elle identifie le paquet sur l'écran d'accueil et chez les joueurs à qui vous l'attribuez.</p>
             <div id="deck-icones" class="icon-grid"></div>
         </div>
         <div class="box">
-            <h3>Cartes (<span id="deck-cards-count">0</span>)</h3>
-            <button class="btn-action" onclick="ajouterCarteCustom()" style="margin:0 0 12px 0;">+ Ajouter une carte</button>
+            <h3><span data-i18n="bld.cartes">Cartes</span> (<span id="deck-cards-count">0</span>)</h3>
+            <button class="btn-action" onclick="ajouterCarteCustom()" style="margin:0 0 12px 0;" data-i18n="bld.ajouterCarte">+ Ajouter une carte</button>
             <div id="deck-cards-list"></div>
         </div>
-        <button class="btn-action btn-create" onclick="sauvegarderPaquetCourant()">Enregistrer</button>
-        <button class="btn-action" style="background:#5c1414; border-color:var(--accent-red);" onclick="supprimerPaquetCourant()">Supprimer le paquet</button>
+        <button class="btn-action btn-create" onclick="sauvegarderPaquetCourant()" data-i18n="bld.enregistrer">Enregistrer</button>
+        <button class="btn-action" style="background:#5c1414; border-color:var(--accent-red);" onclick="supprimerPaquetCourant()" data-i18n="bld.supprimerPaquet">Supprimer le paquet</button>
     </div>
 
     <div id="screen-card-edit" class="screen">
-        <h2>Carte</h2>
+        <h2 data-i18n="ce.titreEcran">Carte</h2>
         <div class="box">
-            <label class="form-label">Gravité</label>
+            <label class="form-label" data-i18n="ce.gravite">Gravité</label>
             <select id="card-gravity" class="form-input">
-                <option value="DÉCÈS">DÉCÈS</option>
-                <option value="Critique">CRITIQUE</option>
-                <option value="Grave">GRAVE</option>
-                <option value="Légère">LÉGÈRE</option>
-                <option value="Spécial">SPÉCIAL</option>
+                <option value="DÉCÈS" data-i18n="grav.DÉCÈS">DÉCÈS</option>
+                <option value="Critique" data-i18n="grav.Critique">CRITIQUE</option>
+                <option value="Grave" data-i18n="grav.Grave">GRAVE</option>
+                <option value="Légère" data-i18n="grav.Légère">LÉGÈRE</option>
+                <option value="Spécial" data-i18n="grav.Spécial">SPÉCIAL</option>
             </select>
-            <label class="form-label">Titre</label>
-            <input type="text" id="card-title" class="form-input" placeholder="Ex : Fracture">
-            <label class="form-label">Zone touchée</label>
-            <input type="text" id="card-zone" class="form-input" placeholder="Ex : Bras">
-            <label class="form-label">Protocole / effet</label>
-            <textarea id="card-effect" class="form-input" rows="3" placeholder="Ex : Attelle + Morphine"></textarea>
+            <label class="form-label" data-i18n="ce.titre">Titre</label>
+            <input type="text" id="card-title" class="form-input" data-i18n-ph="ce.titrePh" placeholder="Ex : Fracture">
+            <label class="form-label" data-i18n="ce.zone">Zone touchée</label>
+            <input type="text" id="card-zone" class="form-input" data-i18n-ph="ce.zonePh" placeholder="Ex : Bras">
+            <label class="form-label" data-i18n="ce.protocole">Protocole / effet</label>
+            <textarea id="card-effect" class="form-input" rows="3" data-i18n-ph="ce.protocolePh" placeholder="Ex : Attelle + Morphine"></textarea>
         </div>
         <div class="box">
-            <h3>Matériel requis</h3>
-            <p style="font-size:0.75rem; color:var(--bse-muted); margin:0 0 10px 0;">Touchez une puce pour la sélectionner. Le matériel ajouté ici n'est proposé que dans ce paquet (✕ pour le retirer).</p>
+            <h3 data-i18n="ce.matos">Matériel requis</h3>
+            <p style="font-size:0.75rem; color:var(--bse-muted); margin:0 0 10px 0;" data-i18n="ce.matosAide"></p>
             <div id="card-matos-list" class="chip-wrap"></div>
             <div style="display:flex; gap:5px; margin-top:12px; border-top:1px solid var(--bse-border-soft); padding-top:12px;">
-                <input type="text" id="new-matos-name" class="form-input" placeholder="Nouveau matériel (ex : Anti-rad)" style="margin:0;">
+                <input type="text" id="new-matos-name" class="form-input" data-i18n-ph="ce.nouveauMatosPh" placeholder="Nouveau matériel (ex : Anti-rad)" style="margin:0;">
                 <button class="header-btn" onclick="ajouterNouveauMatos()" style="width:40px; border-color:var(--bse-gold); color:var(--bse-gold-light);">+</button>
             </div>
         </div>
-        <button class="btn-action btn-create" onclick="validerCarte()">Valider la carte</button>
-        <button class="btn-action" onclick="annulerEditionCarte()">Annuler</button>
+        <button class="btn-action btn-create" onclick="validerCarte()" data-i18n="ce.valider">Valider la carte</button>
+        <button class="btn-action" onclick="annulerEditionCarte()" data-i18n="btn.annuler">Annuler</button>
     </div>
 
     <div id="previewModal" class="modal" onclick="fermerPreviewModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <h3 id="preview-title" class="modal-title">Aperçu</h3>
+            <h3 id="preview-title" class="modal-title" data-i18n="mod.apercu">Aperçu</h3>
             <div id="preview-body"></div>
-            <button type="button" onclick="fermerPreviewModal()" class="btn-action">Fermer</button>
+            <button type="button" onclick="fermerPreviewModal()" class="btn-action" data-i18n="btn.fermer">Fermer</button>
         </div>
     </div>
 
     <div id="multiplayerModal" class="modal" style="z-index: 200;">
         <div class="modal-content">
-            <h3 class="modal-title">Menu multijoueur</h3>
+            <h3 class="modal-title" data-i18n="multi.titre">Menu multijoueur</h3>
             <div class="form-group">
-                <label class="form-label">Nom de la partie (hôte)</label>
-                <input type="text" id="multi-game-name" class="form-input" placeholder="Ex : Exercice Alpha">
+                <label class="form-label" data-i18n="multi.nomPartie">Nom de la partie (hôte)</label>
+                <input type="text" id="multi-game-name" class="form-input" data-i18n-ph="multi.nomPartiePh" placeholder="Ex : Exercice Alpha">
             </div>
             <div class="form-group">
-                <label class="form-label">Pseudo de l'hôte</label>
-                <input type="text" id="multi-pseudo" class="form-input" placeholder="Ex : Orga">
+                <label class="form-label" data-i18n="multi.pseudoHote"></label>
+                <input type="text" id="multi-pseudo" class="form-input" data-i18n-ph="multi.pseudoHotePh" placeholder="Ex : Orga">
             </div>
             <div class="form-group">
-                <label class="form-label">Liaison entre appareils</label>
+                <label class="form-label" data-i18n="multi.liaison">Liaison entre appareils</label>
                 <select id="multi-transport" class="form-input" onchange="changerTransport(this.value)">
-                    <option value="firebase">Serveur Firebase (recommandé)</option>
-                    <option value="peer">Pair-à-pair (ancien)</option>
+                    <option value="firebase" data-i18n="multi.firebase">Serveur Firebase (recommandé)</option>
+                    <option value="peer" data-i18n="multi.peer">Pair-à-pair (ancien)</option>
                 </select>
                 <p id="multi-transport-aide" style="font-size:0.75rem; color:var(--bse-muted); margin:-4px 0 10px;"></p>
             </div>
-            <button type="button" class="btn-action btn-create" onclick="creerPartieEnLigne()">Créer une partie (hôte)</button>
+            <button type="button" class="btn-action btn-create" onclick="creerPartieEnLigne()" data-i18n="multi.creer">Créer une partie (hôte)</button>
 
             <hr style="border:none; border-top:1px solid var(--bse-border); margin:18px 0;">
 
-            <button type="button" id="btn-bascule-rejoindre" class="btn-action btn-join" onclick="basculerZoneRejoindre()"><svg class="ico chevron"><use href="#i-chevron"></use></svg>Rejoindre une partie</button>
+            <button type="button" id="btn-bascule-rejoindre" class="btn-action btn-join" onclick="basculerZoneRejoindre()"><svg class="ico chevron"><use href="#i-chevron"></use></svg><span data-i18n="multi.rejoindre">Rejoindre une partie</span></button>
 
             <div id="join-input-area" style="display:none; margin-top:10px; border-top:1px solid var(--bse-border); padding-top:10px;">
                 <div id="qr-reader" style="width:100%; display:none; margin-bottom:10px; background:white; color:black; border-radius:var(--radius-s); overflow:hidden;"></div>
-                <button type="button" class="btn-action" style="margin-bottom:10px;" onclick="startQRScanner()"><svg class="ico"><use href="#i-qr"></use></svg>Scanner le QR code</button>
+                <button type="button" class="btn-action" style="margin-bottom:10px;" onclick="startQRScanner()"><svg class="ico"><use href="#i-qr"></use></svg><span data-i18n="multi.scanner">Scanner le QR code</span></button>
 
-                <input type="text" id="join-code" class="form-input" placeholder="Nom de la partie ou lien">
+                <input type="text" id="join-code" class="form-input" data-i18n-ph="multi.codePh" placeholder="Nom de la partie ou lien">
 
-                <button type="button" class="btn-action btn-join" onclick="rejoindrePartieEnLigne()">Connexion</button>
+                <button type="button" class="btn-action btn-join" onclick="rejoindrePartieEnLigne()" data-i18n="multi.connexion">Connexion</button>
             </div>
 
             <div style="margin-top:14px; border-top:1px solid var(--bse-border); padding-top:10px;">
-                <button type="button" class="btn-action" onclick="testerReseau()"><svg class="ico"><use href="#i-net"></use></svg>Tester le réseau</button>
+                <button type="button" class="btn-action" onclick="testerReseau()"><svg class="ico"><use href="#i-net"></use></svg><span data-i18n="multi.testerReseau">Tester le réseau</span></button>
                 <div id="net-test-result" style="display:none; font-size:0.8rem; text-align:left; background:#0d0d0d; border:1px solid var(--bse-border); border-radius:var(--radius-s); padding:10px; margin-top:8px; line-height:1.6;"></div>
-                <button type="button" class="btn-action" style="font-size:0.68rem;" onclick="document.getElementById('turn-config-area').style.display = document.getElementById('turn-config-area').style.display === 'none' ? 'block' : 'none'"><svg class="ico"><use href="#i-tool"></use></svg>Relais réseau (TURN) — optionnel</button>
+                <button type="button" class="btn-action" style="font-size:0.68rem;" onclick="document.getElementById('turn-config-area').style.display = document.getElementById('turn-config-area').style.display === 'none' ? 'block' : 'none'"><svg class="ico"><use href="#i-tool"></use></svg><span data-i18n="multi.turn">Relais réseau (TURN) — optionnel</span></button>
                 <div id="turn-config-area" style="display:none; margin-top:8px; text-align:left;">
-                    <p style="font-size:0.75rem; color:var(--bse-muted); margin-top:0;">Nécessaire si le test indique ❌ TURN et que vos joueurs sont sur d'autres réseaux (4G, autre WiFi). Créez un compte gratuit sur <b>metered.ca</b> (50 Go/mois), ajoutez un « TURN server » et collez ses identifiants ici. Ils seront transmis automatiquement aux joueurs via le lien / QR code d'invitation.</p>
-                    <input type="text" id="turn-url" class="form-input" placeholder="URL (ex : turn:standard.relay.metered.ca:443)">
-                    <input type="text" id="turn-user" class="form-input" placeholder="Username">
-                    <input type="text" id="turn-pass" class="form-input" placeholder="Password / credential">
-                    <button type="button" class="btn-action btn-create" style="margin-top:0;" onclick="sauverTurnConfig()">Enregistrer le relais</button>
+                    <p style="font-size:0.75rem; color:var(--bse-muted); margin-top:0;" data-i18n-html="multi.turnAide"></p>
+                    <input type="text" id="turn-url" class="form-input" data-i18n-ph="multi.turnUrlPh" placeholder="URL (ex : turn:standard.relay.metered.ca:443)">
+                    <input type="text" id="turn-user" class="form-input" data-i18n-ph="multi.turnUserPh" placeholder="Username">
+                    <input type="text" id="turn-pass" class="form-input" data-i18n-ph="multi.turnPassPh" placeholder="Password / credential">
+                    <button type="button" class="btn-action btn-create" style="margin-top:0;" onclick="sauverTurnConfig()" data-i18n="multi.turnSave">Enregistrer le relais</button>
                 </div>
             </div>
 
-            <button type="button" onclick="fermerMultiModal()" class="btn-action" style="margin-top:18px;">Annuler</button>
-            <div id="multi-status" style="display:none; text-align:center; padding:10px; color:var(--bse-muted); font-size:0.85rem;">Connexion...</div>
+            <button type="button" onclick="fermerMultiModal()" class="btn-action" style="margin-top:18px;" data-i18n="btn.annuler">Annuler</button>
+            <div id="multi-status" style="display:none; text-align:center; padding:10px; color:var(--bse-muted); font-size:0.85rem;" data-i18n="multi.statut">Connexion...</div>
         </div>
     </div>
 
     <!-- MODAL POUR LE CHOIX D'ÉQUIPE (Auto-Join) -->
     <div id="teamSelectionModal" class="modal" style="z-index: 220;">
         <div class="modal-content">
-            <h3 class="modal-title">Rejoindre la partie</h3>
-            <p id="modal-join-partie" style="text-align:center; font-size:0.88rem; color:var(--bse-muted);">Connexion établie.</p>
+            <h3 class="modal-title" data-i18n="join.titre">Rejoindre la partie</h3>
+            <p id="modal-join-partie" style="text-align:center; font-size:0.88rem; color:var(--bse-muted);" data-i18n="join.etabli">Connexion établie.</p>
             <div class="form-group" style="margin-top:14px;">
-                <label class="form-label">Votre pseudo</label>
-                <input type="text" id="modal-join-pseudo" class="form-input" placeholder="Ex : Doc" maxlength="32" autocomplete="nickname">
-                <label class="form-label">Votre équipe</label>
+                <label class="form-label" data-i18n="join.pseudo">Votre pseudo</label>
+                <input type="text" id="modal-join-pseudo" class="form-input" data-i18n-ph="reg.pseudoPh" placeholder="Ex : Doc" maxlength="32" autocomplete="nickname">
+                <label class="form-label" data-i18n="join.equipe">Votre équipe</label>
                 <select id="modal-join-team" class="form-input" style="margin-bottom:0;"></select>
             </div>
-            <button type="button" class="btn-action btn-create" style="margin-top:14px;" onclick="validerEquipeRejoindre()">Rejoindre la partie</button>
+            <button type="button" class="btn-action btn-create" style="margin-top:14px;" onclick="validerEquipeRejoindre()" data-i18n="join.titre">Rejoindre la partie</button>
         </div>
     </div>
 
     <div id="protectionModal" class="modal" style="z-index: 230;">
         <div class="modal-content alert" style="text-align:center;">
-            <h3 id="protection-question" class="modal-title">Protection balistique portée ?</h3>
+            <h3 id="protection-question" class="modal-title" data-i18n="prot.question">Protection balistique portée ?</h3>
             <div style="display:flex; gap:10px;">
-                <button type="button" class="btn-action btn-create" onclick="repondreProtection(true)"><svg class="ico"><use href="#i-shield"></use></svg>Oui</button>
-                <button type="button" class="btn-action" style="background:#5c1414; border-color:var(--accent-red);" onclick="repondreProtection(false)">Non</button>
+                <button type="button" class="btn-action btn-create" onclick="repondreProtection(true)"><svg class="ico"><use href="#i-shield"></use></svg><span data-i18n="btn.oui">Oui</span></button>
+                <button type="button" class="btn-action" style="background:#5c1414; border-color:var(--accent-red);" onclick="repondreProtection(false)" data-i18n="btn.non">Non</button>
             </div>
         </div>
     </div>
 
     <div id="deckShareModal" class="modal" style="z-index: 210;" onclick="if(event.target===this)this.style.display='none'">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <h3 id="deck-share-title" class="modal-title">Partager le paquet</h3>
+            <h3 id="deck-share-title" class="modal-title" data-i18n="share.titre">Partager le paquet</h3>
             <p id="deck-share-hint" style="font-size:0.8rem; color:var(--bse-muted);"></p>
             <textarea id="deck-share-code" class="form-input" rows="6" style="font-family:var(--font-mono); font-size:0.68rem; word-break:break-all;"></textarea>
-            <button type="button" id="deck-share-action" class="btn-action btn-create" onclick="deckShareAction()">Copier</button>
-            <button type="button" class="btn-action" onclick="document.getElementById('deckShareModal').style.display='none'">Fermer</button>
+            <button type="button" id="deck-share-action" class="btn-action btn-create" onclick="deckShareAction()" data-i18n="btn.copier">Copier</button>
+            <button type="button" class="btn-action" onclick="document.getElementById('deckShareModal').style.display='none'" data-i18n="btn.fermer">Fermer</button>
         </div>
     </div>
 
     <div id="confirmLeaveModal" class="modal" style="z-index: 250;" onclick="if(event.target===this)this.style.display='none'">
         <div class="modal-content alert" onclick="event.stopPropagation()">
-            <h3 class="modal-title">Quitter la partie ?</h3>
-            <p style="font-size:0.88rem; color:var(--bse-muted);">Vous quitterez la session multijoueur et reviendrez au menu principal.</p>
-            <button type="button" class="btn-action" style="background:#5c1414; border-color:var(--accent-red);" onclick="executerQuitterPartie()">Oui, quitter</button>
-            <button type="button" class="btn-action" onclick="document.getElementById('confirmLeaveModal').style.display='none'">Annuler</button>
+            <h3 class="modal-title" data-i18n="leave.titre">Quitter la partie ?</h3>
+            <p style="font-size:0.88rem; color:var(--bse-muted);" data-i18n="leave.texte">Vous quitterez la session multijoueur et reviendrez au menu principal.</p>
+            <button type="button" class="btn-action" style="background:#5c1414; border-color:var(--accent-red);" onclick="executerQuitterPartie()" data-i18n="leave.oui">Oui, quitter</button>
+            <button type="button" class="btn-action" onclick="document.getElementById('confirmLeaveModal').style.display='none'" data-i18n="btn.annuler">Annuler</button>
         </div>
+    </div>
+
+    <!-- Selecteur de langue. Frere de #screen-game comme le logo BSE, pour
+         que le selecteur « ecran actif ~ element » puisse le montrer. -->
+    <div id="bloc-langue">
+        <div id="langue-menu" role="listbox" aria-labelledby="btn-langue"></div>
+        <button type="button" id="btn-langue" aria-haspopup="listbox" aria-expanded="false"
+                data-i18n-title="lang.choisir" data-i18n-aria="lang.choisir"
+                onclick="basculerMenuLangue()">
+            <svg id="drapeau-courant" class="drapeau" aria-hidden="true"><use href="#f-fr"></use></svg>
+            <svg class="ico chevron-langue" aria-hidden="true"><use href="#i-chevron"></use></svg>
+        </button>
     </div>
 
     <!-- Signature de l'organisateur : renvoie vers le site Bravo Sierra Events.
          Placée en fin de <body> pour que les sélecteurs « écran actif ~ lien »
          du bloc de style puissent la montrer ou la masquer selon l'écran. -->
     <a id="lien-bse" href="https://bravosierraevents.com" target="_blank" rel="noopener noreferrer"
-       title="Bravo Sierra Events — ouvrir le site" aria-label="Ouvrir le site de Bravo Sierra Events">
+       data-i18n-title="hdr.bseLien" title="Bravo Sierra Events — ouvrir le site"
+       data-i18n-aria="hdr.bseAria" aria-label="Ouvrir le site de Bravo Sierra Events">
         <img src="icons/logo-bse.png" srcset="icons/logo-bse.png 1x, icons/logo-bse@2x.png 2x"
              alt="Bravo Sierra Events">
     </a>
@@ -1018,8 +1083,32 @@
         <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></symbol>
         <symbol id="i-copie" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="1.4"/><path d="M5.5 15H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v.5"/></symbol>
         <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="9.5" rx="1.2"/><path d="M8 10.5V7.6a4 4 0 0 1 8 0v2.9"/></symbol>
+        <!-- ============ DRAPEAUX DU SELECTEUR DE LANGUE ============
+             Dessines en SVG et non en emoji : Windows ne possede aucune
+             police de drapeaux, les emoji y sortent en simples lettres
+             (« FR », « GB »). Ils portent leurs couleurs en attributs de
+             presentation et n'utilisent donc PAS la classe .ico, qui
+             imposerait fill:none / stroke:currentColor. -->
+        <symbol id="f-fr" viewBox="0 0 24 16"><rect width="8" height="16" fill="#0055A4"/><rect x="8" width="8" height="16" fill="#F5F5F5"/><rect x="16" width="8" height="16" fill="#EF4135"/></symbol>
+        <symbol id="f-gb" viewBox="0 0 24 16"><rect width="24" height="16" fill="#012169"/><path d="M0,0 L24,16 M24,0 L0,16" stroke="#F5F5F5" stroke-width="3.4"/><path d="M0,0 L24,16 M24,0 L0,16" stroke="#C8102E" stroke-width="1.8"/><path d="M12,0 V16 M0,8 H24" stroke="#F5F5F5" stroke-width="5.4"/><path d="M12,0 V16 M0,8 H24" stroke="#C8102E" stroke-width="3.2"/></symbol>
+        <symbol id="f-de" viewBox="0 0 24 16"><rect width="24" height="5.34" fill="#111"/><rect y="5.33" width="24" height="5.34" fill="#DD0000"/><rect y="10.66" width="24" height="5.34" fill="#FFCE00"/></symbol>
+        <symbol id="f-es" viewBox="0 0 24 16"><rect width="24" height="16" fill="#AA151B"/><rect y="4" width="24" height="8" fill="#F1BF00"/></symbol>
+        <symbol id="f-it" viewBox="0 0 24 16"><rect width="8" height="16" fill="#008C45"/><rect x="8" width="8" height="16" fill="#F5F5F5"/><rect x="16" width="8" height="16" fill="#CD212A"/></symbol>
+        <symbol id="f-cn" viewBox="0 0 24 16"><rect width="24" height="16" fill="#EE1C25"/><g fill="#FFDE00"><path d="M0,-1 L0.2245,-0.309 L0.9511,-0.309 L0.3633,0.118 L0.5878,0.809 L0,0.382 L-0.5878,0.809 L-0.3633,0.118 L-0.9511,-0.309 L-0.2245,-0.309 Z" transform="translate(4 4) scale(2.4)"/><path d="M0,-1 L0.2245,-0.309 L0.9511,-0.309 L0.3633,0.118 L0.5878,0.809 L0,0.382 L-0.5878,0.809 L-0.3633,0.118 L-0.9511,-0.309 L-0.2245,-0.309 Z" transform="translate(8 1.7) scale(0.8)"/><path d="M0,-1 L0.2245,-0.309 L0.9511,-0.309 L0.3633,0.118 L0.5878,0.809 L0,0.382 L-0.5878,0.809 L-0.3633,0.118 L-0.9511,-0.309 L-0.2245,-0.309 Z" transform="translate(9.8 3.4) scale(0.8)"/><path d="M0,-1 L0.2245,-0.309 L0.9511,-0.309 L0.3633,0.118 L0.5878,0.809 L0,0.382 L-0.5878,0.809 L-0.3633,0.118 L-0.9511,-0.309 L-0.2245,-0.309 Z" transform="translate(9.8 5.8) scale(0.8)"/><path d="M0,-1 L0.2245,-0.309 L0.9511,-0.309 L0.3633,0.118 L0.5878,0.809 L0,0.382 L-0.5878,0.809 L-0.3633,0.118 L-0.9511,-0.309 L-0.2245,-0.309 Z" transform="translate(8 7.5) scale(0.8)"/></g></symbol>
+        <symbol id="f-jp" viewBox="0 0 24 16"><rect width="24" height="16" fill="#F5F5F5"/><circle cx="12" cy="8" r="4.8" fill="#BC002D"/></symbol>
     </svg>
 
+    <!-- Moteur de traduction + francais (langue de reference), puis un
+         fichier par langue. Ordre indifferent, mais tous doivent etre
+         charges AVANT le script de l'application, qui appelle
+         I18N.demarrer() des la fin de son analyse. -->
+    <script src="i18n.js"></script>
+    <script src="lang-en.js"></script>
+    <script src="lang-de.js"></script>
+    <script src="lang-es.js"></script>
+    <script src="lang-it.js"></script>
+    <script src="lang-zh.js"></script>
+    <script src="lang-ja.js"></script>
     <script>
         /* --- AUDIO --- */
         // L'AudioContext etait cree au chargement, au niveau global du script :
@@ -1275,10 +1364,24 @@
         function reglagesVerrouilles() { return estEnPartieClient() && !appState.isCoHost; }
         // Version d'affichage d'un effet : la balise technique [MEMBRE_ALEATOIRE] est retirée
         // (au tirage réel, elle est remplacée par un membre tiré au sort)
+        /* --- AFFICHAGE TRADUIT DES CARTES ---
+           Les cartes gardent leurs textes francais : ce sont les cles
+           internes de la logique de tirage, des paquets enregistres et de
+           Firebase. Ces fonctions ne servent qu'a l'AFFICHAGE. Une carte
+           ecrite par un joueur dans un paquet perso n'est evidemment pas au
+           catalogue : elle ressort telle qu'il l'a saisie. */
+        function txTitre(v) { return window.I18N ? I18N.titre(v) : v; }
+        function txZone(v)  { return window.I18N ? I18N.zone(v)  : v; }
+        function txGrav(v)  { return window.I18N ? I18N.grav(v)  : v; }
+        function txMat(v)   { return window.I18N ? I18N.mat(v)   : v; }
+        function txMembre(v){ return window.I18N ? I18N.membre(v): v; }
+        function txBilan(v) { return window.I18N ? I18N.bilan(v) : v; }
+        function txSoin(v)  { return window.I18N ? I18N.soin(v)  : v; }
+
         function effetPourAffichage(effet) {
-            return String(effet || '')
+            return String(txSoin(effet) || '')
                 .replace(/\s*\(\[MEMBRE_ALEATOIRE\]\)/g, '')
-                .replace(/\[MEMBRE_ALEATOIRE\]/g, 'membre aléatoire');
+                .replace(/\[MEMBRE_ALEATOIRE\]/g, tr('carte.membreAleatoire'));
         }
 
         function getCardQtyKey(drawSrc, card) {
@@ -1349,12 +1452,12 @@
             const rows = [];
             if (appState.mode.startsWith('d_')) {
                 const cd = appState.customDecks.find(d => d.id === appState.mode);
-                trierParGravite(cd && cd.cards ? cd.cards : []).forEach(r => rows.push({ r, rid: ridForMode(r), sec: 'Paquet perso' }));
+                trierParGravite(cd && cd.cards ? cd.cards : []).forEach(r => rows.push({ r, rid: ridForMode(r), sec: tr('cat.sectionPerso') }));
                 return rows;
             }
-            trierParGravite(reglesBaseDuMode(appState.mode)).forEach(r => rows.push({ r, rid: ridForMode(r), sec: 'Mode' }));
+            trierParGravite(reglesBaseDuMode(appState.mode)).forEach(r => rows.push({ r, rid: ridForMode(r), sec: tr('cat.sectionMode') }));
             if (modeAvecExplosion() && appState.explosionEnabled) {
-                trierParGravite(DB_REGLES.explosion || []).forEach(r => rows.push({ r, rid: r.id, sec: 'Explosion' }));
+                trierParGravite(DB_REGLES.explosion || []).forEach(r => rows.push({ r, rid: r.id, sec: tr('cat.sectionExplosion') }));
             }
             return rows;
         }
@@ -1364,25 +1467,25 @@
             const modal = document.getElementById('previewModal');
             const mc = modal.querySelector('.modal-content');
             mc.classList.add('modal-wide');
-            document.getElementById('preview-title').innerText = 'Catalogue — ' + modeLabelCatalog();
+            document.getElementById('preview-title').innerText = tr('cat.titre', { mode: modeLabelCatalog() });
             let html = '<div class="catalog-list">';
             rows.forEach(({ r, rid, sec }) => {
                 const mats = cardMatos(r);
                 const hl = (highlightRid && rid === highlightRid) ? ' catalog-card hl' : ' catalog-card';
                 html += `<div class="${hl}"><div class="preview-card-mini" style="border-left-color:${getColorTexte(r.gravite)}">`;
                 html += `<span style="font-size:0.65em;color:#888;">${escapeHtml(sec)}</span>`;
-                html += `<h4 style="color:${getColorTexte(r.gravite)};margin:4px 0 0 0;">${escapeHtml(r.gravite)}</h4>`;
+                html += `<h4 style="color:${getColorTexte(r.gravite)};margin:4px 0 0 0;">${escapeHtml(txGrav(r.gravite))}</h4>`;
                 // Condition de protection : indique à l'orga quand la carte peut sortir
-                const cond = r.protection === true ? '<span class="deck-badge" style="border-color:var(--accent-green);color:#a8d3ae;">protection portée</span>'
-                           : r.protection === false ? '<span class="deck-badge" style="border-color:var(--accent-red);color:#e8a0a0;">sans protection</span>' : '';
-                html += `<p><strong>${escapeHtml(r.titre)}</strong>${r.zone ? ` <span style="font-size:0.8em;color:#888;">· ${escapeHtml(r.zone)}</span>` : ''} ${cond}</p>`;
-                if (r.description) html += `<p style="font-size:0.82em;color:#bbb;font-style:italic;">${escapeHtml(r.description)}</p>`;
+                const cond = r.protection === true ? `<span class="deck-badge" style="border-color:var(--accent-green);color:#a8d3ae;">${escapeHtml(tr('cat.protPortee'))}</span>`
+                           : r.protection === false ? `<span class="deck-badge" style="border-color:var(--accent-red);color:#e8a0a0;">${escapeHtml(tr('cat.sansProt'))}</span>` : '';
+                html += `<p><strong>${escapeHtml(txTitre(r.titre))}</strong>${r.zone ? ` <span style="font-size:0.8em;color:#888;">· ${escapeHtml(txZone(r.zone))}</span>` : ''} ${cond}</p>`;
+                if (r.description) html += `<p style="font-size:0.82em;color:#bbb;font-style:italic;">${escapeHtml(txBilan(r.description))}</p>`;
                 html += `<p style="font-size:0.85em;">${escapeHtml(effetPourAffichage(r.effet))}</p>`;
-                html += `<p style="font-size:0.75em;color:#888;">Matos: ${mats.length ? escapeHtml(mats.join(', ')) : '—'}</p>`;
+                html += `<p style="font-size:0.75em;color:#888;">${escapeHtml(tr('cat.matos'))} ${mats.length ? escapeHtml(mats.map(txMat).join(', ')) : '—'}</p>`;
                 html += '</div></div>';
             });
             html += '</div>';
-            if (!rows.length) html = '<p style="color:#888;">Aucune carte pour ce mode.</p>';
+            if (!rows.length) html = `<p style="color:#888;">${escapeHtml(tr('cat.aucuneCarte'))}</p>`;
             document.getElementById('preview-body').innerHTML = html;
             modal.style.display = 'block';
             if (highlightRid) setTimeout(() => { const el = document.querySelector('.catalog-card.hl'); if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 120);
@@ -1391,10 +1494,10 @@
         function modeLabelCatalog() {
             if (appState.mode.startsWith('d_')) {
                 const d = appState.customDecks.find(x => x.id === appState.mode);
-                return d ? d.name : 'Perso';
+                return d ? d.name : tr('mode.perso');
             }
-            let s = appState.mode === 'extreme' ? 'extrême' : appState.mode;
-            if (modeAvecExplosion() && appState.explosionEnabled) s += ' + explosion';
+            let s = tr('mode.' + appState.mode);
+            if (modeAvecExplosion() && appState.explosionEnabled) s += tr('mode.plusExplosion');
             return s;
         }
 
@@ -1530,12 +1633,12 @@
             const credential = document.getElementById('turn-pass').value.trim();
             appState.turnConfig = urls ? { urls, username, credential } : null;
             saveState();
-            alert(urls ? 'Relais enregistré. Il sera utilisé pour les prochaines connexions et transmis aux joueurs via le lien / QR code.' : 'Relais effacé.');
+            alert(urls ? tr('net.relaisEnregistre') : tr('net.relaisEfface'));
         }
         async function testerReseau() {
             const el = document.getElementById('net-test-result');
             el.style.display = 'block';
-            el.innerHTML = 'Test en cours (~15 s)...';
+            el.innerHTML = escapeHtml(tr('net.testEnCours'));
             // 1. Serveur de mise en relation PeerJS
             const sig = await new Promise(res => {
                 if (typeof Peer === 'undefined') { res(false); return; }
@@ -1566,24 +1669,21 @@
             const ok = '<b style="color:var(--accent-green)">✓</b>';
             const ko = '<b style="color:var(--accent-red)">✗</b>';
             const lignes = [
-                (sig ? ok : ko) + ' Mise en relation (serveur PeerJS)',
-                (types.srflx ? ok : ko) + ' STUN — connexion directe possible',
-                (types.relay ? ok : ko) + ' TURN — relais si le direct est bloqué' + (appState.turnConfig && appState.turnConfig.urls ? '' : ' (aucun relais configuré)')
+                (sig ? ok : ko) + ' ' + tr('net.ligneSignalisation'),
+                (types.srflx ? ok : ko) + ' ' + tr('net.ligneStun'),
+                (types.relay ? ok : ko) + ' ' + tr('net.ligneTurn') + (appState.turnConfig && appState.turnConfig.urls ? '' : ' ' + tr('net.aucunRelais'))
             ];
             let verdict;
             if (sig && types.relay) {
-                verdict = ok + ' Tout est opérationnel : la connexion devrait marcher, même entre réseaux différents (4G ↔ box).';
+                verdict = ok + ' ' + tr('net.verdictOk');
             } else if (sig && types.srflx) {
-                verdict = '<b style="color:var(--accent-orange)">!</b> Pas de relais TURN : la connexion peut échouer entre réseaux différents ou si la box isole ses appareils. Configurez un relais ci-dessous (Relais réseau), il sera transmis aux joueurs par le QR code.';
+                verdict = '<b style="color:var(--accent-orange)">!</b> ' + tr('net.verdictSansTurn');
             } else if (sig && types.host) {
-                verdict = ko + ' STUN bloqué alors qu\'Internet fonctionne : c\'est presque toujours le NAVIGATEUR qui bloque l\'UDP de WebRTC.<br>' +
-                    '• <b>Opera / Opera GX</b> : désactivez le VPN intégré, puis dans les réglages cherchez « WebRTC » et choisissez « Utiliser l\'UDP sans proxy ».<br>' +
-                    '• Sinon : VPN, antivirus ou pare-feu. Testez dans Chrome ou Edge pour confirmer.<br>' +
-                    '• Un relais TURN configuré passe aussi par TCP 443 et contourne souvent ce blocage.';
+                verdict = ko + ' ' + tr('net.verdictStunBloque');
             } else if (sig) {
-                verdict = ko + ' WebRTC est entièrement désactivé dans ce navigateur (aucun candidat réseau). Vérifiez les réglages de confidentialité du navigateur ou essayez-en un autre.';
+                verdict = ko + ' ' + tr('net.verdictWebrtcOff');
             } else {
-                verdict = ko + ' Serveur de mise en relation injoignable : vérifiez l\'accès Internet.';
+                verdict = ko + ' ' + tr('net.verdictPasDeSignalisation');
             }
             el.innerHTML = lignes.map(l => `<div>${l}</div>`).join('') + `<div style="margin-top:8px;color:#ccc;">${verdict}</div>`;
         }
@@ -1598,6 +1698,11 @@
                     .catch(e => console.warn('Mode hors ligne indisponible', e));
             });
         }
+
+        // La langue est appliquee des maintenant (le DOM est deja analyse, ce
+        // script est en fin de <body>) pour eviter d'afficher du francais une
+        // fraction de seconde avant de le remplacer.
+        if (window.I18N) I18N.demarrer();
 
         /* --- INIT --- */
         window.onload = function() {
@@ -1655,6 +1760,7 @@
             } else if (getClientSession()) {
                 demarrerReconnexionClient({ maxAttempts: 20, silentFail: true });
             }
+            construireMenuLangue();
             updateUI_Game();
         };
 
@@ -1788,12 +1894,12 @@
         function collecterReglesTirage(src) {
             if (String(src).startsWith('sp_')) {
                 const sp = (clientSessionMeta.sessionPacks || []).find(p => p.id === src);
-                if (!sp) { alert("Ce paquet n'est plus disponible."); return null; }
+                if (!sp) { alert(tr('msg.paquetIndisponible')); return null; }
                 return { rules: sp.cards || [], drawSrcForQty: sp.src, isSessionPack: true };
             }
             const rules = getRulesArrayForDrawSource(src);
             if (!rules.length) {
-                alert("Aucun paquet de cartes pour ce mode. Vérifiez les réglages ou le paquet personnalisé.");
+                alert(tr('msg.aucunPaquetMode'));
                 return null;
             }
             return { rules, drawSrcForQty: src, isSessionPack: false };
@@ -1814,7 +1920,7 @@
             if (!col.isSessionPack) appendSessionPackPool(src, pool);
 
             if (!pool.length) {
-                alert("Aucune carte disponible. Vérifiez que vous avez le matériel requis (Réglages).");
+                alert(tr('msg.aucuneCarteMateriel'));
                 return null;
             }
             return pool[Math.floor(Math.random()*pool.length)];
@@ -1886,7 +1992,7 @@
             extremeCtx.membre = membreLabel || null;   // 'Bras Gauche', 'Jambe Droite'...
             if (zone === 'tete' || zone === 'torse') {
                 document.getElementById('protection-question').innerText =
-                    zone === 'tete' ? 'Casque balistique porté ?' : 'Gilet pare-balles porté ?';
+                    zone === 'tete' ? tr('prot.casque') : tr('prot.gilet');
                 document.getElementById('protectionModal').style.display = 'block';
             } else {
                 finaliserTirageExtreme();
@@ -1914,9 +2020,9 @@
                 }
             });
             if (!pool.length) {
-                const etat = ctx.protection === true ? ' avec protection portée'
-                           : ctx.protection === false ? ' sans protection' : '';
-                alert('Aucune carte disponible pour cette zone' + etat + '.\n\nVérifiez les quantités et le matériel disponible dans les Réglages.');
+                const etat = ctx.protection === true ? tr('msg.avecProtection')
+                           : ctx.protection === false ? tr('msg.sansProtection') : '';
+                alert(tr('msg.aucuneCarteZone', { etat: etat }));
                 retourAccueil();
                 return;
             }
@@ -1933,14 +2039,14 @@
 
         function afficherResultat(card, ctxExtreme) {
             const col = getColor(card.gravite);
-            document.getElementById('badge-gravite').innerText = card.gravite;
+            document.getElementById('badge-gravite').innerText = txGrav(card.gravite);
             document.getElementById('badge-gravite').style.backgroundColor = col;
             // La gravité pilote le filet supérieur de la fiche (--grav), pas un halo
             document.getElementById('ui-card').style.setProperty('--grav', col);
             document.getElementById('btn-card').style.backgroundColor = col;
             document.getElementById('btn-card').style.borderColor = col;
-            document.getElementById('btn-card').innerText = "Nouveau diagnostic";
-            document.getElementById('txt-titre').innerText = card.titre;
+            document.getElementById('btn-card').innerText = tr('fiche.nouveau');
+            document.getElementById('txt-titre').innerText = txTitre(card.titre);
 
             // Zone finale de la fiche, par ordre de priorité :
             //  1. mode Extrême : la zone cliquée sur la silhouette fait foi ;
@@ -1951,12 +2057,16 @@
             if (ctxExtreme && ctxExtreme.zoneLabel) z = ctxExtreme.zoneLabel;
             else if (card.typeZone === 'membre') z = MEMBRES[Math.floor(Math.random()*4)];
             else if (Array.isArray(card.zones) && card.zones.length) z = card.zones[Math.floor(Math.random()*card.zones.length)];
-            document.getElementById('txt-zone').innerText = z;
+            // z reste la valeur CANONIQUE (francais) : elle sert de cle a
+            // card.effets[z] juste apres. Seul l'affichage est traduit.
+            document.getElementById('txt-zone').innerText = MEMBRES.includes(z) ? txMembre(z) : txZone(z);
 
             const protEl = document.getElementById('protection-indicator');
             if (ctxExtreme && ctxExtreme.protection !== null && ctxExtreme.protection !== undefined) {
                 protEl.style.display = 'flex';
-                protEl.innerHTML = ico('shield') + '<span>Protection balistique portée : ' + (ctxExtreme.protection ? 'OUI' : 'NON') + '</span>';
+                protEl.innerHTML = ico('shield') + '<span>' + escapeHtml(tr('fiche.protPortee', {
+                    reponse: ctxExtreme.protection ? tr('btn.oui').toUpperCase() : tr('btn.non').toUpperCase()
+                })) + '</span>';
             } else {
                 protEl.style.display = 'none';
             }
@@ -1964,16 +2074,17 @@
             // Bilan de la blessure, lu au blessé avant les soins
             const blocBilan = document.getElementById('bloc-bilan');
             if (card.description) {
-                document.getElementById('txt-bilan').innerText = card.description;
+                document.getElementById('txt-bilan').innerText = txBilan(card.description);
                 blocBilan.style.display = 'block';
             } else {
                 blocBilan.style.display = 'none';
             }
 
             // Protocole propre à la zone retenue (casque / gilet), sinon le texte commun
-            let effetAffiche = (card.effets && card.effets[z]) || card.effet || '';
+            let effetAffiche = txSoin((card.effets && card.effets[z]) || card.effet || '');
             if (effetAffiche.includes('[MEMBRE_ALEATOIRE]')) {
-                effetAffiche = effetAffiche.split('[MEMBRE_ALEATOIRE]').join((ctxExtreme && ctxExtreme.membre) || MEMBRES[Math.floor(Math.random()*4)]);
+                const membre = (ctxExtreme && ctxExtreme.membre) || MEMBRES[Math.floor(Math.random()*4)];
+                effetAffiche = effetAffiche.split('[MEMBRE_ALEATOIRE]').join(txMembre(membre));
             }
             document.getElementById('txt-soins').innerText = effetAffiche;
 
@@ -2024,7 +2135,7 @@
             isTimerActive = true;
             document.getElementById('danger-zone-container').style.display = "block";
             const btn = document.getElementById('btn-card');
-            btn.innerText = "Soins effectués (sauver)";
+            btn.innerText = tr('fiche.soigner');
             btn.style.backgroundColor = "#d43838";
             btn.style.borderColor = "#d43838";
             beepInterval = setInterval(playBeep, 1000);
@@ -2038,7 +2149,7 @@
         }
 
         function actionPrincipale() {
-            if(isTimerActive) { clearInterval(timerLogic); stopAllAudio(); isTimerActive = false; alert("PATIENT STABILISÉ !"); }
+            if(isTimerActive) { clearInterval(timerLogic); stopAllAudio(); isTimerActive = false; alert(tr('fiche.stabilise')); }
             retourAccueil();
         }
 
@@ -2109,8 +2220,8 @@
             document.getElementById('settings-pseudo').value = appState.playerName || '';
 
             const s = document.getElementById('select-mode');
-            s.innerHTML = `<option value="classique">CLASSIQUE</option><option value="avance">AVANCÉ</option><option value="extreme">EXTRÊME (silhouette)</option>`;
-            appState.customDecks.forEach(d => s.innerHTML += `<option value="${escapeHtml(d.id)}">${escapeHtml(d.name)} (Custom)</option>`);
+            s.innerHTML = `<option value="classique">${escapeHtml(tr('reg.modeClassique'))}</option><option value="avance">${escapeHtml(tr('reg.modeAvance'))}</option><option value="extreme">${escapeHtml(tr('reg.modeExtreme'))}</option>`;
+            appState.customDecks.forEach(d => s.innerHTML += `<option value="${escapeHtml(d.id)}">${escapeHtml(tr('reg.custom', { nom: d.name }))}</option>`);
             if (![...s.options].some(o => o.value === appState.mode)) appState.mode = 'classique';
             s.value = appState.mode;
             document.getElementById('chk-death').checked = appState.deathRisk;
@@ -2127,7 +2238,7 @@
                 lockMsg = document.createElement('div');
                 lockMsg.id = 'settings-lock-msg';
                 lockMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(212,56,56,0.12);color:var(--accent-red);padding:10px;border-radius:var(--radius-s);margin:0 0 12px;text-align:center;font-family:var(--font-display);font-weight:700;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.12em;border:1px solid var(--accent-red);';
-                lockMsg.innerHTML = ico('lock') + 'Paramètres verrouillés par l\'hôte';
+                lockMsg.innerHTML = ico('lock') + escapeHtml(tr('reg.verrouille'));
                 document.getElementById('screen-settings').querySelector('h2').insertAdjacentElement('afterend', lockMsg);
             }
             lockMsg.style.display = isLocked ? 'block' : 'none';
@@ -2153,10 +2264,10 @@
             allPossibleMaterials.forEach(m => {
                 if (!requiredMatos.has(m)) return;
                 if (appState.materiel[m] === undefined) appState.materiel[m] = true;
-                matosHtml += `<div class="check-item"><span style="${isLocked ? 'opacity:0.5' : ''}">${escapeHtml(m)}</span><input type="checkbox" onchange="setMaterielFlag(${jsAttr(m)}, this.checked)" ${appState.materiel[m]?'checked':''} ${isLocked ? 'disabled' : ''}></div>`;
+                matosHtml += `<div class="check-item"><span style="${isLocked ? 'opacity:0.5' : ''}">${escapeHtml(txMat(m))}</span><input type="checkbox" onchange="setMaterielFlag(${jsAttr(m)}, this.checked)" ${appState.materiel[m]?'checked':''} ${isLocked ? 'disabled' : ''}></div>`;
             });
             document.getElementById('liste-materiel').innerHTML = matosHtml ||
-                "<div style='color:#666; font-style:italic; padding:10px;'>Aucun matériel requis pour ce mode ou cette sélection.</div>";
+                `<div style='color:#666; font-style:italic; padding:10px;'>${escapeHtml(tr('reg.aucunMateriel'))}</div>`;
 
             document.getElementById('box-explosion-opt').style.display = modeAvecExplosion() ? 'block' : 'none';
             document.getElementById('chk-explosion').checked = appState.explosionEnabled;
@@ -2178,9 +2289,9 @@
                     <div class="check-item" style="opacity:${matosOk ? 1 : 0.5}; transition: opacity 0.3s;">
                         <!-- min-width:0 : sans lui, un titre long refuse de se comprimer
                              et pousse les boutons hors de l'écran sur un petit mobile -->
-                        <div style="flex:1 1 auto; min-width:0; overflow-wrap:anywhere;"><strong style="color:${getColorTexte(r.gravite)}">${escapeHtml(r.titre)}</strong></div>
+                        <div style="flex:1 1 auto; min-width:0; overflow-wrap:anywhere;"><strong style="color:${getColorTexte(r.gravite)}">${escapeHtml(txTitre(r.titre))}</strong></div>
                         <div style="display:flex; align-items:center; gap:5px; flex:none;">
-                            <button type="button" class="btn-mini" title="Voir la carte" onclick="voirCatalogueComplet(${jsAttr(rid)})">${ico('eye')}</button>
+                            <button type="button" class="btn-mini" title="${escapeHtml(tr('reg.voirCarte'))}" onclick="voirCatalogueComplet(${jsAttr(rid)})">${ico('eye')}</button>
                             <button type="button" class="btn-mini" style="${isLocked ? 'opacity:0.3; cursor:not-allowed;' : ''}" onclick="changeQty(${jsAttr(rid)},-1)" ${isLocked ? 'disabled' : ''}>-</button>
                             <span style="width:20px;text-align:center; ${isLocked ? 'opacity:0.5' : ''}">${q}</span>
                             <button type="button" class="btn-mini" style="${isLocked ? 'opacity:0.3; cursor:not-allowed;' : ''}" onclick="changeQty(${jsAttr(rid)},1)" ${isLocked ? 'disabled' : ''}>+</button>
@@ -2202,13 +2313,13 @@
             let rulesHtml = trierParGravite(baseRules).map(r => renderRow(r, totalBase)).join('');
             if (modeAvecExplosion() && appState.explosionEnabled) {
                 const totalExplosion = poolTotal(DB_REGLES.explosion);
-                rulesHtml += `<div class="separator">${ico('blast')}Pack explosion</div>`;
+                rulesHtml += `<div class="separator">${ico('blast')}${escapeHtml(tr('reg.packExplosion'))}</div>`;
                 rulesHtml += trierParGravite(DB_REGLES.explosion).map(r => renderRow(r, totalExplosion)).join('');
             }
             document.getElementById('liste-regles').innerHTML = rulesHtml;
 
             // Même libellé que sur l'accueil : le bandeau porte déjà « Paquet actif »
-            document.getElementById('info-deck').innerText = computeActiveCardCount() + " cartes";
+            document.getElementById('info-deck').innerText = tr('jeu.cartes', { n: computeActiveCardCount() });
         }
 
         function setMaterielFlag(name, v) {
@@ -2304,33 +2415,33 @@
         // Icones proposees pour un paquet perso. « img: » designe les deux
         // illustrations d'origine, conservees comme choix possibles.
         const ICONES_PAQUET = [
-            { id:'cards',     nom:'Cartes' },
-            { id:'img:picto-blesse.png',  nom:'Blessé' },
-            { id:'img:btn-explosion.png', nom:'Souffle' },
-            { id:'balle',     nom:'Balle' },
-            { id:'reticule',  nom:'Réticule' },
-            { id:'lame',      nom:'Lame' },
-            { id:'grenade',   nom:'Grenade' },
-            { id:'bombe',     nom:'Bombe' },
-            { id:'blast',     nom:'Explosion' },
-            { id:'feu',       nom:'Feu' },
-            { id:'eclair',    nom:'Décharge' },
-            { id:'froid',     nom:'Froid' },
-            { id:'biohazard', nom:'Biohazard' },
-            { id:'radiation', nom:'Radiation' },
-            { id:'poison',    nom:'Toxique' },
-            { id:'gaz',       nom:'Masque à gaz' },
-            { id:'zombie',    nom:'Zombie' },
-            { id:'alien',     nom:'Créature' },
-            { id:'robot',     nom:'Robot' },
-            { id:'skull',     nom:'Crâne' },
-            { id:'seringue',  nom:'Seringue' },
-            { id:'cachets',   nom:'Cachets' },
-            { id:'perfusion', nom:'Perfusion' },
-            { id:'pouls',     nom:'Pouls' },
-            { id:'os',        nom:'Fracture' },
-            { id:'kit',       nom:'Trousse' },
-            { id:'shield',    nom:'Protection' }
+            { id:'cards',     cle:'cartes' },
+            { id:'img:picto-blesse.png',  cle:'blesse' },
+            { id:'img:btn-explosion.png', cle:'souffle' },
+            { id:'balle',     cle:'balle' },
+            { id:'reticule',  cle:'reticule' },
+            { id:'lame',      cle:'lame' },
+            { id:'grenade',   cle:'grenade' },
+            { id:'bombe',     cle:'bombe' },
+            { id:'blast',     cle:'explosion' },
+            { id:'feu',       cle:'feu' },
+            { id:'eclair',    cle:'decharge' },
+            { id:'froid',     cle:'froid' },
+            { id:'biohazard', cle:'biohazard' },
+            { id:'radiation', cle:'radiation' },
+            { id:'poison',    cle:'toxique' },
+            { id:'gaz',       cle:'masqueGaz' },
+            { id:'zombie',    cle:'zombie' },
+            { id:'alien',     cle:'creature' },
+            { id:'robot',     cle:'robot' },
+            { id:'skull',     cle:'crane' },
+            { id:'seringue',  cle:'seringue' },
+            { id:'cachets',   cle:'cachets' },
+            { id:'perfusion', cle:'perfusion' },
+            { id:'pouls',     cle:'pouls' },
+            { id:'os',        cle:'fracture' },
+            { id:'kit',       cle:'trousse' },
+            { id:'shield',    cle:'protection' }
         ];
         // Rend l'icone d'un paquet, en retombant sur « cards » si la valeur est
         // inconnue : une valeur libre ne doit jamais produire de balise cassee.
@@ -2345,7 +2456,7 @@
             const l = document.getElementById('deck-icones');
             if (!l) return;
             l.innerHTML = ICONES_PAQUET.map(i =>
-                `<button type="button" class="icon-choix${i.id === tempIcone ? ' on' : ''}" title="${escapeHtml(i.nom)}" onclick="choisirIcone(${jsAttr(i.id)})">${iconePaquet(i.id, 'ico')}</button>`
+                `<button type="button" class="icon-choix${i.id === tempIcone ? ' on' : ''}" title="${escapeHtml(tr('icone.' + i.cle))}" onclick="choisirIcone(${jsAttr(i.id)})">${iconePaquet(i.id, 'ico')}</button>`
             ).join('');
         }
         function choisirIcone(id) { tempIcone = id; renderChoixIcone(); }
@@ -2361,13 +2472,13 @@
         // configuration de l'hôte : on prévient plutôt que d'effacer en silence.
         function bloqueEditionEnPartie() {
             if (!joueurSimpleEnPartie()) return false;
-            alert("Impossible pendant une partie : la configuration vient de l'organisateur et votre paquet serait effacé.\n\nQuittez la partie pour retrouver et modifier vos paquets personnels.");
+            alert(tr('bld.bloqueEnPartie'));
             return true;
         }
         function creerNouveauPaquet() {
             if (bloqueEditionEnPartie()) return;
             const id = "d_"+Date.now();
-            appState.customDecks.push({id:id, name:"Nouveau paquet", showOnHome:true, cards:[], materials:[], icone:'cards'});
+            appState.customDecks.push({id:id, name:tr('bld.nouveauPaquet'), showOnHome:true, cards:[], materials:[], icone:'cards'});
             editDeck(id);
         }
 
@@ -2386,14 +2497,13 @@
                      <div style="display:flex; gap:9px; align-items:flex-start;">
                        ${ico('lock')}
                        <div style="font-size:0.82rem; line-height:1.5; color:var(--bse-muted);">
-                         <b style="color:var(--bse-gold-light);">Partie en cours.</b> Vous jouez les paquets attribués par l'organisateur.
-                         Vos paquets personnels sont mis de côté et vous seront rendus dès que vous quitterez la partie.
+                         <b style="color:var(--bse-gold-light);">${escapeHtml(tr('bld.enPartieTitre'))}</b> ${escapeHtml(tr('bld.enPartieTexte'))}
                        </div>
                      </div>
                    </div>` : '';
             if (!decks.length) {
-                l.innerHTML = avis + '<div class="builder-empty">Aucun paquet personnalisé pour le moment.'
-                    + (enPartie ? '' : '<br>Appuyez sur « + CRÉER UN PAQUET » pour commencer.') + '</div>';
+                l.innerHTML = avis + `<div class="builder-empty">${escapeHtml(tr('bld.aucunPaquet'))}`
+                    + (enPartie ? '' : '<br>' + escapeHtml(tr('bld.aucunPaquetAide'))) + '</div>';
                 return;
             }
             l.innerHTML = avis + decks.map(d => {
@@ -2401,18 +2511,18 @@
                 const counts = {};
                 cards.forEach(c => { const g = c.gravite || 'Spécial'; counts[g] = (counts[g] || 0) + 1; });
                 const pills = Object.entries(counts).map(([g, n]) =>
-                    `<span class="grav-pill" style="background:${getColor(g)}">${n} ${escapeHtml(g)}</span>`).join('');
-                const homeBadge = d.showOnHome ? '<span class="deck-badge home">Sur l\'accueil</span>' : '<span class="deck-badge">Masqué</span>';
-                const extremeBadge = d.extremeMode ? '<span class="deck-badge" style="border:1px solid var(--accent-red); background:rgba(211,47,47,0.2); color:#ef9a9a;">Extrême</span>' : '';
+                    `<span class="grav-pill" style="background:${getColor(g)}">${n} ${escapeHtml(txGrav(g))}</span>`).join('');
+                const homeBadge = d.showOnHome ? `<span class="deck-badge home">${escapeHtml(tr('bld.surAccueil'))}</span>` : `<span class="deck-badge">${escapeHtml(tr('bld.masque'))}</span>`;
+                const extremeBadge = d.extremeMode ? `<span class="deck-badge" style="border:1px solid var(--accent-red); background:rgba(211,47,47,0.2); color:#ef9a9a;">${escapeHtml(tr('mode.extreme'))}</span>` : '';
                 return `<div class="deck-card" onclick="editDeck(${jsAttr(d.id)})">
                     <div class="deck-card-head">
                         <span class="deck-card-title" style="display:flex;align-items:center;gap:9px;min-width:0;"><span style="color:var(--bse-gold);line-height:0;">${iconePaquet(d.icone, 'ico')}</span>${escapeHtml(d.name)}</span>
                         <span style="display:flex; gap:6px;">
-                            <button type="button" class="header-btn" title="Partager" onclick="event.stopPropagation(); partagerPaquet(${jsAttr(d.id)})">${ico('share')}</button>
-                            <button type="button" class="header-btn" title="Modifier" onclick="event.stopPropagation(); editDeck(${jsAttr(d.id)})">${ico('edit')}</button>
+                            <button type="button" class="header-btn" title="${escapeHtml(tr('btn.partager'))}" onclick="event.stopPropagation(); partagerPaquet(${jsAttr(d.id)})">${ico('share')}</button>
+                            <button type="button" class="header-btn" title="${escapeHtml(tr('btn.modifier'))}" onclick="event.stopPropagation(); editDeck(${jsAttr(d.id)})">${ico('edit')}</button>
                         </span>
                     </div>
-                    <div class="deck-card-meta"><span>${cards.length} carte${cards.length > 1 ? 's' : ''}</span>${homeBadge}${extremeBadge}</div>
+                    <div class="deck-card-meta"><span>${escapeHtml(tr('jeu.cartes', { n: cards.length }))}</span>${homeBadge}${extremeBadge}</div>
                     ${pills ? `<div class="grav-pills">${pills}</div>` : ''}
                 </div>`;
             }).join('');
@@ -2422,16 +2532,16 @@
             const l = document.getElementById('host-decks-list');
             if(!l) return;
             const rows = [
-                { id: 'classique', label: 'Mode : Classique' },
-                { id: 'avance', label: 'Mode : Avancé' },
-                { id: 'extreme', label: 'Mode : Extrême (silhouette)' },
-                ...appState.customDecks.map(d => ({ id: d.id, label: 'Perso : ' + d.name, perso: true }))
+                { id: 'classique', label: tr('qg.ligneMode', { nom: tr('mode.classique') }) },
+                { id: 'avance', label: tr('qg.ligneMode', { nom: tr('mode.avance') }) },
+                { id: 'extreme', label: tr('qg.ligneMode', { nom: tr('reg.modeExtreme') }) },
+                ...appState.customDecks.map(d => ({ id: d.id, label: tr('qg.lignePerso', { nom: d.name }), perso: true }))
             ];
             l.innerHTML = rows.map(r => {
                 const actif = appState.mode === r.id;
                 return `<div class="player-row" style="border-left:4px solid ${r.perso ? 'var(--accent-orange)' : 'var(--accent-blue)'}; flex-direction:row; justify-content:space-between; align-items:center;">
-                    <span><strong>${escapeHtml(r.label)}</strong>${actif ? ' <span class="deck-badge home">JOUÉ</span>' : ''}</span>
-                    <button type="button" class="btn-dash" style="background:var(--accent-blue);" onclick="hostEditSettings(${jsAttr(r.id)})">Réglages</button>
+                    <span><strong>${escapeHtml(r.label)}</strong>${actif ? ` <span class="deck-badge home">${escapeHtml(tr('qg.joue'))}</span>` : ''}</span>
+                    <button type="button" class="btn-dash" style="background:var(--accent-blue);" onclick="hostEditSettings(${jsAttr(r.id)})">${escapeHtml(tr('hdr.reglages'))}</button>
                 </div>`;
             }).join('');
         }
@@ -2465,19 +2575,19 @@
             const cards = d.cards || [];
             if (count) count.innerText = cards.length;
             if (!cards.length) {
-                l.innerHTML = '<div class="builder-empty">Aucune carte dans ce paquet.<br>Appuyez sur « + AJOUTER UNE CARTE ».</div>';
+                l.innerHTML = `<div class="builder-empty">${escapeHtml(tr('bld.aucuneCarte'))}<br>${escapeHtml(tr('bld.aucuneCarteAide'))}</div>`;
                 return;
             }
             l.innerHTML = cards.map((c, i) => {
                 const mats = cardMatos(c);
-                const sub = [c.zone, effetPourAffichage(c.effet)].filter(Boolean).join(' · ');
+                const sub = [txZone(c.zone), effetPourAffichage(c.effet)].filter(Boolean).join(' · ');
                 return `<div class="card-row" style="border-left-color:${getColorTexte(c.gravite)}">
                     <div class="card-row-main" onclick="editCard(${i})">
-                        <div class="card-row-title" style="color:${getColorTexte(c.gravite)}">${escapeHtml(c.titre || 'Sans titre')}</div>
-                        <div class="card-row-sub">${escapeHtml(sub || '—')}${mats.length ? ' · ' + mats.length + ' matériel' + (mats.length > 1 ? 's' : '') : ''}</div>
+                        <div class="card-row-title" style="color:${getColorTexte(c.gravite)}">${escapeHtml(txTitre(c.titre) || tr('bld.sansTitre'))}</div>
+                        <div class="card-row-sub">${escapeHtml(sub || '—')}${mats.length ? ' · ' + escapeHtml(tr('bld.nMateriel', { n: mats.length })) : ''}</div>
                     </div>
-                    <button type="button" class="btn-mini" title="Modifier" onclick="editCard(${i})">${ico('edit')}</button>
-                    <button type="button" class="btn-mini" title="Supprimer" style="color:var(--accent-red)" onclick="supprimerCarte(${i})">${ico('trash')}</button>
+                    <button type="button" class="btn-mini" title="${escapeHtml(tr('btn.modifier'))}" onclick="editCard(${i})">${ico('edit')}</button>
+                    <button type="button" class="btn-mini" title="${escapeHtml(tr('btn.supprimer'))}" style="color:var(--accent-red)" onclick="supprimerCarte(${i})">${ico('trash')}</button>
                 </div>`;
             }).join('');
         }
@@ -2485,7 +2595,7 @@
         function supprimerCarte(i) {
             const d = appState.customDecks.find(x => x.id === currentDeckId);
             if (!d || !d.cards[i]) return;
-            if (!confirm(`Supprimer la carte « ${d.cards[i].titre || 'Sans titre'} » ?`)) return;
+            if (!confirm(tr('bld.confirmSupprCarte', { nom: txTitre(d.cards[i].titre) || tr('bld.sansTitre') }))) return;
             d.cards.splice(i, 1);
             renderCardsList(d);
         }
@@ -2508,49 +2618,49 @@
             const d = appState.customDecks.find(x => x.id === id);
             if (!d) return;
             deckShareMode = 'export';
-            document.getElementById('deck-share-title').innerText = 'Partager « ' + d.name + ' »';
-            document.getElementById('deck-share-hint').innerText = 'Envoyez ce code à un autre joueur (SMS, WhatsApp, mail...). Il l\'importera via « IMPORTER UN PAQUET » dans Mes paquets.';
+            document.getElementById('deck-share-title').innerText = tr('share.exportTitre', { nom: d.name });
+            document.getElementById('deck-share-hint').innerText = tr('share.exportAide');
             const ta = document.getElementById('deck-share-code');
             ta.value = encoderPaquet(d);
             ta.readOnly = true;
-            document.getElementById('deck-share-action').innerText = 'COPIER LE CODE';
+            document.getElementById('deck-share-action').innerText = tr('share.copierCode');
             document.getElementById('deckShareModal').style.display = 'block';
         }
         function importerPaquetUI() {
             if (bloqueEditionEnPartie()) return;
             deckShareMode = 'import';
-            document.getElementById('deck-share-title').innerText = 'Importer un paquet';
-            document.getElementById('deck-share-hint').innerText = 'Collez ici le code de partage reçu (il commence par TMDECK1).';
+            document.getElementById('deck-share-title').innerText = tr('bld.importer');
+            document.getElementById('deck-share-hint').innerText = tr('share.importAide');
             const ta = document.getElementById('deck-share-code');
             ta.value = '';
             ta.readOnly = false;
-            document.getElementById('deck-share-action').innerText = 'IMPORTER';
+            document.getElementById('deck-share-action').innerText = tr('share.importer');
             document.getElementById('deckShareModal').style.display = 'block';
         }
         function deckShareAction() {
             const ta = document.getElementById('deck-share-code');
             if (deckShareMode === 'export') {
-                const fallbackCopy = () => { ta.select(); document.execCommand('copy'); alert('Code copié !'); };
+                const fallbackCopy = () => { ta.select(); document.execCommand('copy'); alert(tr('share.codeCopie')); };
                 if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(ta.value).then(() => alert('Code copié !')).catch(fallbackCopy);
+                    navigator.clipboard.writeText(ta.value).then(() => alert(tr('share.codeCopie'))).catch(fallbackCopy);
                 } else fallbackCopy();
                 return;
             }
             const p = decoderPaquet(ta.value);
-            if (!p) { alert('Code invalide ou incomplet. Vérifiez qu\'il a été copié en entier.'); return; }
-            const d = { id: 'd_' + Date.now(), name: p.name || 'Paquet importé', showOnHome: true, cards: p.cards, materials: Array.isArray(p.materials) ? p.materials : [], extremeMode: !!p.extremeMode, icone: p.icone || 'cards' };
+            if (!p) { alert(tr('share.codeInvalide')); return; }
+            const d = { id: 'd_' + Date.now(), name: p.name || tr('share.paquetImporte'), showOnHome: true, cards: p.cards, materials: Array.isArray(p.materials) ? p.materials : [], extremeMode: !!p.extremeMode, icone: p.icone || 'cards' };
             appState.customDecks.push(d);
             initDefaults(); // quantités par défaut + disponibilité du matériel importé
             saveState();
             document.getElementById('deckShareModal').style.display = 'none';
             ouvrirBuilder();
-            alert('Paquet « ' + d.name + ' » importé (' + d.cards.length + ' cartes) !');
+            alert(tr('share.importeOk', { nom: d.name, n: d.cards.length }));
         }
 
         function sauvegarderPaquetCourant() {
             const d = appState.customDecks.find(x => x.id === currentDeckId);
             if (!d) { retourApresEditionDeck(); return; }
-            d.name = document.getElementById('deck-name').value.trim() || 'Paquet sans nom';
+            d.name = document.getElementById('deck-name').value.trim() || tr('bld.sansNom');
             d.showOnHome = document.getElementById('deck-show-home').checked;
             d.extremeMode = document.getElementById('deck-extreme').checked;
             d.icone = tempIcone;
@@ -2573,7 +2683,7 @@
 
         function supprimerPaquetCourant() {
             const d = appState.customDecks.find(x => x.id === currentDeckId);
-            if (d && !confirm(`Supprimer le paquet « ${d.name} » et toutes ses cartes ?`)) return;
+            if (d && !confirm(tr('bld.confirmSupprPaquet', { nom: d.name }))) return;
             appState.customDecks = appState.customDecks.filter(x => x.id !== currentDeckId);
             saveState();
             if (appState.isOrga) {
@@ -2628,7 +2738,7 @@
             const chip = (m, custom) => {
                 const on = tempMatos.includes(m);
                 const x = custom ? `<span class="chip-x" onclick="event.stopPropagation(); retirerMatosDuPaquet(${jsAttr(m)})">✕</span>` : '';
-                return `<span class="chip${on ? ' on' : ''}" onclick="toggleMatos(${jsAttr(m)}); renderMatosCheck();">${escapeHtml(m)}${x}</span>`;
+                return `<span class="chip${on ? ' on' : ''}" onclick="toggleMatos(${jsAttr(m)}); renderMatosCheck();">${escapeHtml(txMat(m))}${x}</span>`;
             };
             l.innerHTML = base.map(m => chip(m, false)).join('') + extras.map(m => chip(m, true)).join('');
         }
@@ -2651,7 +2761,7 @@
         function retirerMatosDuPaquet(m) {
             const d = getDeckCourant();
             if (!d) return;
-            if (!confirm(`Retirer « ${m} » de ce paquet ? Il sera aussi retiré des cartes qui l'utilisent.`)) return;
+            if (!confirm(tr('ce.confirmRetirerMatos', { nom: txMat(m) }))) return;
             d.materials = (d.materials || []).filter(x => x !== m);
             (d.cards || []).forEach(c => { if (Array.isArray(c.matos)) c.matos = c.matos.filter(x => x !== m); });
             tempMatos = tempMatos.filter(x => x !== m);
@@ -2759,7 +2869,7 @@
         // Connexion anonyme : donne à chaque appareil une identité stable que le
         // serveur peut vérifier. C'est ce qui rend les règles de sécurité utiles.
         async function fbConnexion() {
-            if (!fbDisponible()) throw new Error("Le multijoueur Firebase n'est pas disponible (bibliothèque absente).");
+            if (!fbDisponible()) throw new Error(tr('msg.firebaseIndisponible'));
             if (!fbPret) { firebase.initializeApp(FB_CONFIG); fbPret = true; }
             if (fbUid) return fbUid;
             const cred = await firebase.auth().signInAnonymously();
@@ -2797,7 +2907,7 @@
         function fbErreurEcriture(e) {
             console.warn('Écriture refusée par la base', e);
             if (e && String(e.message || '').includes('permission')) {
-                alert("Modification refusée : vous n'avez pas les droits d'organisateur sur cette partie.");
+                alert(tr('msg.droitsOrga'));
             }
         }
 
@@ -2830,7 +2940,7 @@
             playersData = {};
             Object.keys(val).forEach(uid => {
                 const j = val[uid] || {};
-                playersData[uid] = { id: uid, name: j.nom || 'Joueur', teamId: j.teamId || 'blue',
+                playersData[uid] = { id: uid, name: j.nom || tr('multi.joueur'), teamId: j.teamId || 'blue',
                     isCoHost: !!j.isCoHost, offline: j.enLigne === false };
             });
             const moi = playersData[fbUid];
@@ -2840,9 +2950,7 @@
                 if (!!moi.isCoHost !== !!appState.isCoHost) {
                     appState.isCoHost = !!moi.isCoHost;
                     updateUI_Game();
-                    alert(appState.isCoHost
-                        ? 'Vous êtes co-organisateur : le QG est accessible via le bouton multijoueur, en haut à droite.'
-                        : 'Grade admin retiré.');
+                    alert(tr(appState.isCoHost ? 'msg.devenuCoOrga' : 'msg.gradeRetire'));
                 }
             }
             updateDashboard();
@@ -2850,7 +2958,7 @@
         }
 
         function fbEjecte() {
-            alert('Vous avez été retiré de la partie.');
+            alert(tr('msg.retireDeLaPartie'));
             fbQuitterPartie(true);
         }
 
@@ -2858,7 +2966,7 @@
             const val = snap.val() || {};
             hostLogs = Object.keys(val).map(k => {
                 const e = val[k]; const d = new Date(e.ts || Date.now());
-                return { time: d.toLocaleTimeString('fr-FR'), date: d.toLocaleDateString('fr-FR'),
+                return { time: d.toLocaleTimeString(I18N.langue()), date: d.toLocaleDateString(I18N.langue()),
                          text: e.texte || '', color: e.couleur || null, ts: e.ts || 0 };
             }).sort((a, b) => b.ts - a.ts).slice(0, 400);
             renderHostLogs();
@@ -2878,7 +2986,7 @@
             abo('config', s => fbAppliquerConfig(s.val()));
             abo('joueurs', fbAppliquerJoueurs);
             abo('logs', fbAppliquerLogs);
-            abo('meta/close', s => { if (s.val() === true) { alert("L'organisateur a clôturé la partie."); fbQuitterPartie(true); } });
+            abo('meta/close', s => { if (s.val() === true) { alert(tr('msg.orgaACloture')); fbQuitterPartie(true); } });
         }
         function fbDetacherEcoutes() {
             fbEcoutes.forEach(([r, cb]) => { try { r.off('value', cb); } catch (e) {} });
@@ -2901,7 +3009,7 @@
             const ref = firebase.database().ref('parties/' + fbPartieId);
             const dejaLa = (await ref.child('meta').get()).val();
             if (dejaLa && dejaLa.hoteUid && dejaLa.hoteUid !== fbUid) {
-                throw new Error("Une partie porte déjà ce nom et appartient à quelqu'un d'autre. Choisissez un autre nom.");
+                throw new Error(tr('msg.nomPartiePris'));
             }
             appState.isOrga = true; appState.isCoHost = false; appState.playerTeamId = 'orga';
             liveSession.gameName = nomPartie;
@@ -2909,14 +3017,14 @@
             await ref.update({
                 meta: { nom: String(nomPartie).slice(0, 60), hoteUid: fbUid, creeLe: Date.now(), close: false },
                 config: fbConstruireConfig(),
-                ['joueurs/' + fbUid]: { nom: String(pseudo || 'Orga').slice(0, 32), teamId: 'orga', enLigne: true, isCoHost: false }
+                ['joueurs/' + fbUid]: { nom: String(pseudo || tr('multi.orga')).slice(0, 32), teamId: 'orga', enLigne: true, isCoHost: false }
             });
             transport = 'firebase'; fbPartieRef = ref;
             oublierSessionsPeer();
             setFbSession(fbPartieId);
             fbInstallerPresence();
             fbBrancherEcoutes();
-            fbJournal('Partie ouverte : ' + fbPartieId);
+            fbJournal(tr('log.partieOuverte', { code: fbPartieId }));
         }
 
         async function fbRejoindrePartie(code, pseudo, teamId) {
@@ -2924,14 +3032,14 @@
             fbPartieId = normaliserCodePartie(code);
             const ref = firebase.database().ref('parties/' + fbPartieId);
             const meta = (await ref.child('meta').get()).val();
-            if (!meta) throw new Error("Partie introuvable. Vérifiez le nom auprès de l'organisateur.");
-            if (meta.close === true) throw new Error('Cette partie est clôturée.');
+            if (!meta) throw new Error(tr('msg.partieIntrouvable'));
+            if (meta.close === true) throw new Error(tr('msg.partieCloturee'));
             appState.isOrga = false;
             appState.playerTeamId = teamId || appState.playerTeamId;
             liveSession.gameName = meta.nom || fbPartieId;
             clientSessionMeta.gameName = meta.nom || fbPartieId;
             await ref.child('joueurs/' + fbUid).update({
-                nom: String(pseudo || appState.playerName || 'Joueur').slice(0, 32),
+                nom: String(pseudo || appState.playerName || tr('multi.joueur')).slice(0, 32),
                 teamId: appState.playerTeamId, enLigne: true
             });
             transport = 'firebase'; fbPartieRef = ref;
@@ -2939,7 +3047,7 @@
             setFbSession(fbPartieId);
             fbInstallerPresence();
             fbBrancherEcoutes();
-            fbJournal(appState.playerName + ' a rejoint', couleurEquipe(appState.playerTeamId));
+            fbJournal(tr('log.aRejoint', { nom: appState.playerName }), couleurEquipe(appState.playerTeamId));
         }
 
         function couleurEquipe(tid) {
@@ -3020,16 +3128,16 @@
             }).join('');
         }
         function construireTexteLogs() {
-            const entete = 'BSE MEDICAL SYSTEM — journal de partie' +
+            const entete = 'BSE MEDICAL SYSTEM — ' + tr('qg.logEntete') +
                 (liveSession.gameName ? ' « ' + liveSession.gameName + ' »' : '') +
-                '\r\nExporté le ' + new Date().toLocaleString('fr-FR') +
+                '\r\n' + tr('qg.logExporte') + ' ' + new Date().toLocaleString(I18N.langue()) +
                 '\r\n' + '-'.repeat(60) + '\r\n';
             const lignes = hostLogs.slice().reverse().map(e =>
                 typeof e === 'string' ? e : `[${e.date ? e.date + ' ' : ''}${e.time}] ${e.text}`);
             return entete + lignes.join('\r\n');
         }
         function telechargerLogs() {
-            if (!hostLogs.length) { alert('Aucun log à télécharger.'); return; }
+            if (!hostLogs.length) { alert(tr('qg.aucunLog')); return; }
             const blob = new Blob(['﻿' + construireTexteLogs()], { type: 'text/plain;charset=utf-8' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
@@ -3052,18 +3160,18 @@
             // l'Éditeur (mode Avancé + cartes explosion), pas par attribution.
             const sel = document.getElementById('host-pack-source');
             if (!sel) return;
-            sel.innerHTML = '<option value="classique">Classique</option>' +
-                '<option value="avance">Avancé</option>' +
-                '<option value="extreme">Extrême (silhouette)</option>' +
-                '<option value="explosion">Explosion</option>' +
+            sel.innerHTML = `<option value="classique">${escapeHtml(tr('mode.classique'))}</option>` +
+                `<option value="avance">${escapeHtml(tr('mode.avance'))}</option>` +
+                `<option value="extreme">${escapeHtml(tr('reg.modeExtreme'))}</option>` +
+                `<option value="explosion">${escapeHtml(tr('mode.explosion'))}</option>` +
                 appState.customDecks.map(d => `<option value="${escapeHtml(d.id)}">${escapeHtml(d.name)}</option>`).join('');
         }
         function libellePaquetSource(src) {
-            if (src === 'classique') return 'Classique';
-            if (src === 'avance') return 'Avancé';
-            if (src === 'extreme') return 'Extrême';
-            if (src === 'explosion') return 'Explosion';
-            if (src === 'bille') return 'Balistique';
+            if (src === 'classique') return tr('mode.classique');
+            if (src === 'avance') return tr('mode.avance');
+            if (src === 'extreme') return tr('mode.extreme');
+            if (src === 'explosion') return tr('mode.explosion');
+            if (src === 'bille') return tr('paquet.balistique');
             const d = appState.customDecks.find(x => x.id === src);
             return d ? d.name : src;
         }
@@ -3077,10 +3185,10 @@
             const el = document.getElementById('host-teams-editor');
             if (!el) return;
             const teams = appState.customTeams || [];
-            el.innerHTML = teams.map(t => `
-                <div class="player-row" style="border-left:4px solid ${t.color}">
-                    <strong>${escapeHtml(t.name)}</strong>
-                    ${teams.length > 2 ? `<button type="button" class="btn-dash" style="background:#555;margin-left:8px;" onclick="hostSupprimerEquipe(${jsAttr(t.id)})">Supprimer</button>` : '<span style="font-size:0.75em;color:#666;">(min. 2 équipes)</span>'}
+            el.innerHTML = teams.map(eq => `
+                <div class="player-row" style="border-left:4px solid ${eq.color}">
+                    <strong>${escapeHtml(eq.name)}</strong>
+                    ${teams.length > 2 ? `<button type="button" class="btn-dash" style="background:#555;margin-left:8px;" onclick="hostSupprimerEquipe(${jsAttr(eq.id)})">${escapeHtml(tr('btn.supprimer'))}</button>` : `<span style="font-size:0.75em;color:#666;">${escapeHtml(tr('qg.minEquipes'))}</span>`}
                 </div>`).join('');
         }
         function hostRefreshHostPanels() {
@@ -3095,7 +3203,7 @@
         function hostAjouterEquipe() {
             const nm = document.getElementById('host-new-team-name').value.trim();
             let col = (document.getElementById('host-new-team-color').value || '').trim();
-            if (!nm) { alert('Indiquez un nom d\'équipe.'); return; }
+            if (!nm) { alert(tr('qg.indiquezNomEquipe')); return; }
             if (!col) col = '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
             if (!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(col)) col = '#888888';
             document.getElementById('host-new-team-name').value = '';
@@ -3105,14 +3213,14 @@
         }
         function ajouterEquipeDirect(nm, col) {
             appState.customTeams.push({ id: 't_' + Date.now(), name: nm, color: col });
-            hostPushLog(`Équipe ajoutée : ${nm}`);
+            hostPushLog(tr('qg.logEquipeAjoutee', { nom: nm }));
             broadcastFullState();
             hostRefreshHostPanels();
             updateDashboard();
         }
         function hostSupprimerEquipe(tid) {
             if (!appState.isOrga && !enPartieFirebase()) { envoyerAdminCmd({ action: 'delTeam', teamId: tid }); return; }
-            if (!appState.customTeams || appState.customTeams.length <= 2) { alert('Il faut au moins deux équipes.'); return; }
+            if (!appState.customTeams || appState.customTeams.length <= 2) { alert(tr('qg.deuxEquipesMini')); return; }
             const keep = appState.customTeams.filter(t => t.id !== tid);
             const fb = keep[0].id;
             // Réassigne ET notifie les joueurs concernés (sinon ils gardent une équipe qui n'existe plus)
@@ -3126,7 +3234,7 @@
             });
             appState.customTeams = keep;
             broadcastFullState();
-            hostPushLog('Équipe supprimée, joueurs réassignés.');
+            hostPushLog(tr('qg.logEquipeSupprimee'));
             hostRefreshHostPanels();
             updateDashboard();
         }
@@ -3135,8 +3243,8 @@
             const scope = document.getElementById('host-pack-scope').value;
             const teamId = scope === 'team' ? document.getElementById('host-pack-team').value : null;
             const peerId = scope === 'player' ? document.getElementById('host-pack-player').value : null;
-            if (scope === 'team' && !teamId) { alert('Choisissez une équipe.'); return; }
-            if (scope === 'player' && !peerId) { alert('Choisissez un joueur (connecté).'); return; }
+            if (scope === 'team' && !teamId) { alert(tr('qg.choisirEquipe')); return; }
+            if (scope === 'player' && !peerId) { alert(tr('qg.choisirJoueur')); return; }
             if (!appState.isOrga && !enPartieFirebase()) { envoyerAdminCmd({ action: 'addPack', src, scope, teamId, peerId }); return; }
             const refus = ajouterPaquetSessionDirect(src, scope, teamId, peerId);
             if (refus) alert(refus);
@@ -3150,14 +3258,14 @@
 
             const memeCible = dejaLa.some(p => p.src === src && p.scope === scope &&
                 (p.teamId || null) === (teamId || null) && (p.peerId || null) === (peerId || null));
-            if (memeCible) return `« ${label} » est déjà attribué à cette cible.`;
+            if (memeCible) return tr('qg.dejaAttribueCible', { nom: label });
 
             if (scope !== 'all' && dejaLa.some(p => p.src === src && p.scope === 'all')) {
-                return `« ${label} » est déjà attribué à tout le monde : inutile de le redonner à une équipe ou à un joueur.`;
+                return tr('qg.dejaAttribueTous', { nom: label });
             }
 
             const cards = cloneCards(getRulesArrayForDrawSource(src));
-            if (!cards.length) return 'Ce paquet est vide pour la configuration actuelle.';
+            if (!cards.length) return tr('qg.paquetVide');
 
             // « Tout le monde » remplace les attributions plus étroites du même
             // paquet, pour que la liste reflète exactement ce que voient les joueurs.
@@ -3165,7 +3273,7 @@
                 const retires = dejaLa.filter(p => p.src === src).length;
                 if (retires) {
                     liveSession.sessionPacks = dejaLa.filter(p => p.src !== src);
-                    hostPushLog(`${label} : ${retires} attribution(s) ciblée(s) remplacée(s) par « tout le monde »`);
+                    hostPushLog(tr('qg.logRemplaceParTous', { nom: label, n: retires }));
                 }
             }
 
@@ -3175,16 +3283,16 @@
             const extremeMode = src === 'extreme' || !!(deckSrc && deckSrc.extremeMode);
             const pack = { id: 'sp_' + Date.now(), src, scope, cards, teamId: teamId || null, peerId: peerId || null, label, extremeMode, icone: (deckSrc && deckSrc.icone) || null };
             liveSession.sessionPacks.push(pack);
-            hostPushLog(`Paquet distribué : ${label} → ${libelleDestination(pack)}`);
+            hostPushLog(tr('qg.logPaquetDistribue', { nom: label, cible: libelleDestination(pack) }));
             broadcastFullState();
             renderHostSessionPacksList();
             return null;
         }
         // Description lisible de la cible d'un paquet
         function libelleDestination(p) {
-            if (p.scope === 'team') return 'Équipe ' + ((appState.customTeams.find(t => t.id === p.teamId) || {}).name || '?');
-            if (p.scope === 'player') return 'Joueur ' + ((playersData[p.peerId] || {}).name || p.peerId || '?');
-            return 'Tout le monde';
+            if (p.scope === 'team') return tr('qg.cibleEquipe', { nom: (appState.customTeams.find(x => x.id === p.teamId) || {}).name || '?' });
+            if (p.scope === 'player') return tr('qg.cibleJoueur', { nom: (playersData[p.peerId] || {}).name || p.peerId || '?' });
+            return tr('qg.toutLeMonde');
         }
         function hostRetirerPaquetSession(pid) {
             if (!appState.isOrga && !enPartieFirebase()) { envoyerAdminCmd({ action: 'delPack', packId: pid }); return; }
@@ -3197,7 +3305,7 @@
             if (!el) return;
             const packs = liveSession.sessionPacks || [];
             if (!packs.length) {
-                el.innerHTML = '<div class="builder-empty">Aucun paquet distribué.<br>Les joueurs n\'ont que le tirage Balistique.</div>';
+                el.innerHTML = `<div class="builder-empty">${escapeHtml(tr('qg.aucunPaquetDistribue'))}<br>${escapeHtml(tr('qg.aucunPaquetDistribueAide'))}</div>`;
                 return;
             }
             // Une ligne = un paquet et sa cible. L'identifiant technique de la
@@ -3211,10 +3319,10 @@
                         <div class="deck-card-title">${escapeHtml(p.label)}</div>
                         <div class="deck-card-meta">
                             <span class="deck-badge" style="border-color:${couleur}; color:${couleur};">${escapeHtml(libelleDestination(p))}</span>
-                            <span>${nbCartes} carte${nbCartes > 1 ? 's' : ''}</span>
+                            <span>${escapeHtml(tr('jeu.cartes', { n: nbCartes }))}</span>
                         </div>
                     </div>
-                    <button type="button" class="btn-mini" title="Retirer ce paquet" style="color:var(--accent-red)" onclick="hostRetirerPaquetSession(${jsAttr(p.id)})">${ico('trash')}</button>
+                    <button type="button" class="btn-mini" title="${escapeHtml(tr('qg.retirerPaquet'))}" style="color:var(--accent-red)" onclick="hostRetirerPaquetSession(${jsAttr(p.id)})">${ico('trash')}</button>
                 </div>`;
             }).join('');
             el.innerHTML = `<div class="separator" style="margin-top:4px;">${packs.length} paquet${packs.length > 1 ? 's' : ''} distribué${packs.length > 1 ? 's' : ''}</div>` + lignes;
@@ -3241,13 +3349,13 @@
         function copierLienInvitation() {
             const el = document.getElementById('host-join-link');
             if (!el || !el.value) return;
-            copierTexte(el.value, "Lien d'invitation copié.");
+            copierTexte(el.value, tr('msg.lienCopie'));
         }
         // Le code seul, pour le dicter ou l'envoyer sans le lien complet
         function copierCodePartie() {
             const code = (document.getElementById('host-connection-id').innerText || '').trim();
-            if (!code || code === '...') { alert("La partie n'est pas encore ouverte."); return; }
-            copierTexte(code, "Code de la partie copié :" + String.fromCharCode(10, 10) + code);
+            if (!code || code === '...') { alert(tr('msg.partiePasOuverte')); return; }
+            copierTexte(code, tr('msg.codeCopie') + String.fromCharCode(10, 10) + code);
         }
 
         // Section « Rejoindre » : repliable, pour ne pas encombrer le menu
@@ -3290,7 +3398,7 @@
             admins.forEach(p => { const c = hostConns[p.id]; if (c) { try { c.send(payload); } catch (e) {} } });
         }
         function remplirEcranQG() {
-            document.getElementById('host-game-title').innerText = liveSession.gameName || clientSessionMeta.gameName || 'Partie';
+            document.getElementById('host-game-title').innerText = liveSession.gameName || clientSessionMeta.gameName || tr('qg.partie');
             if (enPartieFirebase()) {
                 // En liaison Firebase, tout le monde lit la même partie : un
                 // co-admin dispose des mêmes informations que l'organisateur,
@@ -3363,7 +3471,7 @@
         // Fonction Scan QR Code (Auto-Join)
         function startQRScanner() {
             if (typeof Html5QrcodeScanner === 'undefined') {
-                alert("Scanner QR indisponible (librairie non chargée — vérifiez la connexion Internet).");
+                alert(tr('msg.scannerIndisponible'));
                 return;
             }
             document.getElementById('qr-reader').style.display = 'block';
@@ -3397,10 +3505,10 @@
             const wrap = document.getElementById('host-qr-wrap');
             if (!wrap) return;
             const echec = (raison) => {
-                wrap.innerHTML = '<span style="color:#777;font-size:0.78em;line-height:1.5;">QR indisponible.<br>Partagez le lien ou le nom de la partie.</span>';
+                wrap.innerHTML = `<span style="color:#777;font-size:0.78em;line-height:1.5;">${escapeHtml(tr('qg.qrIndisponible'))}<br>${escapeHtml(tr('qg.qrIndisponibleAide'))}</span>`;
                 console.warn('QR non genere :', raison);
             };
-            const setImg = (url) => { wrap.innerHTML = `<img src="${url}" alt="QR code d'invitation" style="display:block; margin:0 auto;">`; };
+            const setImg = (url) => { wrap.innerHTML = `<img src="${url}" alt="${escapeHtml(tr('qg.qrAlt'))}" style="display:block; margin:0 auto;">`; };
             if (typeof window.QRCode === 'undefined') { echec('bibliotheque absente'); return; }
             try {
                 window.QRCode.toDataURL(link, { width: 180, margin: 2 }, (err, url) => err ? echec(err) : setImg(url));
@@ -3410,15 +3518,13 @@
         function changerTransport(v) {
             appState.transportPrefere = (v === 'peer') ? 'peer' : 'firebase';
             const aide = document.getElementById('multi-transport-aide');
-            if (aide) aide.innerText = appState.transportPrefere === 'firebase'
-                ? "Passe par le serveur : fonctionne entre réseaux différents (4G / WiFi), et vous pouvez fermer votre page sans couper la partie."
-                : "Connexion directe entre appareils. Nécessite souvent un relais TURN, et votre page doit rester ouverte.";
+            if (aide) aide.innerText = tr(appState.transportPrefere === 'firebase' ? 'multi.aideFirebase' : 'multi.aidePeer');
             saveState();
         }
 
         async function creerPartieFirebase(gameName, hostPseudo) {
             const st = document.getElementById('multi-status');
-            st.style.display = 'block'; st.innerText = 'Ouverture de la partie...';
+            st.style.display = 'block'; st.innerText = tr('multi.ouverture');
             try {
                 await fbCreerPartie(gameName, hostPseudo || appState.playerName);
                 st.style.display = 'none';
@@ -3438,7 +3544,7 @@
                 saveState();
             } catch (e) {
                 st.style.display = 'block';
-                st.innerText = (e && e.message) ? e.message : 'Ouverture impossible.';
+                st.innerText = (e && e.message) ? e.message : tr('multi.ouvertureImpossible');
                 appState.isOrga = false;
                 console.error(e);
             }
@@ -3446,17 +3552,17 @@
 
         function creerPartieEnLigne() {
             if ((appState.transportPrefere || 'firebase') === 'firebase') {
-                const gameName = (document.getElementById('multi-game-name').value || '').trim() || 'Partie';
+                const gameName = (document.getElementById('multi-game-name').value || '').trim() || tr('qg.partie');
                 const hostPseudo = document.getElementById('multi-pseudo').value.trim();
                 if (hostPseudo) appState.playerName = hostPseudo;
                 creerPartieFirebase(gameName, hostPseudo);
                 return;
             }
             if (typeof Peer === 'undefined') {
-                alert("Multijoueur indisponible (librairie PeerJS non chargée — vérifiez la connexion Internet).");
+                alert(tr('msg.peerIndisponible'));
                 return;
             }
-            const gameName = (document.getElementById('multi-game-name').value || '').trim() || 'Partie';
+            const gameName = (document.getElementById('multi-game-name').value || '').trim() || tr('qg.partie');
             const hostPseudo = document.getElementById('multi-pseudo').value.trim();
             if (hostPseudo) appState.playerName = hostPseudo;
 
@@ -3501,7 +3607,7 @@
 
             if (opts.fromModal) {
                 document.getElementById('multi-status').style.display = 'block';
-                document.getElementById('multi-status').innerText = opts.resume ? 'Reprise de la partie...' : 'Création de la partie...';
+                document.getElementById('multi-status').innerText = tr(opts.resume ? 'multi.reprise' : 'multi.creation');
             }
             if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
 
@@ -3521,14 +3627,14 @@
                     setTimeout(() => demarrerHost(gameName, opts), 5000);
                     return;
                 }
-                let msg = (err && err.message) ? err.message : 'Erreur PeerJS';
-                if (err && err.type === 'unavailable-id') msg = "Ce nom de partie est déjà utilisé (ou l'ancienne session n'a pas encore expiré). Attendez une minute ou changez de nom.";
+                let msg = (err && err.message) ? err.message : tr('msg.erreurPeer');
+                if (err && err.type === 'unavailable-id') msg = tr('msg.nomPartieDejaPris');
                 if (opts.fromModal) {
                     document.getElementById('multi-status').style.display = 'block';
                     document.getElementById('multi-status').innerText = msg;
                 } else if (opts.resume && !hostResumeAlertShown) {
                     hostResumeAlertShown = true;
-                    alert('Reprise de la partie « ' + gameName + ' » impossible pour le moment (' + msg + '). Nouvel essai au prochain retour sur la page, ou recréez la partie avec le même nom pour retrouver vos joueurs.');
+                    alert(tr('msg.repriseImpossible', { nom: gameName, raison: msg }));
                 }
                 console.error(err);
             });
@@ -3556,7 +3662,7 @@
                 hostSetTab('join');
                 genererQR(joinLink);
 
-                hostPushLog((opts.resume ? 'Session reprise : ' : 'Session hôte démarrée : ') + id);
+                hostPushLog(tr(opts.resume ? 'log.sessionReprise' : 'log.sessionDemarree', { code: id }));
                 hostRefreshHostPanels();
                 updateDashboard();
                 sauvegarderSessionHote();
@@ -3576,7 +3682,7 @@
                     if (p) {
                         // On garde le joueur dans la partie : il repassera "en ligne" à sa reconnexion
                         p.offline = true;
-                        hostPushLog(`${p.name} déconnecté (en attente de reconnexion)`, couleurJoueur(p));
+                        hostPushLog(tr('log.joueurDeconnecte', { nom: p.name }), couleurJoueur(p));
                     }
                     updateDashboard();
                     hostPopulatePackTeamPlayerSelects();
@@ -3587,16 +3693,16 @@
 
         function rejoindrePartieEnLigne(autoCode = null, forcerFirebase = false) {
             if (appState.isOrga) {
-                alert("Vous hébergez déjà une partie sur cet appareil. Quittez l'ancienne partie via l'interface Hôte pour pouvoir en rejoindre une autre en tant que joueur.");
+                alert(tr('msg.dejaHote'));
                 return;
             }
             if (typeof Peer === 'undefined') {
-                alert("Multijoueur indisponible (librairie PeerJS non chargée — vérifiez la connexion Internet).");
+                alert(tr('msg.peerIndisponible'));
                 return;
             }
 
             const rawInput = autoCode || document.getElementById('join-code').value.trim();
-            if (!rawInput) { alert('Indiquez le nom de la partie ou scannez le QR code.'); return; }
+            if (!rawInput) { alert(tr('msg.indiquezNomPartie')); return; }
 
             // Liaison Firebase : soit choisie dans le menu, soit imposée par le
             // lien d'invitation de l'hôte (paramètre fb=1).
@@ -3617,7 +3723,7 @@
             clearTimeout(clientReconnect.timer);
 
             document.getElementById('multi-status').style.display = 'block';
-            document.getElementById('multi-status').innerText = 'Recherche de la partie...';
+            document.getElementById('multi-status').innerText = tr('multi.recherche');
             ouvrirConnexionClient(normaliserCodePartie(rawInput), true);
         }
 
@@ -3629,14 +3735,14 @@
         let fbCodeEnAttente = '';
         async function rejoindreFirebase(rawInput) {
             const st = document.getElementById('multi-status');
-            st.style.display = 'block'; st.innerText = 'Recherche de la partie...';
+            st.style.display = 'block'; st.innerText = tr('multi.recherche');
             try {
                 await fbConnexion();
                 const id = normaliserCodePartie(rawInput);
                 const snap = await firebase.database().ref('parties/' + id).get();
                 const p = snap.val();
-                if (!p || !p.meta) throw new Error("Partie introuvable. Vérifiez le nom auprès de l'organisateur.");
-                if (p.meta.close === true) throw new Error('Cette partie est clôturée.');
+                if (!p || !p.meta) throw new Error(tr('msg.partieIntrouvable'));
+                if (p.meta.close === true) throw new Error(tr('msg.partieCloturee'));
                 fbCodeEnAttente = id;
                 const equipes = (p.config && p.config.teams && p.config.teams.length) ? p.config.teams : DEFAULT_TEAMS;
                 appState.customTeams = equipes;
@@ -3648,7 +3754,7 @@
                 document.getElementById('teamSelectionModal').style.display = 'block';
             } catch (e) {
                 st.style.display = 'block';
-                st.innerText = (e && e.message) ? e.message : 'Connexion impossible.';
+                st.innerText = (e && e.message) ? e.message : tr('msg.connexionImpossible');
                 console.error(e);
             }
         }
@@ -3705,9 +3811,9 @@
                 if (!manuel) { programmerProchaineTentative(); return; }
                 const st = document.getElementById('multi-status');
                 st.style.display = 'block';
-                st.innerText = (err && err.message) ? err.message : 'Erreur PeerJS';
+                st.innerText = (err && err.message) ? err.message : tr('msg.erreurPeer');
                 if (err && err.type === 'peer-unavailable') {
-                    alert("La partie est introuvable. Vérifiez que l'Hôte n'a pas fermé sa page web ou annulé la partie.");
+                    alert(tr('msg.partieIntrouvableHote'));
                     st.style.display = 'none';
                 }
                 console.error(err);
@@ -3715,7 +3821,7 @@
 
             p.on('open', () => {
                 if (token !== connectToken) return;
-                if (manuel) document.getElementById('multi-status').innerText = 'Connexion réseau en cours...';
+                if (manuel) document.getElementById('multi-status').innerText = tr('multi.connexionReseau');
 
                 myConn = p.connect(code, { reliable: true });
 
@@ -3723,7 +3829,7 @@
                     if (token !== connectToken) return;
                     if (myConn && myConn.open) return;
                     if (!manuel) { programmerProchaineTentative(); return; }
-                    alert("Délai dépassé : la liaison avec l'Hôte n'a pas pu s'établir. Vérifiez que sa page est ouverte, puis lancez « Tester le réseau » dans le menu multijoueur : si TURN est en échec, l'hôte doit configurer un relais (« Relais réseau ») — il sera transmis automatiquement par son QR code.");
+                    alert(tr('msg.delaiDepasse'));
                     document.getElementById('multi-status').style.display = 'none';
                     isWaitingForTeamSelection = false;
                     const conn = myConn; myConn = null;
@@ -3738,7 +3844,7 @@
                     if (!manuel) { programmerProchaineTentative(); return; }
                     document.getElementById('multi-status').style.display = 'none';
                     if (!myConn) return; // déjà nettoyé
-                    alert('Connexion impossible : hôte introuvable ou réseau instable.');
+                    alert(tr('msg.hoteIntrouvable'));
                     executerQuitterPartie();
                 });
 
@@ -3746,7 +3852,7 @@
                     if (token !== connectToken) return;
                     clearTimeout(connectionTimeout);
                     if (manuel) {
-                        document.getElementById('multi-status').innerText = 'Récupération des données...';
+                        document.getElementById('multi-status').innerText = tr('multi.recuperation');
                         // Filet de sécurité : si le SYNC_CONFIG n'arrive pas, on propose quand même les équipes locales
                         teamSelectFallback = setTimeout(() => {
                             if (isWaitingForTeamSelection) afficherModalChoixEquipe();
@@ -3773,7 +3879,7 @@
             const saved = getClientSession();
             if (!saved || !saved.code) {
                 // Pas d'identité mémorisée (jamais entré en partie) : comportement simple
-                alert("Connexion à l'hôte perdue.");
+                alert(tr('msg.connexionPerdueHote'));
                 executerQuitterPartie();
                 return;
             }
@@ -3793,7 +3899,7 @@
             if (clientReconnect.attempts > clientReconnect.maxAttempts) {
                 const silencieux = clientReconnect.silentFail;
                 clientReconnect.active = false;
-                if (!silencieux) alert("Reconnexion impossible : la partie semble terminée ou l'hôte injoignable.");
+                if (!silencieux) alert(tr('msg.reconnexionImpossible'));
                 executerQuitterPartie();
                 return;
             }
@@ -3839,15 +3945,15 @@
         // un lien collé dans un navigateur : l'appareil n'a alors aucun pseudo.
         function preparerModalRejoindre(nomPartie) {
             const p = document.getElementById('modal-join-pseudo');
-            if (p) p.value = (appState.playerName && appState.playerName !== 'Joueur') ? appState.playerName : '';
-            const t = document.getElementById('modal-join-partie');
-            if (t) t.innerText = nomPartie ? 'Partie « ' + nomPartie +' »' : 'Connexion établie.';
+            if (p) p.value = (appState.playerName && appState.playerName !== tr('multi.joueur')) ? appState.playerName : '';
+            const el = document.getElementById('modal-join-partie');
+            if (el) el.innerText = nomPartie ? tr('join.partieNommee', { nom: nomPartie }) : tr('join.etabli');
         }
         function lirePseudoModal() {
             const el = document.getElementById('modal-join-pseudo');
             const v = ((el && el.value) || '').trim().slice(0, 32);
             if (!v) {
-                alert("Indiquez un pseudo : c'est le nom sous lequel l'organisateur vous verra dans la partie.");
+                alert(tr('msg.indiquezPseudo'));
                 if (el) el.focus();
                 return null;
             }
@@ -3879,7 +3985,7 @@
             if (!myConn || !myConn.open) {
                 document.getElementById('teamSelectionModal').style.display = 'none';
                 isWaitingForTeamSelection = false;
-                alert('Connexion perdue. Réessayez de rejoindre la partie.');
+                alert(tr('msg.connexionPerdue'));
                 return;
             }
             if (!lirePseudoModal()) return;
@@ -3898,7 +4004,7 @@
             document.getElementById('btn-multi-icon').classList.add('online');
             nettoyerUrlInvitation();
             updateUI_Game();
-            alert('Connecté à la partie !');
+            alert(tr('msg.connecte'));
         }
 
         /* --- IDENTITE DES JOUEURS --- */
@@ -3926,7 +4032,7 @@
         function handleHostData(conn, data) {
             if (!data || !data.type) return;
             if (data.type === 'JOIN') {
-                const nomDemande = String(data.name || 'Joueur').slice(0, 32).trim() || 'Joueur';
+                const nomDemande = String(data.name || tr('multi.joueur')).slice(0, 32).trim() || tr('multi.joueur');
                 const jeton = (typeof data.token === 'string' && data.token.length >= 8) ? data.token.slice(0, 100) : '';
 
                 // Reconnexion : reconnue au seul jeton. Un client sans jeton
@@ -3958,10 +4064,10 @@
                     isCoHost: !!(ancien && ancien.isCoHost),
                     token: jeton
                 };
-                hostPushLog(ancien ? `${nom} s'est reconnecté` : `${nom} a rejoint`, couleurJoueur(playersData[conn.peer]));
+                hostPushLog(tr(ancien ? 'log.sEstReconnecte' : 'log.aRejoint', { nom: nom }), couleurJoueur(playersData[conn.peer]));
                 if (nom !== nomDemande) {
                     try { conn.send({ type: 'CMD_NAME', name: nom }); } catch (e) {}
-                    hostPushLog(`Pseudo « ${nomDemande} » déjà utilisé : ce joueur devient « ${nom} »`, couleurJoueur(playersData[conn.peer]));
+                    hostPushLog(tr('log.pseudoDejaPris', { demande: nomDemande, retenu: nom }), couleurJoueur(playersData[conn.peer]));
                 }
                 if (ancien && ancien.isCoHost) { try { conn.send({ type: 'CMD_ROLE', isCoHost: true }); } catch (e) {} }
                 broadcastFullState();
@@ -3987,7 +4093,7 @@
                 if (data.materiel) appState.materiel = data.materiel;
                 if (data.quantites) appState.quantites = data.quantites;
                 saveState();
-                hostPushLog(`${p.name} (co-admin) a modifié la configuration`, couleurJoueur(p));
+                hostPushLog(tr('log.configModifiee', { nom: p.name }), couleurJoueur(p));
                 broadcastFullState();
                 hostRefreshHostPanels();
                 return;
@@ -4005,7 +4111,7 @@
                 else if (a === 'delTeam' && data.teamId) hostSupprimerEquipe(data.teamId);
                 else if (a === 'addPack' && data.src) {
                     const refus = ajouterPaquetSessionDirect(data.src, data.scope, data.teamId, data.peerId);
-                    if (refus) hostPushLog(`Ajout refusé (${admin.name}) : ${refus}`, couleurJoueur(admin));
+                    if (refus) hostPushLog(tr('log.ajoutRefuse', { nom: admin.name, raison: refus }), couleurJoueur(admin));
                 }
                 else if (a === 'delPack' && data.packId) hostRetirerPaquetSession(data.packId);
                 else if (a === 'close') executerCloture(admin.name);
@@ -4014,12 +4120,12 @@
             if (data.type === 'DRAW_LOG') {
                 const p = playersData[conn.peer];
                 const n = p ? p.name : conn.peer;
-                hostPushLog(`${n} · tirage : ${data.titre || '?'} [${data.gravite || ''}] · ${data.src || ''}`, couleurJoueur(p));
+                hostPushLog(tr('log.tirage', { nom: n, carte: txTitre(data.titre) || '?', gravite: txGrav(data.gravite) || '', source: data.src || '' }), couleurJoueur(p));
                 return;
             }
             if (data.type === 'LEAVE') {
                 // Départ volontaire : on retire le joueur (pas d'attente de reconnexion)
-                hostPushLog(`${data.name || 'Joueur'} quitte la partie`, couleurJoueur(playersData[conn.peer]));
+                hostPushLog(tr('log.quitteLaPartie', { nom: data.name || tr('multi.joueur') }), couleurJoueur(playersData[conn.peer]));
                 delete hostConns[conn.peer];
                 delete playersData[conn.peer];
                 updateDashboard();
@@ -4081,7 +4187,7 @@
                 if (cs) { cs.name = n; setClientSession(cs); }
                 saveState();
                 updateUI_Game();
-                alert('Ce pseudo était déjà pris dans la partie. Vous y apparaissez sous : ' + n);
+                alert(tr('msg.pseudoRemplace', { nom: n }));
                 return;
             }
             if (data.type === 'CMD_TEAM') {
@@ -4089,7 +4195,7 @@
                 const cs = getClientSession();
                 if (cs) { cs.teamId = data.teamId; setClientSession(cs); }
                 updateUI_Game();
-                alert('Changement d\'équipe');
+                alert(tr('msg.changementEquipe'));
                 return;
             }
             if (data.type === 'CMD_ROLE') {
@@ -4105,11 +4211,11 @@
                     if (document.getElementById('screen-host-dashboard').classList.contains('active')) showScreen('screen-game');
                 }
                 updateUI_Game();
-                alert(v ? 'Vous êtes co-organisateur : le QG de la partie est accessible via le bouton multijoueur, en haut à droite.' : 'Grade admin retiré.');
+                alert(tr(v ? 'msg.devenuCoOrga' : 'msg.gradeRetire'));
                 return;
             }
             if (data.type === 'CLOSE_SESSION') {
-                alert(data.reason || 'La partie est terminée.');
+                alert(data.reason || tr('msg.partieTerminee'));
                 executerQuitterPartie();
             }
         }
@@ -4123,29 +4229,29 @@
             const entries = Object.entries(playersData).filter(([key]) => !(enPartieFirebase() && key === fbUid));
             document.getElementById('connected-count').innerText = entries.filter(([, p]) => !p.offline).length;
             l.innerHTML = entries.map(([key, p]) => {
-                const team = appState.customTeams.find(t => t.id === p.teamId) || appState.customTeams[0];
+                const team = appState.customTeams.find(eq => eq.id === p.teamId) || appState.customTeams[0];
                 if (!team) return '';
 
                 if (p.offline) {
                     return `<div class="player-row" style="border-left:4px solid ${team.color}; opacity:0.55;">
-                        <div class="player-row-header"><strong>${escapeHtml(p.name)}</strong><span class="badge-role">hors ligne</span> <span style="color:${team.color}">(${escapeHtml(team.name)})</span></div>
+                        <div class="player-row-header"><strong>${escapeHtml(p.name)}</strong><span class="badge-role">${escapeHtml(tr('qg.horsLigne'))}</span> <span style="color:${team.color}">(${escapeHtml(team.name)})</span></div>
                         <div class="player-actions" style="margin-top:6px; display:flex; align-items:center; gap:8px;">
-                            <span style="font-size:0.75em;color:#888;">Reviendra automatiquement…</span>
-                            <button type="button" class="btn-dash" style="background:#d32f2f" onclick="cmdKick(${jsAttr(key)})">Retirer</button>
+                            <span style="font-size:0.75em;color:#888;">${escapeHtml(tr('qg.reviendra'))}</span>
+                            <button type="button" class="btn-dash" style="background:#d32f2f" onclick="cmdKick(${jsAttr(key)})">${escapeHtml(tr('qg.retirer'))}</button>
                         </div>
                     </div>`;
                 }
 
-                const btns = appState.customTeams.map(t =>
-                    `<button type="button" class="btn-dash" style="background:${t.color}; color:white; font-weight:bold; margin-right:5px; border:1px solid rgba(255,255,255,0.4);" onclick="cmdTeam(${jsAttr(key)},${jsAttr(t.id)})">${escapeHtml(t.name)}</button>`
+                const btns = appState.customTeams.map(eq =>
+                    `<button type="button" class="btn-dash" style="background:${eq.color}; color:white; font-weight:bold; margin-right:5px; border:1px solid rgba(255,255,255,0.4);" onclick="cmdTeam(${jsAttr(key)},${jsAttr(eq.id)})">${escapeHtml(eq.name)}</button>`
                 ).join('');
 
-                const badge = p.isCoHost ? '<span class="badge-role admin">Co-admin</span>' : '';
+                const badge = p.isCoHost ? `<span class="badge-role admin">${escapeHtml(tr('statut.coadmin'))}</span>` : '';
                 return `<div class="player-row" style="border-left:4px solid ${team.color}">
                     <div class="player-row-header"><strong>${escapeHtml(p.name)}</strong>${badge} <span style="color:${team.color}">(${escapeHtml(team.name)})</span></div>
                     <div class="player-actions" style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;">${btns}
-                        <button type="button" class="btn-dash" style="background:#f57c00" onclick="cmdToggleCohost(${jsAttr(key)})">Admin</button>
-                        <button type="button" class="btn-dash" style="background:#d32f2f" onclick="cmdKick(${jsAttr(key)})">Kick</button>
+                        <button type="button" class="btn-dash" style="background:#f57c00" onclick="cmdToggleCohost(${jsAttr(key)})">${escapeHtml(tr('qg.admin'))}</button>
+                        <button type="button" class="btn-dash" style="background:#d32f2f" onclick="cmdKick(${jsAttr(key)})">${escapeHtml(tr('qg.kick'))}</button>
                     </div>
                 </div>`;
             }).join('');
@@ -4157,7 +4263,7 @@
             if (enPartieFirebase()) {
                 const j = playersData[pid]; if (!j) return;
                 fbRef('joueurs/' + pid + '/isCoHost').set(!j.isCoHost).catch(fbErreurEcriture);
-                hostPushLog(`${j.name} · co-admin : ${!j.isCoHost ? 'oui' : 'non'}`, couleurJoueur(j));
+                hostPushLog(tr('log.coadmin', { nom: j.name, valeur: tr(!j.isCoHost ? 'btn.oui' : 'btn.non').toLowerCase() }), couleurJoueur(j));
                 return;
             }
             if (!appState.isOrga) { envoyerAdminCmd({ action: 'cohost', pid }); return; }
@@ -4166,7 +4272,7 @@
             if (!p || !c) return;
             p.isCoHost = !p.isCoHost;
             try { c.send({ type: 'CMD_ROLE', isCoHost: p.isCoHost }); } catch (e) {}
-            hostPushLog(`${p.name} · co-admin : ${p.isCoHost ? 'oui' : 'non'}`, couleurJoueur(p));
+            hostPushLog(tr('log.coadmin', { nom: p.name, valeur: tr(p.isCoHost ? 'btn.oui' : 'btn.non').toLowerCase() }), couleurJoueur(p));
             updateDashboard();
         }
         function cmdTeam(pid, tid) {
@@ -4185,7 +4291,7 @@
             if (enPartieFirebase()) {
                 const j = playersData[pid];
                 fbRef('joueurs/' + pid).remove()
-                    .then(() => hostPushLog(`Retiré de la partie : ${(j && j.name) || pid}`, couleurJoueur(j)))
+                    .then(() => hostPushLog(tr('log.retireDeLaPartie', { nom: (j && j.name) || pid }), couleurJoueur(j)))
                     .catch(fbErreurEcriture);
                 return;
             }
@@ -4194,35 +4300,35 @@
             const nom = (playersData[pid] && playersData[pid].name) || pid;
             const coul = couleurJoueur(playersData[pid]);
             if (c) {
-                try { c.send({ type: 'CLOSE_SESSION', reason: 'Vous avez été exclu de la partie.' }); } catch (e) {}
+                try { c.send({ type: 'CLOSE_SESSION', reason: tr('msg.exclu') }); } catch (e) {}
                 // Laisse le temps au message de partir avant de couper la connexion
                 setTimeout(() => { try { c.close(); } catch (e) {} }, 500);
             }
             delete hostConns[pid];
             delete playersData[pid];
-            hostPushLog(`Retiré de la partie : ${nom}`, coul);
+            hostPushLog(tr('log.retireDeLaPartie', { nom: nom }), coul);
             updateDashboard();
             hostPopulatePackTeamPlayerSelects();
         }
         function cloturerPartie() {
             if (enPartieFirebase()) {
-                if (!confirm('Clôturer la partie ? Tous les joueurs seront avertis et déconnectés.')) return;
+                if (!confirm(tr('qg.confirmCloture'))) return;
                 fbCloturerPartie();
                 return;
             }
             if (!appState.isOrga) {
                 if (!estEnPartieClient() || !appState.isCoHost) return;
-                if (!confirm('Clôturer la partie pour tout le monde ?')) return;
+                if (!confirm(tr('qg.confirmClotureTous'))) return;
                 envoyerAdminCmd({ action: 'close' });
                 return;
             }
-            if (!confirm('Clôturer la partie ? Tous les joueurs seront avertis et déconnectés.')) return;
+            if (!confirm(tr('qg.confirmCloture'))) return;
             executerCloture();
         }
         function executerCloture(parQui) {
             const conns = Object.values(hostConns);
             conns.forEach(c => {
-                try { c.send({ type: 'CLOSE_SESSION', reason: 'L\'organisateur a clôturé la partie.' }); } catch (e) {}
+                try { c.send({ type: 'CLOSE_SESSION', reason: tr('msg.orgaACloture') }); } catch (e) {}
             });
             // Laisse le temps aux messages de partir avant de tout couper
             const oldPeer = peer;
@@ -4246,7 +4352,7 @@
             localStorage.removeItem(HOST_SESSION_KEY); // la session ne sera plus reprise au prochain lancement
             document.getElementById('btn-multi-icon').classList.remove('online');
 
-            hostPushLog('Partie clôturée' + (parQui ? ' par ' + parQui + ' (co-admin)' : '') + '.');
+            hostPushLog(parQui ? tr('log.partieClotureePar', { nom: parQui }) : tr('log.partieCloturee'));
             renderHostSessionPacksList();
             updateDashboard();
             retourAccueilDepuisHost();
@@ -4299,13 +4405,21 @@
         }
 
         /* --- UI & GAME --- */
+        // Le pseudo par defaut est stocke tel quel (« Joueur ») : c'est la valeur
+        // enregistree et envoyee au reseau. Tant que le joueur n'en a pas choisi
+        // un, son AFFICHAGE suit la langue.
+        function pseudoAffiche() {
+            const n = appState.playerName;
+            return (!n || n === 'Joueur') ? tr('multi.joueur') : n;
+        }
+
         function updateUI_Game() {
             const inPartie = estEnPartieClient();
             // Hors partie, l'équipe n'a aucun sens : ni couleur ni nom. En solo,
             // afficher « Bleu » laissait croire à une appartenance inexistante.
             const rattache = inPartie || appState.isOrga || clientReconnect.active;
             const team = rattache ? appState.customTeams.find(t => t.id === appState.playerTeamId) : null;
-            const teamLabel = team ? team.name : (appState.playerTeamId === 'orga' ? 'Organisateur' : '—');
+            const teamLabel = team ? team.name : (appState.playerTeamId === 'orga' ? tr('statut.organisateur') : '—');
             const borderCol = rattache ? (team ? team.color : '#888') : '#333';
             document.getElementById('main-header').style.borderBottomColor = borderCol;
             // Le voyant du bandeau d'état reprend la couleur de l'équipe
@@ -4315,16 +4429,16 @@
             const qbtn = document.getElementById('btn-quitter-partie');
             if (qbtn) qbtn.style.display = (inPartie || clientReconnect.active) ? 'inline-flex' : 'none';
             if (clientReconnect.active) {
-                document.getElementById('top-indicator').innerText = `${appState.playerName} · Reconnexion à la partie…`;
+                document.getElementById('top-indicator').innerText = tr('statut.reconnexion', { nom: pseudoAffiche() });
             } else {
                 const eq = rattache ? (' · ' + teamLabel) : '';
                 const gn = (inPartie && clientSessionMeta.gameName) ? (' · ' + clientSessionMeta.gameName) : '';
-                const co = appState.isCoHost ? ' · Co-admin' : '';
-                document.getElementById('top-indicator').innerText = `${appState.playerName}${eq}${gn}${co}`;
+                const co = appState.isCoHost ? (' · ' + tr('statut.coadmin')) : '';
+                document.getElementById('top-indicator').innerText = `${pseudoAffiche()}${eq}${gn}${co}`;
             }
 
             const infoDeck = document.getElementById('info-deck');
-            if (infoDeck) infoDeck.innerText = computeActiveCardCount() + " cartes";
+            if (infoDeck) infoDeck.innerText = tr('jeu.cartes', { n: computeActiveCardCount() });
 
             // Un bouton de tirage = une couronne colorée + un pictogramme (image fournie ou symbole)
             const drawBtn = (src, label, ringClass, inner) =>
@@ -4360,10 +4474,10 @@
                     ? appState.customDecks.find(d => d.id === appState.mode) : null;
                 html = deckDuMode
                     ? drawBtn('bille', deckDuMode.name, 'pulse-ring-custom', iconePaquet(deckDuMode.icone, 'icon-custom'))
-                    : drawBtn('bille', 'Balistique', 'pulse-ring', imgArt('picto-blesse.png', 'icon-wounded'));
+                    : drawBtn('bille', tr('paquet.balistique'), 'pulse-ring', imgArt('picto-blesse.png', 'icon-wounded'));
                 // L'explosion ne se propose qu'en mode Avancé ou Extrême
                 if (modeAvecExplosion() && appState.explosionEnabled) {
-                    html += drawBtn('explosion', 'Explosion', 'pulse-ring-blast', imgArt('btn-explosion.png', 'icon-blast'));
+                    html += drawBtn('explosion', tr('paquet.explosion'), 'pulse-ring-blast', imgArt('btn-explosion.png', 'icon-blast'));
                 }
                 if (!inPartie) {
                     // Solo ou hôte : uniquement ses PROPRES paquets. Ceux reçus
@@ -4378,6 +4492,47 @@
             }
             document.getElementById('dynamic-buttons-container').innerHTML = html;
         }
+        /* --- SELECTEUR DE LANGUE --- */
+        function construireMenuLangue() {
+            const menu = document.getElementById('langue-menu');
+            if (!menu || !window.I18N) return;
+            const actuelle = I18N.langue();
+            menu.innerHTML = I18N.langues().map(l => `
+                <button type="button" role="option" aria-selected="${l.code === actuelle}"
+                        class="langue-item${l.code === actuelle ? ' actif' : ''}"
+                        onclick="choisirLangue('${l.code}')">
+                    <svg class="drapeau" aria-hidden="true"><use href="#${l.drapeau}"></use></svg><span>${escapeHtml(l.nom)}</span>
+                </button>`).join('');
+            // On remplace l'attribut du <use> existant plutot que le contenu du
+            // <svg> : ecrire dans innerHTML d'un element SVG n'est pas fiable
+            // partout, alors que setAttribute l'est.
+            const u = document.querySelector('#drapeau-courant use');
+            if (u) u.setAttribute('href', '#' + I18N.infos().drapeau);
+        }
+        function basculerMenuLangue(forcer) {
+            const bloc = document.getElementById('bloc-langue');
+            if (!bloc) return;
+            const ouvert = (forcer === undefined) ? !bloc.classList.contains('ouvert') : !!forcer;
+            bloc.classList.toggle('ouvert', ouvert);
+            const b = document.getElementById('btn-langue');
+            if (b) b.setAttribute('aria-expanded', ouvert ? 'true' : 'false');
+        }
+        function choisirLangue(code) {
+            basculerMenuLangue(false);
+            if (window.I18N) I18N.definir(code);
+        }
+        document.addEventListener('click', (e) => {
+            const bloc = document.getElementById('bloc-langue');
+            if (bloc && bloc.classList.contains('ouvert') && !bloc.contains(e.target)) basculerMenuLangue(false);
+        });
+        /* Appele par I18N.definir(). Les ecrans construits en JS ne portent pas
+           de data-i18n : il faut les redessiner a la main. Les autres (reglages,
+           editeur, QG) se reconstruisent a leur prochaine ouverture. */
+        window.onLangueChangee = function () {
+            construireMenuLangue();
+            try { updateUI_Game(); } catch (e) { console.warn('rafraichissement accueil', e); }
+        };
+
         function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(appState)); updateUI_Game(); }
 
     </script>
