@@ -12,6 +12,25 @@
 
 const CACHE_VERSION = 'bse-medic-v7';
 
+/* Delai laisse au reseau avant de servir le cache.
+   Sur un telephone, « pas de reseau » est rarement une coupure franche : le
+   WiFi du terrain repond mais ne mene nulle part, la 4G est a une barre, ou
+   iOS relance l'application avant d'avoir retabli la connexion. Un fetch sans
+   limite reste alors suspendu tres longtemps et l'application ne se lance pas
+   du tout. Passe ce delai on sert la version en cache ; le telechargement
+   continue en arriere-plan et servira au lancement suivant. */
+const DELAI_RESEAU = 2500;
+
+function avecDelai(promesse, ms) {
+    return new Promise((tenir, rejeter) => {
+        const minuteur = setTimeout(() => rejeter(new Error('delai reseau depasse')), ms);
+        promesse.then(
+            (v) => { clearTimeout(minuteur); tenir(v); },
+            (e) => { clearTimeout(minuteur); rejeter(e); }
+        );
+    });
+}
+
 // Tout ce qui compose l'application. Chemins relatifs : l'application
 // fonctionne aussi bien a la racine d'un domaine que dans un sous-dossier.
 const APP_SHELL = [
@@ -80,17 +99,31 @@ self.addEventListener('fetch', (event) => {
     // des qu'il y a du reseau ; le cache prend le relais hors ligne.
     const estCatalogue = /\/(i18n|lang-[a-z]{2})\.js$/.test(url.pathname);
     if (req.mode === 'navigate' || url.pathname.endsWith('/index.html') || estCatalogue) {
+        const cle = estCatalogue ? req : './index.html';
+        const reseau = (async () => {
+            const cache = await caches.open(CACHE_VERSION);
+            const reponse = await fetch(req);
+            // Une page d'erreur du serveur ne doit jamais remplacer la version
+            // en cache : sinon l'application hors ligne servirait un 404.
+            if (reponse && reponse.ok) cache.put(cle, reponse.clone());
+            return reponse;
+        })();
+        // Le telechargement se poursuit meme si on a deja repondu par le cache.
+        event.waitUntil(reseau.catch(() => {}));
         event.respondWith((async () => {
             try {
-                const reponse = await fetch(req);
-                const cache = await caches.open(CACHE_VERSION);
-                cache.put(estCatalogue ? req : './index.html', reponse.clone());
-                return reponse;
+                const reponse = await avecDelai(reseau, DELAI_RESEAU);
+                if (reponse && reponse.ok) return reponse;
+                throw new Error('reponse ' + (reponse && reponse.status));
             } catch (e) {
                 const cache = await caches.open(CACHE_VERSION);
-                if (estCatalogue) return (await cache.match(req)) || new Response('', { status: 504 });
-                return (await cache.match('./index.html')) || (await cache.match('./')) ||
-                       new Response('Application indisponible hors ligne.', { status: 503 });
+                const enCache = (await cache.match(cle)) || (estCatalogue ? null : await cache.match('./'));
+                if (enCache) return enCache;
+                // Rien en cache : le reseau reste la seule chance, on l'attend.
+                try { return await reseau; } catch (e2) {}
+                return new Response(estCatalogue ? '' : 'Application indisponible hors ligne.',
+                                    { status: estCatalogue ? 504 : 503,
+                                      headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
             }
         })());
         return;

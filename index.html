@@ -2738,6 +2738,7 @@
         }
 
         function supprimerCarte(i) {
+            memoriserChampsPaquet();
             const d = appState.customDecks.find(x => x.id === currentDeckId);
             if (!d || !d.cards[i]) return;
             if (!confirm(tr('bld.confirmSupprCarte', { nom: txTitre(d.cards[i].titre) || tr('bld.sansTitre') }))) return;
@@ -2802,13 +2803,27 @@
             alert(tr('share.importeOk', { nom: d.name, n: d.cards.length }));
         }
 
-        function sauvegarderPaquetCourant() {
+        /* Reporte le formulaire du paquet (nom, affichage sur l'accueil, mode
+           extreme, icone) dans l'objet, sans enregistrer.
+           Indispensable avant d'ouvrir une carte : on en revient par
+           editDeck(), qui recharge le formulaire depuis l'objet. Sans ce
+           report, recocher « afficher sur l'accueil » puis toucher une carte
+           decochait la case en silence, et le paquet restait introuvable sur
+           l'accueil quoi qu'on fasse ensuite. Un renommage se perdait pareil. */
+        function memoriserChampsPaquet() {
             const d = appState.customDecks.find(x => x.id === currentDeckId);
-            if (!d) { retourApresEditionDeck(); return; }
-            d.name = document.getElementById('deck-name').value.trim() || tr('bld.sansNom');
+            const champNom = document.getElementById('deck-name');
+            if (!d || !champNom) return;
+            d.name = champNom.value.trim() || tr('bld.sansNom');
             d.showOnHome = document.getElementById('deck-show-home').checked;
             d.extremeMode = document.getElementById('deck-extreme').checked;
             d.icone = tempIcone;
+        }
+
+        function sauvegarderPaquetCourant() {
+            const d = appState.customDecks.find(x => x.id === currentDeckId);
+            if (!d) { retourApresEditionDeck(); return; }
+            memoriserChampsPaquet();
             saveState();
 
             if (appState.isOrga) {
@@ -2840,6 +2855,7 @@
         }
 
         function ajouterCarteCustom() {
+            memoriserChampsPaquet();
             currentCardIndex = -1;
             document.getElementById('card-title').value = "";
             document.getElementById('card-zone').value = "";
@@ -2851,6 +2867,7 @@
         }
 
         function editCard(i) {
+            memoriserChampsPaquet();
             const d = appState.customDecks.find(x => x.id === currentDeckId);
             if (!d || !d.cards[i]) { retourApresEditionDeck(); return; }
             currentCardIndex = i;
