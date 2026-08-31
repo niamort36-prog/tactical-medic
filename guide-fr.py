@@ -8,7 +8,7 @@
 TEXTES = {
     "m08": "Enregistrer",
     "m09": "Une seule carte pour plusieurs membres",
-    "m10": "La zone se choisit dans une liste&nbsp;: t&ecirc;te, torse, bras droit, bras gauche, jambe droite, jambe gauche &mdash; mais aussi <b>les deux bras</b>, <b>les deux jambes</b> ou <b>les quatre membres</b>. Une &eacute;raflure aux quatre membres tient alors en <b>une seule carte</b> au lieu de quatre&nbsp;: la zone exacte est tir&eacute;e au sort au moment du diagnostic, et en mode Extr&ecirc;me c'est celle que vous avez touch&eacute;e sur la silhouette. &laquo;&nbsp;Zone personnalis&eacute;e&nbsp;&raquo; reste l&agrave; pour &eacute;crire ce que vous voulez.",
+    "m10": "La zone se choisit dans une liste&nbsp;: t&ecirc;te, torse, bras droit, bras gauche, jambe droite, jambe gauche &mdash; mais aussi <b>les deux bras</b>, <b>les deux jambes</b> ou <b>les quatre membres</b>. Une &eacute;raflure aux quatre membres tient alors en <b>une seule carte</b> au lieu de quatre&nbsp;: la zone exacte est tir&eacute;e au sort au moment du diagnostic, et en mode Extr&ecirc;me c'est celle que vous avez touch&eacute;e sur la silhouette. &laquo;&nbsp;Zone personnalis&eacute;e&nbsp;&raquo; reste l&agrave; pour &eacute;crire ce que vous voulez. Trois boutons <b>Protection balistique</b> completent le tableau&nbsp;: la carte peut ne sortir qu'<b>avec</b> le casque ou le gilet, qu'<b>en leur absence</b>, ou dans les deux cas. C'est ainsi qu'on oppose &laquo;&nbsp;impact sur casque&nbsp;&raquo; et &laquo;&nbsp;tir &agrave; la t&ecirc;te&nbsp;&raquo;.",
     "m07": "tout en bas&nbsp;: &agrave; gauche le <b>choix de la langue</b>, &agrave; droite les liens vers <b>Bravo Sierra Events</b> &mdash; site, Discord, Instagram, YouTube et Facebook.",
     "m01": "Torse",
     "m02": "PROTECTION",
@@ -203,7 +203,7 @@ TEXTES = {
     "g183": "Cr&eacute;er un paquet",
     "g184": "Donnez-lui un nom. Cochez <b>Afficher sur l'accueil</b> pour qu'il ait son propre bouton rond.",
     "g185": "Ajouter des cartes",
-    "g186": "Pour chacune&nbsp;: une gravit&eacute;, un titre, une zone, un protocole de soin.",
+    "g186": "Pour chacune&nbsp;: une gravit&eacute;, un titre, une zone, une condition de protection, un protocole de soin.",
     "g187": "Choisir le mat&eacute;riel requis",
     "g188": "Touchez les puces correspondantes. Vous pouvez cr&eacute;er du mat&eacute;riel qui n'existe pas dans la liste de base &mdash; &laquo;&nbsp;Anti-rad&nbsp;&raquo;, &laquo;&nbsp;S&eacute;rum&nbsp;&raquo;...",
     "g189": "Choisir l'ic&ocirc;ne du bouton",

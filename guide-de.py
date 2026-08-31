@@ -7,7 +7,7 @@
 TEXTES = {
     "m08": "Speichern",
     "m09": "Eine Karte f&uuml;r mehrere Gliedma&szlig;en",
-    "m10": "Der Bereich wird aus einer Liste gew&auml;hlt: Kopf, Rumpf, rechter Arm, linker Arm, rechtes Bein, linkes Bein &mdash; aber auch <b>beide Arme</b>, <b>beide Beine</b> oder <b>alle vier Gliedma&szlig;en</b>. Eine Sch&uuml;rfwunde an allen vier Gliedma&szlig;en passt dann in <b>eine einzige Karte</b> statt in vier: der genaue Bereich wird bei der Beurteilung ausgelost, im Extrem-Modus ist es der auf der Silhouette angetippte. „Eigener Bereich“ bleibt, um zu schreiben, was Sie wollen.",
+    "m10": "Der Bereich wird aus einer Liste gew&auml;hlt: Kopf, Rumpf, rechter Arm, linker Arm, rechtes Bein, linkes Bein &mdash; aber auch <b>beide Arme</b>, <b>beide Beine</b> oder <b>alle vier Gliedma&szlig;en</b>. Eine Sch&uuml;rfwunde an allen vier Gliedma&szlig;en passt dann in <b>eine einzige Karte</b> statt in vier: der genaue Bereich wird bei der Beurteilung ausgelost, im Extrem-Modus ist es der auf der Silhouette angetippte. „Eigener Bereich“ bleibt, um zu schreiben, was Sie wollen. Drei Schaltfl&auml;chen <b>Ballistischer Schutz</b> vervollst&auml;ndigen das Bild: die Karte kann nur <b>mit</b> Helm oder Weste kommen, nur <b>ohne</b> sie, oder in beiden F&auml;llen. So stellt man „Treffer auf den Helm“ dem „Kopfschuss“ gegen&uuml;ber.",
     "m07": "ganz unten: links die <b>Sprachauswahl</b>, rechts die Links zu <b>Bravo Sierra Events</b> &mdash; Website, Discord, Instagram, YouTube und Facebook.",
     "m01": "Rumpf",
     "m02": "SCHUTZ",
@@ -202,7 +202,7 @@ TEXTES = {
     "g183": "Ein Deck erstellen",
     "g184": "Geben Sie ihm einen Namen. Haken Sie <b>Auf dem Startbildschirm zeigen</b> an, damit es einen eigenen runden Knopf bekommt.",
     "g185": "Karten hinzufügen",
-    "g186": "Für jede: ein Schweregrad, ein Titel, ein Bereich, ein Behandlungsprotokoll.",
+    "g186": "F&uuml;r jede: ein Schweregrad, ein Titel, ein Bereich, eine Schutzbedingung, ein Behandlungsprotokoll.",
     "g187": "Das benötigte Material wählen",
     "g188": "Tippen Sie die passenden Chips an. Sie können Material anlegen, das in der Grundliste nicht existiert &mdash; „Anti-Rad“, „Serum“...",
     "g189": "Das Symbol der Schaltfläche wählen",

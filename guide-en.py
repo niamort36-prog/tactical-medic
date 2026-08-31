@@ -7,7 +7,7 @@
 TEXTES = {
     "m08": "Save",
     "m09": "One card for several limbs",
-    "m10": "The area is picked from a list: head, torso, right arm, left arm, right leg, left leg &mdash; but also <b>both arms</b>, <b>both legs</b> or <b>all four limbs</b>. A graze to all four limbs then fits in <b>a single card</b> instead of four: the exact area is drawn at random at assessment time, and in Extreme mode it is the one you tapped on the silhouette. “Custom area” is still there to write whatever you like.",
+    "m10": "The area is picked from a list: head, torso, right arm, left arm, right leg, left leg &mdash; but also <b>both arms</b>, <b>both legs</b> or <b>all four limbs</b>. A graze to all four limbs then fits in <b>a single card</b> instead of four: the exact area is drawn at random at assessment time, and in Extreme mode it is the one you tapped on the silhouette. “Custom area” is still there to write whatever you like. Three <b>Body armour</b> buttons complete the picture: the card can come up only <b>with</b> the helmet or vest, only <b>without</b> them, or either way. That is how “impact on the helmet” is set against “headshot”.",
     "m07": "right at the bottom: on the left the <b>language picker</b>, on the right the links to <b>Bravo Sierra Events</b> &mdash; website, Discord, Instagram, YouTube and Facebook.",
     "m01": "Torso",
     "m02": "BODY ARMOUR",
@@ -202,7 +202,7 @@ TEXTES = {
     "g183": "Create a deck",
     "g184": "Give it a name. Tick <b>Show on the home screen</b> so it gets its own round button.",
     "g185": "Add cards",
-    "g186": "For each one: a severity, a title, an area, a treatment protocol.",
+    "g186": "For each one: a severity, a title, an area, a body-armour condition, a treatment protocol.",
     "g187": "Choose the required equipment",
     "g188": "Tap the matching chips. You can create equipment that does not exist in the base list &mdash; “Anti-rad”, “Serum”...",
     "g189": "Choose the button icon",

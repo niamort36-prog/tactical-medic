@@ -7,7 +7,7 @@
 TEXTES = {
     "m08": "Salvare",
     "m09": "Una sola carta per pi&ugrave; arti",
-    "m10": "La zona si sceglie da un elenco: testa, torso, braccio destro, braccio sinistro, gamba destra, gamba sinistra &mdash; ma anche <b>entrambe le braccia</b>, <b>entrambe le gambe</b> o <b>tutti e quattro gli arti</b>. Un'escoriazione ai quattro arti sta allora in <b>una sola carta</b> invece di quattro: la zona esatta viene estratta a caso al momento della diagnosi e, in modalit&agrave; Estrema, &egrave; quella toccata sulla sagoma. “Zona personalizzata” resta per scrivere quello che vuoi.",
+    "m10": "La zona si sceglie da un elenco: testa, torso, braccio destro, braccio sinistro, gamba destra, gamba sinistra &mdash; ma anche <b>entrambe le braccia</b>, <b>entrambe le gambe</b> o <b>tutti e quattro gli arti</b>. Un'escoriazione ai quattro arti sta allora in <b>una sola carta</b> invece di quattro: la zona esatta viene estratta a caso al momento della diagnosi e, in modalit&agrave; Estrema, &egrave; quella toccata sulla sagoma. “Zona personalizzata” resta per scrivere quello che vuoi. Tre pulsanti <b>Protezione balistica</b> completano il quadro: la carta pu&ograve; uscire solo <b>con</b> l'elmetto o il giubbotto, solo <b>senza</b> di essi, o in entrambi i casi. &Egrave; cos&igrave; che si contrappone “impatto sull'elmetto” a “colpo alla testa”.",
     "m07": "in fondo: a sinistra la <b>scelta della lingua</b>, a destra i collegamenti a <b>Bravo Sierra Events</b> &mdash; sito, Discord, Instagram, YouTube e Facebook.",
     "m01": "Torso",
     "m02": "PROTEZIONE",
@@ -202,7 +202,7 @@ TEXTES = {
     "g183": "Creare un mazzo",
     "g184": "Dagli un nome. Spunta <b>Mostra sulla schermata iniziale</b> perché abbia il suo pulsante rotondo.",
     "g185": "Aggiungere carte",
-    "g186": "Per ciascuna: una gravità, un titolo, una zona, un protocollo di cura.",
+    "g186": "Per ciascuna: una gravit&agrave;, un titolo, una zona, una condizione di protezione, un protocollo di cura.",
     "g187": "Scegliere il materiale necessario",
     "g188": "Tocca le pastiglie corrispondenti. Puoi creare materiale che non esiste nell'elenco di base &mdash; “Anti-rad”, “Siero”...",
     "g189": "Scegliere l'icona del pulsante",

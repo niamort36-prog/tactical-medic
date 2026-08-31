@@ -920,6 +920,9 @@
                  est choisie, pour garder la possibilité d'écrire n'importe quoi. -->
             <input type="text" id="card-zone" class="form-input" data-i18n-ph="ce.zonePh" placeholder="Ex : Bras" style="display:none;">
             <p id="card-zone-aide" style="font-size:0.75rem; color:var(--bse-muted); margin:-4px 0 10px;"></p>
+            <label class="form-label" data-i18n="ce.protection">Protection balistique</label>
+            <div id="card-protection" class="chip-wrap"></div>
+            <p id="card-protection-aide" style="font-size:0.75rem; color:var(--bse-muted); margin:6px 0 10px;"></p>
             <label class="form-label" data-i18n="ce.protocole">Protocole / effet</label>
             <textarea id="card-effect" class="form-input" rows="3" data-i18n-ph="ce.protocolePh" placeholder="Ex : Attelle + Morphine"></textarea>
         </div>
@@ -1227,6 +1230,16 @@
            ete reellement touchee.
            Les libelles stockes restent en francais : ce sont les cles des
            tables de traduction et de la logique de tirage. */
+        /* Protection d'une carte, comme dans le paquet Extreme : elle peut ne
+           sortir qu'avec le casque ou le gilet, qu'en leur absence, ou dans les
+           deux cas. La question n'est posee que pour la tete et le torse ; sur
+           un membre, la carte sort quel que soit ce reglage. */
+        const PROTECTIONS_CARTE = [
+            { id: 'peuImporte', valeur: null },
+            { id: 'avec',       valeur: true },
+            { id: 'sans',       valeur: false }
+        ];
+
         const ZONES_CARTE = [
             { id: 'tete',      zone: 'Tête',          cibles: ['tete'] },
             { id: 'torse',     zone: 'Torse',         cibles: ['torse'] },
@@ -2580,6 +2593,23 @@
         }
         function choisirIcone(id) { tempIcone = id; renderChoixIcone(); }
 
+        /* --- PROTECTION D'UNE CARTE PERSONNALISEE --- */
+        let tempProtection = null;
+        function renderChoixProtection() {
+            const l = document.getElementById('card-protection');
+            if (!l) return;
+            l.innerHTML = PROTECTIONS_CARTE.map(p =>
+                `<span class="chip${p.valeur === tempProtection ? ' on' : ''}" onclick="choisirProtection(${jsAttr(p.id)})">${escapeHtml(tr('prot.' + p.id))}</span>`
+            ).join('');
+            const aide = document.getElementById('card-protection-aide');
+            if (aide) aide.innerText = tr('prot.aide');
+        }
+        function choisirProtection(id) {
+            const p = PROTECTIONS_CARTE.find(x => x.id === id);
+            tempProtection = p ? p.valeur : null;
+            renderChoixProtection();
+        }
+
         /* --- ZONE D'UNE CARTE PERSONNALISEE --- */
         function renderChoixZone(idChoisi) {
             const sel = document.getElementById('card-zone-choix');
@@ -2725,7 +2755,9 @@
             }
             l.innerHTML = cards.map((c, i) => {
                 const mats = cardMatos(c);
-                const sub = [txZoneOuMembre(c.zone), effetPourAffichage(c.effet)].filter(Boolean).join(' · ');
+                const prot = (c.protection === true || c.protection === false)
+                    ? tr(c.protection ? 'prot.avec' : 'prot.sans') : null;
+                const sub = [txZoneOuMembre(c.zone), prot, effetPourAffichage(c.effet)].filter(Boolean).join(' · ');
                 return `<div class="card-row" style="border-left-color:${getColorTexte(c.gravite)}">
                     <div class="card-row-main" onclick="editCard(${i})">
                         <div class="card-row-title" style="color:${getColorTexte(c.gravite)}">${escapeHtml(txTitre(c.titre) || tr('bld.sansTitre'))}</div>
@@ -2860,6 +2892,8 @@
             document.getElementById('card-title').value = "";
             document.getElementById('card-zone').value = "";
             renderChoixZone('tete');
+            tempProtection = null;
+            renderChoixProtection();
             document.getElementById('card-effect').value = "";
             tempMatos = [];
             renderMatosCheck();
@@ -2876,6 +2910,8 @@
             document.getElementById('card-gravity').value = c.gravite;
             document.getElementById('card-zone').value = c.zone || '';
             renderChoixZone(zoneIdDeLaCarte(c));
+            tempProtection = (c.protection === undefined || c.protection === null) ? null : !!c.protection;
+            renderChoixProtection();
             document.getElementById('card-effect').value = c.effet;
             tempMatos = [...cardMatos(c)];
             renderMatosCheck();
@@ -2953,6 +2989,9 @@
             // l'autre et retombe sur la reconnaissance par le texte.
             if (opt.zones) nc.zones = opt.zones.slice();
             if (opt.cibles) nc.cibles = opt.cibles.slice();
+            // Absente = la carte sort dans les deux cas. On ne pose le champ
+            // que s'il restreint reellement, comme les cartes de base.
+            if (tempProtection === true || tempProtection === false) nc.protection = tempProtection;
             if (currentCardIndex === -1) d.cards.push(nc); else d.cards[currentCardIndex] = nc;
             editDeck(currentDeckId);
         }
