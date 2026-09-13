@@ -4,32 +4,13 @@
    sans aucun reseau (terrain sans couverture). Tout ce dont
    l'application a besoin est mis en cache a la premiere visite.
 
-   index.html se met a jour tout seul (reseau d'abord). En revanche,
+   index.html se met a jour tout seul, en arriere-plan. En revanche,
    si un fichier de APP_SHELL change — bibliotheque de vendor/, image,
    icone — il faut incrementer CACHE_VERSION : c'est la seule chose qui
    remplace ces fichiers sur les telephones deja equipes.
    ========================================================= */
 
-const CACHE_VERSION = 'bse-medic-v7';
-
-/* Delai laisse au reseau avant de servir le cache.
-   Sur un telephone, « pas de reseau » est rarement une coupure franche : le
-   WiFi du terrain repond mais ne mene nulle part, la 4G est a une barre, ou
-   iOS relance l'application avant d'avoir retabli la connexion. Un fetch sans
-   limite reste alors suspendu tres longtemps et l'application ne se lance pas
-   du tout. Passe ce delai on sert la version en cache ; le telechargement
-   continue en arriere-plan et servira au lancement suivant. */
-const DELAI_RESEAU = 2500;
-
-function avecDelai(promesse, ms) {
-    return new Promise((tenir, rejeter) => {
-        const minuteur = setTimeout(() => rejeter(new Error('delai reseau depasse')), ms);
-        promesse.then(
-            (v) => { clearTimeout(minuteur); tenir(v); },
-            (e) => { clearTimeout(minuteur); rejeter(e); }
-        );
-    });
-}
+const CACHE_VERSION = 'bse-medic-v8';
 
 // Tout ce qui compose l'application. Chemins relatifs : l'application
 // fonctionne aussi bien a la racine d'un domaine que dans un sous-dossier.
@@ -95,8 +76,15 @@ self.addEventListener('fetch', (event) => {
     // secours QR en ligne... doivent passer directement au reseau.
     if (url.origin !== self.location.origin) return;
 
-    // La page elle-meme : reseau d'abord, pour recuperer une mise a jour
-    // des qu'il y a du reseau ; le cache prend le relais hors ligne.
+    // La page elle-meme : cache d'abord, mise a jour en arriere-plan.
+    // Sur un telephone, « pas de reseau » est rarement une coupure franche : le
+    // WiFi du terrain repond mais ne mene nulle part, la 4G est a une barre, ou
+    // iOS relance l'application avant d'avoir retabli la connexion. Attendre le
+    // reseau, c'etait plusieurs secondes d'ecran vide a chaque relance — et une
+    // relance a lieu chaque fois que le systeme decharge l'application reduite,
+    // c'est-a-dire tres souvent. Depuis le cache, elle est deja la.
+    // Le prix a payer : une version fraiche est telechargee pendant ce temps et
+    // s'applique a l'ouverture SUIVANTE, jamais sous les doigts du medic.
     const estCatalogue = /\/(i18n|lang-[a-z]{2})\.js$/.test(url.pathname);
     if (req.mode === 'navigate' || url.pathname.endsWith('/index.html') || estCatalogue) {
         const cle = estCatalogue ? req : './index.html';
@@ -111,20 +99,17 @@ self.addEventListener('fetch', (event) => {
         // Le telechargement se poursuit meme si on a deja repondu par le cache.
         event.waitUntil(reseau.catch(() => {}));
         event.respondWith((async () => {
+            const cache = await caches.open(CACHE_VERSION);
+            const enCache = (await cache.match(cle)) || (estCatalogue ? null : await cache.match('./'));
+            if (enCache) return enCache;
+            // Toute premiere visite : le reseau est la seule source, on l'attend.
             try {
-                const reponse = await avecDelai(reseau, DELAI_RESEAU);
+                const reponse = await reseau;
                 if (reponse && reponse.ok) return reponse;
-                throw new Error('reponse ' + (reponse && reponse.status));
-            } catch (e) {
-                const cache = await caches.open(CACHE_VERSION);
-                const enCache = (await cache.match(cle)) || (estCatalogue ? null : await cache.match('./'));
-                if (enCache) return enCache;
-                // Rien en cache : le reseau reste la seule chance, on l'attend.
-                try { return await reseau; } catch (e2) {}
-                return new Response(estCatalogue ? '' : 'Application indisponible hors ligne.',
-                                    { status: estCatalogue ? 504 : 503,
-                                      headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
-            }
+            } catch (e) { /* traite juste en dessous */ }
+            return new Response(estCatalogue ? '' : 'Application indisponible hors ligne.',
+                                { status: estCatalogue ? 504 : 503,
+                                  headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
         })());
         return;
     }

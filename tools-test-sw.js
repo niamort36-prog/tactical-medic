@@ -2,10 +2,14 @@
        node tools-test-sw.js            teste sw.js
        node tools-test-sw.js autre.js   teste une autre version
 
-   Banc d'essai du service worker : on charge sw.js dans un environnement
-   simule et on declenche la requete de navigation avec un reseau qui,
-   tour a tour, repond, echoue, renvoie une erreur, ou reste suspendu.
-   C'est ce dernier cas qui bloquait l'application sur iPhone. */
+   On charge sw.js dans un environnement simule et on declenche la requete
+   de navigation avec un reseau qui, tour a tour, repond, echoue, renvoie une
+   erreur, ou reste suspendu. Ce qu'on verifie :
+     - l'application s'ouvre INSTANTANEMENT des qu'elle est en cache, quel que
+       soit l'etat du reseau (c'est le reseau suspendu qui la bloquait sur
+       iPhone, et le simple fait de l'attendre qui la ralentissait) ;
+     - une reponse d'erreur ne remplace jamais la version en cache ;
+     - la version fraiche est bien rangee en cache pour l'ouverture suivante. */
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -51,9 +55,12 @@ function environnement(comportementReseau, contenuCache) {
     return { ecouteurs, cache, sandbox };
 }
 
-async function jouer(nom, comportementReseau, attenduMs, attenduMarque) {
-    const CACHE = [['./index.html', faireResponse('PAGE EN CACHE', { __marque: 'cache' })]];
-    const { ecouteurs } = environnement(comportementReseau, CACHE);
+// opt.cacheVide : premiere visite, rien n'est encore enregistre.
+// opt.cacheAttendu : marque attendue dans le cache une fois le reseau retombe.
+async function jouer(nom, comportementReseau, attenduMs, attenduMarque, opt) {
+    opt = opt || {};
+    const CACHE = opt.cacheVide ? [] : [['./index.html', faireResponse('PAGE EN CACHE', { __marque: 'cache' })]];
+    const { ecouteurs, cache } = environnement(comportementReseau, CACHE);
     const req = { url: 'https://exemple.test/', mode: 'navigate', method: 'GET' };
     let promesse = null;
     const event = { request: req, respondWith: (p) => { promesse = p; }, waitUntil: (p) => { if (p && p.catch) p.catch(() => {}); } };
@@ -69,22 +76,41 @@ async function jouer(nom, comportementReseau, attenduMs, attenduMarque) {
     const marque = rep.__marque || rep.corps;
     const okDelai = attenduMs === null ? true : Math.abs(ms - attenduMs) <= 700;
     const okSource = marque === attenduMarque || String(marque).includes(attenduMarque);
-    console.log(((okDelai && okSource) ? 'OK    ' : 'ECHEC ') + nom.padEnd(36) + String(ms).padStart(6) + ' ms  ->  ' + marque);
-    return okDelai && okSource;
+    // Le telechargement de fond continue apres la reponse : on lui laisse le
+    // temps d'aboutir avant de regarder ce qui a ete range en cache.
+    let okCache = true, dansCache = '';
+    if (opt.cacheAttendu) {
+        await new Promise((r) => setTimeout(r, 200));
+        const c = cache.get('./index.html');
+        dansCache = c ? (c.__marque || c.corps) : '(vide)';
+        okCache = dansCache === opt.cacheAttendu;
+    }
+    const ok = okDelai && okSource && okCache;
+    console.log((ok ? 'OK    ' : 'ECHEC ') + nom.padEnd(38) + String(ms).padStart(5) + ' ms  ->  '
+                + marque + (opt.cacheAttendu ? '   [cache : ' + dansCache + ']' : ''));
+    return ok;
 }
 
 (async () => {
     const resultats = [];
-    // 1. Reseau normal : la page fraiche gagne, tout de suite.
-    resultats.push(await jouer('reseau normal', async () => faireResponse('PAGE FRAICHE', { __marque: 'reseau' }), 0, 'reseau'));
-    // 2. Hors ligne franc : echec immediat, le cache prend le relais.
+    const fraiche = async () => faireResponse('PAGE FRAICHE', { __marque: 'reseau' });
+    // 1. Reseau normal : ouverture immediate depuis le cache, et la version
+    //    fraiche est rangee pour la prochaine ouverture.
+    resultats.push(await jouer('reseau normal', fraiche, 0, 'cache', { cacheAttendu: 'reseau' }));
+    // 2. Hors ligne franc.
     resultats.push(await jouer('hors ligne (echec immediat)', async () => { throw new Error('offline'); }, 0, 'cache'));
     // 3. Erreur serveur : ne doit jamais remplacer le cache.
-    resultats.push(await jouer('serveur en erreur 404', async () => faireResponse('PAS TROUVE', { status: 404, __marque: 'erreur' }), 0, 'cache'));
+    resultats.push(await jouer('serveur en erreur 404', async () => faireResponse('PAS TROUVE', { status: 404, __marque: 'erreur' }), 0, 'cache',
+                               { cacheAttendu: 'cache' }));
     // 4. LE CAS DU TERRAIN : le reseau accepte mais ne repond jamais.
-    resultats.push(await jouer('reseau suspendu (portail captif)', () => new Promise(() => {}), 2500, 'cache'));
-    // 5. Reseau tres lent mais qui finit par repondre : le cache sert d'abord.
-    resultats.push(await jouer('reseau lent (5 s)', () => new Promise((r) => setTimeout(() => r(faireResponse('LENTE', { __marque: 'reseau' })), 5000)), 2500, 'cache'));
+    //    C'est lui qui empechait l'application de se lancer sur iPhone.
+    resultats.push(await jouer('reseau suspendu (portail captif)', () => new Promise(() => {}), 0, 'cache'));
+    // 5. Reseau tres lent : l'ouverture ne l'attend pas une seconde.
+    resultats.push(await jouer('reseau lent (5 s)', () => new Promise((r) => setTimeout(() => r(faireResponse('LENTE', { __marque: 'reseau' })), 5000)), 0, 'cache'));
+    // 6. Toute premiere visite : rien en cache, le reseau est la seule source.
+    resultats.push(await jouer('premiere visite (cache vide)', fraiche, 0, 'reseau', { cacheVide: true }));
+    // 7. Premiere visite sans reseau : il faut le dire, pas rester suspendu.
+    resultats.push(await jouer('premiere visite hors ligne', async () => { throw new Error('offline'); }, 0, 'indisponible hors ligne', { cacheVide: true }));
 
     const total = resultats.filter(Boolean).length;
     console.log('\n%d / %d scenarios conformes', total, resultats.length);

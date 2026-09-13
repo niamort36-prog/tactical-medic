@@ -1885,12 +1885,18 @@
             construireMenuLangue();
             majLienGuide();
             updateUI_Game();
+            // En dernier : l'ecran repris doit passer devant la navigation
+            // declenchee par les reprises de session ci-dessus.
+            reprendreInstantane();
         };
 
         // Au réveil de l'appareil (téléphone déverrouillé, retour sur l'onglet), on vérifie que la
         // liaison est toujours vivante et on relance la reprise/reconnexion si besoin.
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState !== 'visible') return;
+            if (document.visibilityState !== 'visible') { enregistrerInstantane(); return; }
+            // Les minuteurs de la page sont geles en arriere-plan : on recale
+            // le compte a rebours sur l'heure reelle des le retour a l'ecran.
+            verifierTimerMort();
             // Le verrou d'ecran est perdu quand l'appareil se met en veille :
             // on le reprend si une fiche de soin est toujours a l'ecran.
             if (ecranCourant === 'screen-result') garderEcranAllume();
@@ -1913,6 +1919,13 @@
                 demarrerReconnexionClient();
             }
         });
+        // pagehide couvre le cas ou le systeme decharge la page sans repasser
+        // par visibilitychange ; freeze est l'avertissement d'Android juste
+        // avant la mise en sommeil de l'onglet. Les trois font le meme travail :
+        // le premier qui passe enregistre, les suivants reecrivent la meme chose.
+        window.addEventListener('pagehide', enregistrerInstantane);
+        document.addEventListener('freeze', enregistrerInstantane);
+
         function relancerConnexionClient() {
             const c = myConn; myConn = null;
             try { if (c) c.close(); } catch (e) {}
@@ -1956,6 +1969,112 @@
             wakeLock = null;
         }
 
+        /* --- CONTINUITE APRES MISE EN VEILLE --- */
+        /* iOS et Android dechargent une application reduite des que la memoire
+           vient a manquer : au retour, la page repart de zero et le medic perd
+           la fiche qu'il avait sous les yeux, ou la carte qu'il etait en train
+           d'ecrire. Aucun code ne peut empecher le systeme de le faire, c'est
+           sa decision. En revanche on peut rendre le rechargement invisible :
+           on note tout ce qui ne vit qu'en memoire au moment ou la page passe
+           en arriere-plan, et on le remet en place au demarrage suivant. */
+        const INSTANTANE_KEY = 'bse_instantane';
+        // Une fiche de soin ne se reprend que peu de temps apres : au-dela, le
+        // blesse a ete traite dans la vraie vie et la rouvrir n'aurait aucun
+        // sens. Une carte en cours d'ecriture, elle, merite d'etre retrouvee.
+        const INSTANTANE_FICHE = 30 * 60 * 1000;
+        const INSTANTANE_EDITION = 6 * 3600 * 1000;
+        const ECRANS_REPRIS = ['screen-result', 'screen-builder', 'screen-deck-edit', 'screen-card-edit'];
+        // Mis a vrai quand un ecran a ete repris : la reprise de session
+        // multijoueur ne doit alors pas ramener l'organisateur sur son QG.
+        let ecranRepris = false;
+
+        function oublierInstantane() {
+            try { localStorage.removeItem(INSTANTANE_KEY); } catch (e) {}
+        }
+
+        function enregistrerInstantane() {
+            if (!ECRANS_REPRIS.includes(ecranCourant)) { oublierInstantane(); return; }
+            const champ = (id) => { const e = document.getElementById(id); return e ? e.value : ''; };
+            const coche = (id) => { const e = document.getElementById(id); return !!(e && e.checked); };
+            const inst = { t: Date.now(), ecran: ecranCourant };
+            if (ecranCourant === 'screen-result') {
+                if (!ficheCourante) { oublierInstantane(); return; }
+                inst.fiche = ficheCourante;
+                if (isTimerActive) inst.finTimer = finTimerMort;
+            } else {
+                inst.deckId = currentDeckId;
+                // Un paquet tout juste cree n'existe encore qu'en memoire : il
+                // n'est enregistre qu'au bouton « Enregistrer ». Sans sa copie
+                // ici, la reprise n'aurait tout simplement rien a rouvrir.
+                const dCourant = (appState.customDecks || []).find(x => x.id === currentDeckId);
+                if (dCourant) inst.paquetComplet = dCourant;
+                if (ecranCourant !== 'screen-builder') {
+                    // Le formulaire du paquet n'est pas encore enregistre : il
+                    // voyage dans l'instantane, pas dans les donnees du joueur.
+                    inst.paquet = { nom: champ('deck-name'), accueil: coche('deck-show-home'),
+                                    extreme: coche('deck-extreme'), icone: tempIcone };
+                }
+                if (ecranCourant === 'screen-card-edit') {
+                    inst.carte = { index: currentCardIndex, gravite: champ('card-gravity'),
+                                   titre: champ('card-title'), zoneId: champ('card-zone-choix'),
+                                   zoneLibre: champ('card-zone'), protection: tempProtection,
+                                   effet: champ('card-effect'), matos: (tempMatos || []).slice() };
+                }
+            }
+            try { localStorage.setItem(INSTANTANE_KEY, JSON.stringify(inst)); } catch (e) { console.warn(e); }
+        }
+
+        function reprendreInstantane() {
+            let inst = null;
+            try { inst = JSON.parse(localStorage.getItem(INSTANTANE_KEY) || 'null'); } catch (e) {}
+            // Consomme des la lecture : une reprise qui echoue ne doit pas se
+            // rejouer a chaque ouverture.
+            oublierInstantane();
+            if (!inst || !inst.t) return;
+            const age = Date.now() - inst.t;
+            if (age > (inst.ecran === 'screen-result' ? INSTANTANE_FICHE : INSTANTANE_EDITION)) return;
+            try {
+                if (inst.ecran === 'screen-result') {
+                    if (!inst.fiche || !inst.fiche.card) return;
+                    afficherResultat(inst.fiche.card, inst.fiche.ctx,
+                                     { z: inst.fiche.z, membre: inst.fiche.membre });
+                    ecranRepris = true;
+                    if (inst.finTimer) activerTimerMort(inst.finTimer);
+                    return;
+                }
+                if (inst.ecran === 'screen-builder') { ouvrirBuilder(); ecranRepris = true; return; }
+                let d = (appState.customDecks || []).find(x => x.id === inst.deckId);
+                if (!d && inst.paquetComplet && inst.paquetComplet.id === inst.deckId) {
+                    d = inst.paquetComplet;
+                    appState.customDecks.push(d);
+                    initDefaults(); // ses cartes ont besoin d'une quantite
+                }
+                if (!d) return; // paquet supprime entre-temps
+                if (inst.paquet) {
+                    d.name = inst.paquet.nom || d.name;
+                    d.showOnHome = !!inst.paquet.accueil;
+                    d.extremeMode = !!inst.paquet.extreme;
+                    d.icone = inst.paquet.icone || d.icone;
+                }
+                editDeck(d.id);
+                ecranRepris = true;
+                if (inst.ecran !== 'screen-card-edit' || !inst.carte) return;
+                const c = inst.carte;
+                // On repasse par l'ouverture normale de la carte, puis on
+                // repose la saisie en cours par-dessus.
+                if (c.index >= 0 && d.cards && d.cards[c.index]) editCard(c.index); else ajouterCarteCustom();
+                document.getElementById('card-gravity').value = c.gravite;
+                document.getElementById('card-title').value = c.titre;
+                document.getElementById('card-zone').value = c.zoneLibre || '';
+                renderChoixZone(c.zoneId);
+                tempProtection = (c.protection === true || c.protection === false) ? c.protection : null;
+                renderChoixProtection();
+                document.getElementById('card-effect').value = c.effet || '';
+                tempMatos = Array.isArray(c.matos) ? c.matos.slice() : [];
+                renderMatosCheck();
+            } catch (e) { console.warn("Reprise de l'ecran impossible", e); }
+        }
+
         /* --- NAVIGATION --- */
         let ecranCourant = 'screen-game';
         let etatHistoriquePousse = false;
@@ -1984,6 +2103,7 @@
 
         function retourAccueil() {
             stopAllAudio(); clearInterval(timerLogic); isTimerActive=false;
+            ficheCourante = null; oublierInstantane();
             relacherEcran();
             document.getElementById('death-overlay').style.display='none';
             document.getElementById('danger-zone-container').style.display='none';
@@ -2168,7 +2288,12 @@
             retourAccueil();
         }
 
-        function afficherResultat(card, ctxExtreme) {
+        // Tout ce qui permet de redessiner la fiche affichee sans relancer
+        // le moindre tirage au sort.
+        let ficheCourante = null;
+        // reprise = { z, membre } : fige la part d'aleatoire pour redonner
+        // exactement la meme fiche apres un rechargement subi.
+        function afficherResultat(card, ctxExtreme, reprise) {
             const col = getColor(card.gravite);
             document.getElementById('badge-gravite').innerText = txGrav(card.gravite);
             document.getElementById('badge-gravite').style.backgroundColor = col;
@@ -2185,7 +2310,8 @@
             //  3. carte multi-zones (Tête ou Torse) : une zone est tirée au sort,
             //     pour que la fiche annonce une zone précise et non un choix.
             let z = card.zone;
-            if (ctxExtreme && ctxExtreme.zoneLabel) z = ctxExtreme.zoneLabel;
+            if (reprise) z = reprise.z;
+            else if (ctxExtreme && ctxExtreme.zoneLabel) z = ctxExtreme.zoneLabel;
             else if (card.typeZone === 'membre') z = MEMBRES[Math.floor(Math.random()*4)];
             else if (Array.isArray(card.zones) && card.zones.length) z = card.zones[Math.floor(Math.random()*card.zones.length)];
             // z reste la valeur CANONIQUE (francais) : elle sert de cle a
@@ -2212,15 +2338,22 @@
             }
 
             // Protocole propre à la zone retenue (casque / gilet), sinon le texte commun
+            // Tire d'avance, meme quand le protocole n'en parle pas : c'est ce
+            // qui permet de le figer dans l'instantane.
+            const membreTire = (reprise && reprise.membre) || (ctxExtreme && ctxExtreme.membre)
+                             || MEMBRES[Math.floor(Math.random()*4)];
             let effetAffiche = txSoin((card.effets && card.effets[z]) || card.effet || '');
             if (effetAffiche.includes('[MEMBRE_ALEATOIRE]')) {
-                const membre = (ctxExtreme && ctxExtreme.membre) || MEMBRES[Math.floor(Math.random()*4)];
-                effetAffiche = effetAffiche.split('[MEMBRE_ALEATOIRE]').join(txMembre(membre));
+                effetAffiche = effetAffiche.split('[MEMBRE_ALEATOIRE]').join(txMembre(membreTire));
             }
             document.getElementById('txt-soins').innerText = effetAffiche;
 
             showScreen('screen-result');
             garderEcranAllume();
+            ficheCourante = { card: card, ctx: ctxExtreme || null, z: z, membre: membreTire };
+            // Une reprise redessine une fiche deja tiree : elle a deja ete
+            // journalisee, et le sort du patient a deja ete joue.
+            if (reprise) return;
 
             if (enPartieFirebase() && !appState.isOrga) {
                 fbJournal(tr('log.tirage', { nom: appState.playerName, carte: txTitre(card.titre),
@@ -2263,16 +2396,32 @@
             return min + Math.random() * (max - min);
         }
 
-        function activerTimerMort() {
+        /* Le compte a rebours vise une HEURE DE FIN, il ne decompte plus des
+           dixiemes de seconde. Un telephone range en poche gele les minuteurs
+           de la page : avec un decompte, le delai laisse au medic s'allongeait
+           de tout le temps passe hors ecran, et il ne survivait pas au
+           rechargement impose par le systeme. Une heure de fin reste juste dans
+           les deux cas. */
+        let finTimerMort = 0;
+        function activerTimerMort(finImposee) {
             isTimerActive = true;
             document.getElementById('danger-zone-container').style.display = "block";
             const btn = document.getElementById('btn-card');
             btn.innerText = tr('fiche.soigner');
             btn.style.backgroundColor = "#d43838";
             btn.style.borderColor = "#d43838";
+            finTimerMort = finImposee || (Date.now() + dureeAvantMort() * 1000);
+            if (verifierTimerMort()) return; // delai deja ecoule (reprise tardive)
             beepInterval = setInterval(playBeep, 1000);
-            let duree = dureeAvantMort();
-            timerLogic = setInterval(() => { duree -= 0.1; if(duree <= 0) { clearInterval(timerLogic); mortDuPatient(); } }, 100);
+            timerLogic = setInterval(verifierTimerMort, 100);
+        }
+        // Vrai quand le delai vient de s'ecouler. Appelee aussi au retour sur
+        // l'application, pour rattraper le temps pendant lequel elle dormait.
+        function verifierTimerMort() {
+            if (!isTimerActive || Date.now() < finTimerMort) return false;
+            clearInterval(timerLogic);
+            mortDuPatient();
+            return true;
         }
 
         function mortDuPatient() {
@@ -3879,7 +4028,9 @@
                 document.getElementById('multi-status').style.display = 'none';
                 document.getElementById('btn-multi-icon').classList.add('online');
                 fermerMultiModal();
-                showScreen('screen-host-dashboard');
+                // Reprise de session au demarrage : si une fiche ou une carte
+                // en cours vient d'etre restauree, elle garde l'ecran.
+                if (!ecranRepris) showScreen('screen-host-dashboard');
                 hostSetTab('join');
                 genererQR(joinLink);
 
