@@ -21,12 +21,16 @@
     <!-- Bibliotheques embarquees dans le depot : sur le terrain il n'y a pas
          toujours de reseau, et un CDN injoignable rendait l'application
          entierement inutilisable, meme en solo. -->
-    <script src="vendor/firebase-app-compat.js"></script>
-    <script src="vendor/firebase-auth-compat.js"></script>
-    <script src="vendor/firebase-database-compat.js"></script>
-    <script src="vendor/peerjs.min.js"></script>
-    <script src="vendor/qrcode.min.js"></script>
-    <script src="vendor/html5-qrcode.min.js"></script>
+    <!-- Firebase, le generateur de QR et le scanner ne sont charges qu'au
+         moment ou ils servent (voir chargerScript plus bas) : un medic qui
+         joue seul n'en telecharge, n'en analyse et n'en garde aucun. C'est
+         750 Ko de JavaScript en moins a l'ouverture et en memoire, donc une
+         application que le telephone met bien plus longtemps a decharger.
+         Ils restent dans APP_SHELL du service worker : hors reseau, ils sont
+         deja sur l'appareil et se chargent instantanement.
+         PeerJS reste ici (liaison historique, encore utilisee en secours)
+         mais en differe : il n'empeche plus la page de s'afficher. -->
+    <script src="vendor/peerjs.min.js" defer></script>
 
     <style>
         /* =========================================================
@@ -1810,6 +1814,36 @@
             el.innerHTML = lignes.map(l => `<div>${l}</div>`).join('') + `<div style="margin-top:8px;color:#ccc;">${verdict}</div>`;
         }
 
+        /* --- CHARGEMENT DES BIBLIOTHEQUES A LA DEMANDE --- */
+        // Un <script> ajoute a la volee. La promesse est mise de cote : deux
+        // appels simultanes attendent le meme chargement, et un script deja
+        // charge repond tout de suite.
+        const scriptsEnCours = {};
+        function chargerScript(src) {
+            if (scriptsEnCours[src]) return scriptsEnCours[src];
+            scriptsEnCours[src] = new Promise((tenir, rejeter) => {
+                const el = document.createElement('script');
+                el.src = src;
+                el.onload = () => tenir(true);
+                el.onerror = () => {
+                    delete scriptsEnCours[src]; // un nouvel essai reste possible
+                    el.remove();
+                    rejeter(new Error('bibliotheque indisponible : ' + src));
+                };
+                document.head.appendChild(el);
+            });
+            return scriptsEnCours[src];
+        }
+        // firebase-app doit etre la avant les deux autres, qui s'y greffent.
+        async function chargerFirebase() {
+            if (typeof firebase !== 'undefined' && firebase.database && firebase.auth) return;
+            await chargerScript('vendor/firebase-app-compat.js');
+            await Promise.all([
+                chargerScript('vendor/firebase-auth-compat.js'),
+                chargerScript('vendor/firebase-database-compat.js')
+            ]);
+        }
+
         /* --- MISE EN CACHE HORS LIGNE --- */
         // Le service worker met l'application entiere en cache a la premiere
         // visite : elle s'ouvre ensuite sans reseau. Sans lui, un terrain sans
@@ -3195,7 +3229,9 @@
 
         async function fbReprendreSession() {
             const s = getFbSession();
-            if (!s || !s.partieId || !fbDisponible()) return false;
+            // fbConnexion() charge la bibliotheque au besoin et leve si elle
+            // manque : c'est le catch plus bas qui s'en occupe.
+            if (!s || !s.partieId) return false;
             try {
                 await fbConnexion();
                 const snap = await firebase.database().ref('parties/' + s.partieId).get();
@@ -3229,6 +3265,7 @@
         // Connexion anonyme : donne à chaque appareil une identité stable que le
         // serveur peut vérifier. C'est ce qui rend les règles de sécurité utiles.
         async function fbConnexion() {
+            try { await chargerFirebase(); } catch (e) { console.warn(e); }
             if (!fbDisponible()) throw new Error(tr('msg.firebaseIndisponible'));
             if (!fbPret) { firebase.initializeApp(FB_CONFIG); fbPret = true; }
             if (fbUid) return fbUid;
@@ -3839,7 +3876,10 @@
         }
 
         // Fonction Scan QR Code (Auto-Join)
-        function startQRScanner() {
+        async function startQRScanner() {
+            // La plus grosse bibliotheque de toutes (370 Ko) pour une action
+            // qu'on fait une fois par partie, au moment de rejoindre.
+            try { await chargerScript('vendor/html5-qrcode.min.js'); } catch (e) { console.warn(e); }
             if (typeof Html5QrcodeScanner === 'undefined') {
                 alert(tr('msg.scannerIndisponible'));
                 return;
@@ -3879,10 +3919,14 @@
                 console.warn('QR non genere :', raison);
             };
             const setImg = (url) => { wrap.innerHTML = `<img src="${url}" alt="${escapeHtml(tr('qg.qrAlt'))}" style="display:block; margin:0 auto;">`; };
-            if (typeof window.QRCode === 'undefined') { echec('bibliotheque absente'); return; }
-            try {
-                window.QRCode.toDataURL(link, { width: 180, margin: 2 }, (err, url) => err ? echec(err) : setImg(url));
-            } catch (e) { echec(e); }
+            // Le generateur n'arrive qu'ici, et une seule fois : seul l'hote
+            // affiche un QR code, jamais un medic.
+            chargerScript('vendor/qrcode.min.js').then(() => {
+                if (typeof window.QRCode === 'undefined') { echec('bibliotheque absente'); return; }
+                try {
+                    window.QRCode.toDataURL(link, { width: 180, margin: 2 }, (err, url) => err ? echec(err) : setImg(url));
+                } catch (e) { echec(e); }
+            }, (e) => echec(e));
         }
 
         function changerTransport(v) {
