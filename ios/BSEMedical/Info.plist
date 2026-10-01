@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>BSE Medical</string>
+    <key>CFBundleShortVersionString</key>
+    <string>$(MARKETING_VERSION)</string>
+    <key>CFBundleVersion</key>
+    <string>$(CURRENT_PROJECT_VERSION)</string>
+
+    <!-- Le scanner de QR code sert a rejoindre la partie d'un organisateur.
+         Sans ce texte, iOS refuse la camera et Apple rejette la soumission. -->
+    <key>NSCameraUsageDescription</key>
+    <string>La caméra sert uniquement à scanner le QR code d’invitation d’un organisateur pour rejoindre sa partie.</string>
+
+    <!-- L'application est pensee pour etre tenue a une main, en jeu. -->
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+    </array>
+
+    <key>UILaunchScreen</key>
+    <dict>
+        <key>UIColorName</key>
+        <string>CouleurFond</string>
+    </dict>
+
+    <!-- Barre d'etat claire sur fond noir. -->
+    <key>UIStatusBarStyle</key>
+    <string>UIStatusBarStyleLightContent</string>
+    <key>UIUserInterfaceStyle</key>
+    <string>Dark</string>
+</dict>
+</plist>

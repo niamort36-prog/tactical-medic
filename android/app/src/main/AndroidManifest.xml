@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  BSE MEDICAL SYSTEM — enveloppe Android (Trusted Web Activity).
+
+  L'application ne contient aucun code metier : elle ouvre le site en plein
+  ecran, sans barre d'adresse, avec le moteur du navigateur deja installe sur
+  le telephone. Consequence directe : une mise a jour de l'application web est
+  disponible immediatement, sans passer par la boutique. Seule cette enveloppe
+  (nom, icone, version) demande une nouvelle publication.
+
+  La disparition de la barre d'adresse est conditionnee a la verification du
+  lien numerique : le fichier /.well-known/assetlinks.json du site doit citer
+  l'empreinte SHA-256 de la cle qui signe cette application. Sans cela,
+  l'application s'ouvre quand meme, mais avec le bandeau du navigateur.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Android 11 et plus cloisonnent la visibilite des applications : sans
+         cette declaration, l'enveloppe ne trouverait aucun navigateur. -->
+    <queries>
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.BseMedical">
+
+        <meta-data
+            android:name="asset_statements"
+            android:resource="@string/asset_statements" />
+
+        <activity
+            android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.LauncherActivity">
+
+            <meta-data
+                android:name="android.support.customtabs.trusted.DEFAULT_URL"
+                android:value="@string/launch_url" />
+
+            <!-- Les barres du systeme reprennent le noir de l'application :
+                 sans cela, elles restent blanches et cassent le plein ecran. -->
+            <meta-data
+                android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
+                android:resource="@color/bse_noir" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR"
+                android:resource="@color/bse_noir" />
+
+            <!-- Ecran de demarrage : le logo sur le noir, pendant que la page
+                 se charge. Sans lui, l'ouverture passe par un flash blanc. -->
+            <meta-data
+                android:name="android.support.customtabs.trusted.SPLASH_IMAGE_DRAWABLE"
+                android:resource="@drawable/splash" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.SPLASH_SCREEN_BACKGROUND_COLOR"
+                android:resource="@color/bse_noir" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.SPLASH_SCREEN_FADE_OUT_DURATION"
+                android:value="300" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.FILE_PROVIDER_AUTHORITY"
+                android:value="com.bravosierraevents.bsemedical.fileprovider" />
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Un lien d'invitation (https://.../?join=...) ouvre directement
+                 l'application au lieu du navigateur : c'est le QR code de
+                 l'organisateur qui en profite. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="@string/host" />
+            </intent-filter>
+        </activity>
+
+        <!-- Sert uniquement a transmettre l'image de demarrage au navigateur. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.bravosierraevents.bsemedical.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/filepaths" />
+        </provider>
+
+    </application>
+</manifest>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BSE Medical</string>
+
+    <string name="host" translatable="false">project-bsm-7d32c.web.app</string>
+    <string name="launch_url" translatable="false">https://project-bsm-7d32c.web.app/index.html</string>
+
+    <!-- Moitie Android de la verification du lien numerique. L'autre moitie
+         est le fichier /.well-known/assetlinks.json publie par le site. Les
+         deux doivent se repondre, sinon la barre d'adresse reste visible. -->
+    <string name="asset_statements" translatable="false">
+        [{
+          \"relation\": [\"delegate_permission/common.handle_all_urls\"],
+          \"target\": {
+            \"namespace\": \"web\",
+            \"site\": \"https://project-bsm-7d32c.web.app\"
+          }
+        }]
+    </string>
+</resources>

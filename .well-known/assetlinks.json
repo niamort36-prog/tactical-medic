@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.bravosierraevents.bsemedical",
+      "sha256_cert_fingerprints": [
+        "BE:3C:40:8E:24:8D:CD:F8:59:63:69:6E:7C:26:8A:7F:13:4A:08:18:CA:15:F7:58:19:54:FB:65:30:37:D0:FD"
+      ]
+    }
+  }
+]

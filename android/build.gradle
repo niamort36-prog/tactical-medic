@@ -1,0 +1,4 @@
+// Projet racine : il ne contient aucun code, tout est dans app/.
+plugins {
+    id 'com.android.application' version '8.10.1' apply false
+}

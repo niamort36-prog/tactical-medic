@@ -1,0 +1,62 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Cle de signature. Le fichier keystore.properties et le .jks ne sont JAMAIS
+// versionnes (voir .gitignore) : perdre la cle de televersement empeche de
+// publier une mise a jour. Sans ce fichier, seul le build de debogage marche.
+def fichierCle = rootProject.file('keystore.properties')
+def cle = new Properties()
+if (fichierCle.exists()) {
+    fichierCle.withInputStream { cle.load(it) }
+}
+
+android {
+    namespace 'com.bravosierraevents.bsemedical'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "com.bravosierraevents.bsemedical"
+        // 21 = Android 5. En dessous, pas de Trusted Web Activity.
+        minSdk 21
+        // 36 = Android 16, exige par Google Play pour toute nouvelle
+        // application depuis le 31 aout 2026.
+        targetSdk 36
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    signingConfigs {
+        release {
+            if (cle.getProperty('storeFile')) {
+                storeFile rootProject.file(cle.getProperty('storeFile'))
+                storePassword cle.getProperty('storePassword')
+                keyAlias cle.getProperty('keyAlias')
+                keyPassword cle.getProperty('keyPassword')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            // Rien a reduire : l'application n'embarque aucun code metier,
+            // tout vit dans la page web.
+            minifyEnabled false
+            if (cle.getProperty('storeFile')) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    // Fournit LauncherActivity : c'est elle qui ouvre le site en plein ecran,
+    // sans barre d'adresse, et qui affiche l'ecran de demarrage.
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.6.2'
+}

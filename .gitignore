@@ -19,3 +19,14 @@ skills-lock.json
 # Cache Python : genere en relancant tools-guide.py, sans interet ici.
 __pycache__/
 *.pyc
+
+# Enveloppe Android : la cle de signature et son mot de passe ne quittent
+# jamais cette machine. Perdre la cle de televersement n'est pas fatal
+# (Google peut la reinitialiser) mais fait perdre plusieurs jours.
+android/*.jks
+android/keystore.properties
+android/local.properties
+android/.gradle/
+android/build/
+android/app/build/
+android/app/release/

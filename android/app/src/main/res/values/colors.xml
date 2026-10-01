@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Memes valeurs que la charte de l'application web. -->
+    <color name="bse_noir">#070707</color>
+    <color name="bse_or">#C49708</color>
+</resources>

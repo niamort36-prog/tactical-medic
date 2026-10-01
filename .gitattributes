@@ -7,3 +7,13 @@
 *.jpeg binary
 *.webp binary
 *.ico  binary
+
+# Le lanceur Gradle est un script shell : des fins de ligne Windows le
+# rendraient inutilisable sur macOS et Linux.
+android/gradlew text eol=lf
+*.jar binary
+*.jks binary
+# Sources natives : fins de ligne Unix, comme les outils les attendent.
+*.swift text eol=lf
+*.gradle text eol=lf
+*.plist text eol=lf

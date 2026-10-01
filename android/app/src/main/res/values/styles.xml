@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.BseMedical" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/bse_noir</item>
+    </style>
+
+    <!-- L'activite de lancement dessine elle-meme l'ecran de demarrage avant
+         de passer la main au navigateur : sa fenetre doit rester nue. -->
+    <style name="Theme.LauncherActivity" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/bse_noir</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+</resources>
