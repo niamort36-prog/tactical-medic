@@ -26,20 +26,6 @@
     ],
     "headers": [
       {
-        "comment": "Lien numerique de l'application Android : Android exige le type JSON exact, sinon la verification echoue en silence et la barre d'adresse reste affichee.",
-        "source": "/.well-known/assetlinks.json",
-        "headers": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=300"
-          }
-        ]
-      },
-      {
         "comment": "L'application tient dans index.html : jamais de cache, sinon les joueurs gardent l'ancienne version apres un deploiement. La racine / et /index.html sont deux chemins distincts pour Firebase : les deux doivent etre couverts.",
         "source": "**",
         "headers": [
